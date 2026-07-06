@@ -1,6 +1,6 @@
 [project]
 name = "expoal"
-version = "0.1.0"
+version = "1.0.0"
 description = "Paste a link from YouTube, TikTok or Instagram and save the video to your own disk. 100% local, no third-party sites."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,5 +26,6 @@ packages = ["src/expoal"]
 
 [dependency-groups]
 dev = [
+    "playwright>=1.61.0",
     "pyinstaller>=6.21.0",
 ]

@@ -1,8 +1,22 @@
+<div align="center">
+
+<img src="assets/icon-256.png" width="96" alt="Expoal">
+
 # Expoal
 
-Paste a link from YouTube, TikTok or Instagram and get the video saved on your own disk.
+**Paste a link from YouTube, TikTok or Instagram and get the video saved on your own disk.**
 
 No third-party download sites, no ads, no uploads. Everything runs locally on your machine, powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+
+[![Download](https://img.shields.io/github/v/release/Mun1to/Expoal?label=download&style=for-the-badge&color=4E6CC8)](https://github.com/Mun1to/Expoal/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-E8B84B?style=for-the-badge)](LICENSE)
+[![Website](https://img.shields.io/badge/website-expoal-4E6CC8?style=for-the-badge)](https://mun1to.github.io/Expoal/)
+
+[**Website**](https://mun1to.github.io/Expoal/) · [**Download**](https://github.com/Mun1to/Expoal/releases/latest)
+
+<img src="assets/screenshot-dark.png" width="820" alt="Expoal screenshot">
+
+</div>
 
 ## Features
 
@@ -17,13 +31,16 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
   - Desktop mode: a native window you can pin to the taskbar
 - 100% local and private: the server only listens on 127.0.0.1, and your links and files never leave your computer
 
-## Requirements
+## Download
 
-- Python 3.10+ and [uv](https://docs.astral.sh/uv/)
-- FFmpeg (recommended): needed for MP3 extraction and for merging the highest video qualities
-  - Windows: `winget install Gyan.FFmpeg` (Expoal finds it even before you restart the terminal)
+The easiest way: grab the latest `Expoal-windows.zip` from the [**releases page**](https://github.com/Mun1to/Expoal/releases/latest), unzip it anywhere and run `Expoal.exe`. It bundles Python and every dependency, so nothing else to install. Double-clicking opens the desktop window, which you can then pin to the taskbar.
 
-## Getting started
+> FFmpeg is not bundled (it is large). Install it for MP3 export and top-quality merges:
+> `winget install Gyan.FFmpeg`
+
+## Run from source
+
+Requirements: Python 3.10+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/Mun1to/Expoal.git
@@ -39,22 +56,17 @@ uv run expoal --desktop
 
 Options: `--port <n>` to change the web port, `--no-browser` to skip opening the browser.
 
-## Standalone app (Windows)
-
-You can build a single `Expoal.exe` that bundles Python and every dependency, so it runs
-without installing anything. Double-clicking it opens the desktop window; you can then pin it
-to the taskbar.
+### Build the standalone app yourself
 
 ```powershell
 uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets\expoal.ico --add-data "src\expoal\web;expoal\web" launcher.py
 ```
 
-The result is in `dist\Expoal\Expoal.exe`. (FFmpeg is not bundled: install it separately for
-MP3 and top-quality merges.)
+The result is in `dist\Expoal\Expoal.exe`.
 
 ## How it works
 
-A small FastAPI server wraps yt-dlp and exposes a minimal API (`/api/info`, `/api/download`, `/api/jobs`, `/api/history`). The same static web UI is served in your browser (web mode) or inside a pywebview native window (desktop mode). Downloads run in a background queue, one at a time, and the history is stored as JSON in your user data folder.
+A small FastAPI server wraps yt-dlp and exposes a minimal API (`/api/info`, `/api/download`, `/api/pick-folder`, `/api/jobs`, `/api/history`). The same static web UI is served in your browser (web mode) or inside a pywebview native window (desktop mode). A local-origin guard blocks cross-origin requests, so no other site can talk to the server. Downloads run in a background queue, one at a time, and the history is stored as JSON in your user data folder.
 
 ## Legal notice
 
@@ -62,4 +74,4 @@ Download only content you own, content licensed for it, or content you have perm
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 Munir Torres (Mun1to)
