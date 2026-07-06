@@ -38,3 +38,26 @@ Leer SIEMPRE antes de empezar una tarea en este proyecto.
   código; dar margen (o excluir la carpeta dist en Defender) al probar builds frescas.
 - **Nota:** `uvicorn.run(app, ...)` con el objeto app importado directamente (no el string
   `"expoal.server:app"`) es necesario para que PyInstaller congele el módulo en el .exe.
+
+## 2026-07-06 — El historial no cargaba en las capturas (BOM de PowerShell)
+
+- **Problema:** al preparar el historial de ejemplo para las capturas escribiéndolo con
+  `Out-File -Encoding utf8` (PowerShell 5.1), la app lo leía como vacío y las capturas salían
+  sin la sección de historial.
+- **Causa raíz:** `Out-File -Encoding utf8` en Windows PowerShell 5.1 añade un BOM al inicio.
+  `history.py` hace `json.loads(path.read_text(encoding="utf-8"))`, que NO descarta el BOM, así
+  que `json.loads` falla y el `except` devuelve `[]` (historial vacío).
+- **Solución:** escribir el JSON SIN BOM (con la herramienta Write, o
+  `[System.IO.File]::WriteAllText` con `UTF8Encoding($false)`). Aprendizaje: nunca generar con
+  `Out-File -Encoding utf8` archivos que va a parsear otra herramienta.
+
+## 2026-07-06 — Alinear el tagline del logo con "Expoal"
+
+- **Problema:** "DEL LINK A TU DISCO" se veía descentrado respecto a "Expoal".
+- **Causa raíz:** "Expoal" tiene descendente (la 'p'); con `align-items: center` el tagline se
+  centra respecto a la line-box completa (que incluye el hueco del descendente), quedando por
+  debajo del centro óptico de las mayúsculas.
+- **Solución:** `line-height: 1` en h1 y tagline + `position: relative; top: -2px` en el tagline
+  (valor elegido con `scripts/tune_header.py`, que compara offsets con una línea guía). OJO: el
+  `.exe`/instalador empaquetan el CSS, así que un cambio de estilo obliga a recompilar y resubir
+  los assets del release, no solo a pushear.
