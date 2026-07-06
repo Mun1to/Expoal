@@ -6,3 +6,4 @@ build/
 *.spec
 *.egg-info/
 .env
+assets/header-check.png

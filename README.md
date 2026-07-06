@@ -33,7 +33,12 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 ## Download
 
-The easiest way: grab the latest `Expoal-windows.zip` from the [**releases page**](https://github.com/Mun1to/Expoal/releases/latest), unzip it anywhere and run `Expoal.exe`. It bundles Python and every dependency, so nothing else to install. Double-clicking opens the desktop window, which you can then pin to the taskbar.
+Grab the latest build from the [**releases page**](https://github.com/Mun1to/Expoal/releases/latest). Two options:
+
+- **`Expoal-1.0.0-setup.exe` (installer, recommended)** — a normal Windows setup wizard. It installs the app, adds Start menu (and optionally desktop) shortcuts, and registers an uninstaller in "Add or remove programs". No admin rights needed.
+- **`Expoal-windows.zip` (portable)** — unzip anywhere and run `Expoal.exe`, nothing to install.
+
+Either way, double-clicking opens the desktop window, which you can then pin to the taskbar. Everything (Python and all dependencies) is bundled.
 
 > FFmpeg is not bundled (it is large). Install it for MP3 export and top-quality merges:
 > `winget install Gyan.FFmpeg`
@@ -73,7 +78,13 @@ Options: `--port <n>` to change the web port, `--no-browser` to skip opening the
 uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets\expoal.ico --add-data "src\expoal\web;expoal\web" launcher.py
 ```
 
-The result is in `dist\Expoal\Expoal.exe`.
+The result is in `dist\Expoal\Expoal.exe`. To build the installer as well (requires [Inno Setup 6](https://jrsoftware.org/isdl.php)):
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\expoal.iss
+```
+
+This produces `dist\Expoal-1.0.0-setup.exe`.
 
 ## How it works
 

@@ -26,7 +26,7 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 
 ## Nivel 3 — Ecosistema
 
-- [ ] Instalador con Inno Setup (accesos directos automáticos, desinstalador)
+- [x] Instalador con Inno Setup (accesos directos automáticos, desinstalador) — `installer/expoal.iss`
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor
 - [ ] Recorte de fragmentos (descargar solo del minuto X al Y)
 - [ ] Subtítulos (descargar .srt junto al vídeo)

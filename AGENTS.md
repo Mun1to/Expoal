@@ -55,6 +55,14 @@ src/expoal/
 - **Empaquetado**: `launcher.py` es el entry point de PyInstaller (abre `--desktop` por defecto).
   Comando de build en el README. El icono se genera con `scripts/make_icon.ps1` (System.Drawing)
   y se empaqueta a .ico con `scripts/pack_ico.py`. `dist/`, `build/` y `*.spec` van en .gitignore.
+- **Instalador**: `installer/expoal.iss` (Inno Setup 6, ISCC en `%LOCALAPPDATA%\Programs\Inno Setup 6`).
+  Instala sin admin (PrivilegesRequired=lowest), crea accesos y desinstalador. `AppId` es un GUID
+  fijo: NO cambiarlo entre versiones (identifica la app para updates/uninstall). Genera
+  `dist/Expoal-<version>-setup.exe`. Se adjunta al release junto al zip portable.
+- **Capturas/OG**: `scripts/capture_screenshots.py` (README/landing) y `scripts/make_og.py` (redes)
+  con Playwright; requieren server en :8710 e historial de ejemplo (Blender) escrito temporalmente
+  en `%LOCALAPPDATA%\Expoal\history.json` y restaurado después. `scripts/capture_header.py` es
+  solo para revisar la alineación del logo (su salida `assets/header-check.png` no se versiona).
 - **Títulos de vídeo = entrada externa**: en el frontend SIEMPRE `textContent`, nunca
   `innerHTML` (XSS). En el backend, `windowsfilenames: True` sanea nombres de archivo.
 - **Sin cookies/login**: contenido privado o con verificación de edad falla de forma
