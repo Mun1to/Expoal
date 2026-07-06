@@ -38,6 +38,17 @@ The easiest way: grab the latest `Expoal-windows.zip` from the [**releases page*
 > FFmpeg is not bundled (it is large). Install it for MP3 export and top-quality merges:
 > `winget install Gyan.FFmpeg`
 
+### "Windows protected your PC"
+
+The `.exe` is not signed with a paid code-signing certificate, so the first time you run it
+Windows SmartScreen may show a blue **"Windows protected your PC"** screen listing the publisher
+as unknown. This is expected for independent open-source apps. To run it:
+
+1. Click **More info**.
+2. Click **Run anyway**.
+
+You only need to do this once. The full source is in this repo if you prefer to build it yourself.
+
 ## Run from source
 
 Requirements: Python 3.10+ and [uv](https://docs.astral.sh/uv/).
