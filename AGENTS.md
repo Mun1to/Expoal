@@ -1,0 +1,59 @@
+# Expoal — Guía para agentes
+
+Descargador de vídeos **100% local y open source**: pegas un link de YouTube/TikTok/Instagram
+y el vídeo cae en tu disco. Sin webs de terceros, sin anuncios, sin subir nada a ningún sitio.
+
+Proyecto independiente de Munir (repo público). Correlacionado con **Rolyal** (ambos comparten
+el paso «link → vídeo descargado»), pero **sin core compartido por ahora**: si Rolyal lo
+necesita más adelante, se extraerá lo común entonces.
+
+## Reglas comunes multi-proyecto
+
+Lee y aplica **[../Reglas_de_los_proyectos.md](../Reglas_de_los_proyectos.md)** (dictado por voz,
+entender antes de arreglar, ciberseguridad, cerrar explicando, README/commits en inglés,
+lluvia de ideas ante decisiones con entidad, pnpm en proyectos Node, guion normal en lo público,
+trato «Munito»/«socio», nunca Co-Authored-By, preguntar antes de push).
+
+Antes de cualquier tarea, lee [FEEDBACK.md](FEEDBACK.md) para no repetir errores pasados.
+
+## Stack y arquitectura
+
+- **Python 3.10+** gestionado con **uv** (`uv sync`, `uv run expoal`).
+- **FastAPI + uvicorn**: API local en `127.0.0.1` (nunca exponer a la red — decisión de seguridad).
+- **yt-dlp** como librería (no como subproceso): extracción de info y descargas.
+- **pywebview**: el modo escritorio (`--desktop`) abre la MISMA interfaz web en ventana nativa.
+  Un solo código, dos modos. El selector nativo de carpetas solo existe en escritorio (js_api).
+- **Frontend**: HTML/CSS/JS vanilla en `src/expoal/web/` (sin framework, estilo Moneorq).
+- **FFmpeg**: opcional pero necesario para MP3 y para fusionar calidades máximas.
+  `config.find_ffmpeg()` lo busca en PATH y en la carpeta de paquetes de winget.
+
+## Estructura
+
+```
+src/expoal/
+├─ __main__.py     # CLI: modo web (navegador) y modo --desktop (pywebview)
+├─ server.py       # FastAPI: /api/info, /api/download, /api/jobs, /api/history, /api/config
+├─ downloader.py   # DownloadManager: cola secuencial en un thread + progress hooks de yt-dlp
+├─ history.py      # Historial JSON persistido en el dir de datos del usuario (platformdirs)
+├─ config.py       # Rutas + detección de ffmpeg
+└─ web/            # Interfaz (index.html, styles.css, app.js) — paleta Fundación Orquio
+```
+
+## Decisiones tomadas (no re-litigar sin motivo)
+
+- **Servidor solo en 127.0.0.1**: es una app personal, no se expone a la LAN.
+- **Cola secuencial** (un worker): suficiente para el MVP; concurrencia es meta futura.
+- **UI en español** por ahora; i18n a inglés es meta futura (ver docs/METAS.md).
+- **Títulos de vídeo = entrada externa**: en el frontend SIEMPRE `textContent`, nunca
+  `innerHTML` (XSS). En el backend, `windowsfilenames: True` sanea nombres de archivo.
+- **Sin cookies/login**: contenido privado o con verificación de edad falla de forma
+  esperada; soporte de `cookiesfrombrowser` es meta futura.
+- **noplaylist: True**: solo vídeos sueltos en el MVP.
+
+## Comandos
+
+```bash
+uv sync                    # instalar dependencias
+uv run expoal --no-browser # servidor web en http://127.0.0.1:8710
+uv run expoal --desktop    # ventana de escritorio
+```

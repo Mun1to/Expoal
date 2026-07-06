@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expoal - Del link a tu disco</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">▼</span>
+      <h1>Expoal</h1>
+      <span class="tagline">Del link a tu disco</span>
+    </div>
+    <span class="version" id="version"></span>
+  </header>
+
+  <main>
+    <div id="ffmpeg-banner" class="banner hidden">
+      Sin FFmpeg no hay MP3 ni calidades máximas fusionadas. Instálalo con
+      <code>winget install Gyan.FFmpeg</code> y reinicia Expoal.
+    </div>
+
+    <section class="card">
+      <form id="url-form" class="url-row">
+        <input type="url" id="url-input" placeholder="Pega aquí un enlace de YouTube, TikTok o Instagram..."
+               autocomplete="off" spellcheck="false" required>
+        <button type="submit" id="analyze-btn" class="btn primary">Analizar</button>
+      </form>
+      <p id="url-error" class="error hidden"></p>
+    </section>
+
+    <section class="card hidden" id="preview">
+      <div class="preview-row">
+        <img id="preview-thumb" alt="" referrerpolicy="no-referrer">
+        <div class="preview-meta">
+          <span class="badge" id="preview-platform"></span>
+          <h2 id="preview-title"></h2>
+          <p id="preview-sub"></p>
+        </div>
+      </div>
+      <div class="options">
+        <div class="option">
+          <label>Formato</label>
+          <div class="segmented" id="mode-group">
+            <button type="button" data-mode="video" class="active">Vídeo MP4</button>
+            <button type="button" data-mode="audio" id="audio-btn">Audio MP3</button>
+          </div>
+        </div>
+        <div class="option">
+          <label for="quality-select">Calidad</label>
+          <select id="quality-select"></select>
+        </div>
+        <div class="option grow">
+          <label for="folder-input">Carpeta de destino</label>
+          <div class="folder-row">
+            <input type="text" id="folder-input" spellcheck="false">
+            <button type="button" id="folder-btn" class="btn ghost hidden">Elegir...</button>
+          </div>
+        </div>
+      </div>
+      <button type="button" id="download-btn" class="btn accent big">Añadir a la cola</button>
+      <p id="download-error" class="error hidden"></p>
+    </section>
+
+    <section class="list-section hidden" id="queue-section">
+      <h3>Cola de descargas</h3>
+      <div id="queue-list"></div>
+    </section>
+
+    <section class="list-section hidden" id="history-section">
+      <div class="section-head">
+        <h3>Historial</h3>
+        <button type="button" id="clear-history" class="btn ghost small">Vaciar</button>
+      </div>
+      <div id="history-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>100% local: tus enlaces y tus archivos no salen de tu ordenador.
+       Descarga solo contenido propio o con permiso.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

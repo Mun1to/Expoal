@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expoal-web",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "expoal", "--no-browser", "--port", "8710"],
+      "cwd": "C:\\proyectos\\Expoal",
+      "port": 8710
+    }
+  ]
+}
