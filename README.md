@@ -8,12 +8,13 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 - Paste a link, preview the video and download it in the best available quality
 - Choose the format: MP4 video or MP3 audio (audio extraction requires FFmpeg)
-- Pick the resolution and the destination folder for each download
+- Pick the resolution, and choose the destination folder with a native file browser
 - Download queue with live progress, speed and ETA
 - Persistent download history
+- Light and dark theme with a toggle (remembers your choice, follows the system by default)
 - Two ways to use it, same app:
   - Web mode: a local page in your browser
-  - Desktop mode: a native window
+  - Desktop mode: a native window you can pin to the taskbar
 - 100% local and private: the server only listens on 127.0.0.1, and your links and files never leave your computer
 
 ## Requirements
@@ -37,6 +38,19 @@ uv run expoal --desktop
 ```
 
 Options: `--port <n>` to change the web port, `--no-browser` to skip opening the browser.
+
+## Standalone app (Windows)
+
+You can build a single `Expoal.exe` that bundles Python and every dependency, so it runs
+without installing anything. Double-clicking it opens the desktop window; you can then pin it
+to the taskbar.
+
+```powershell
+uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets\expoal.ico --add-data "src\expoal\web;expoal\web" launcher.py
+```
+
+The result is in `dist\Expoal\Expoal.exe`. (FFmpeg is not bundled: install it separately for
+MP3 and top-quality merges.)
 
 ## How it works
 

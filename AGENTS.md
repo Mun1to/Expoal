@@ -42,8 +42,19 @@ src/expoal/
 ## Decisiones tomadas (no re-litigar sin motivo)
 
 - **Servidor solo en 127.0.0.1**: es una app personal, no se expone a la LAN.
+  Además hay un middleware `local_origin_guard` que bloquea POST con Origin externo
+  (anti-CSRF contra el servidor local).
 - **Cola secuencial** (un worker): suficiente para el MVP; concurrencia es meta futura.
 - **UI en español** por ahora; i18n a inglés es meta futura (ver docs/METAS.md).
+- **Tema claro/oscuro** vía `html[data-theme]` + variables CSS; el JS fuerza un reflow al
+  cambiar (ver FEEDBACK.md). El tema inicial se fija en un `<script>` inline en el `<head>`
+  para evitar el parpadeo (FOUC).
+- **Explorador de carpetas** (`dialogs.pick_folder`): en escritorio usa el diálogo de pywebview;
+  en web lanza un subproceso con tkinter (evita el problema de tkinter fuera del hilo principal);
+  en el .exe congelado sin ventana devuelve None y la UI mantiene el cuadro de texto.
+- **Empaquetado**: `launcher.py` es el entry point de PyInstaller (abre `--desktop` por defecto).
+  Comando de build en el README. El icono se genera con `scripts/make_icon.ps1` (System.Drawing)
+  y se empaqueta a .ico con `scripts/pack_ico.py`. `dist/`, `build/` y `*.spec` van en .gitignore.
 - **Títulos de vídeo = entrada externa**: en el frontend SIEMPRE `textContent`, nunca
   `innerHTML` (XSS). En el backend, `windowsfilenames: True` sanea nombres de archivo.
 - **Sin cookies/login**: contenido privado o con verificación de edad falla de forma

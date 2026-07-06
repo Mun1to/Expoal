@@ -2,22 +2,40 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yt_dlp
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config
+from . import __version__, config, dialogs
 from .downloader import DownloadManager, clean_error
 from .history import History
 
 WEB_DIR = Path(__file__).parent / "web"
 VALID_MODES = {"video", "audio"}
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 app = FastAPI(title="Expoal", version=__version__)
 history = History(config.HISTORY_FILE)
 manager = DownloadManager(history)
+
+
+@app.middleware("http")
+async def local_origin_guard(request: Request, call_next):
+    """Bloquea escrituras cross-origin: solo la propia interfaz local puede usar la API.
+
+    Sin esto, una web maliciosa abierta en el navegador podría lanzar POST contra
+    127.0.0.1 (CSRF contra servidores locales). Los navegadores siempre mandan
+    la cabecera Origin en peticiones POST.
+    """
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = request.headers.get("origin")
+        if origin and urlparse(origin).hostname not in LOCAL_HOSTS:
+            return JSONResponse({"detail": "Origen no permitido"}, status_code=403)
+    return await call_next(request)
 
 
 class InfoRequest(BaseModel):
@@ -90,6 +108,11 @@ def start_download(req: DownloadRequest) -> dict:
         )
     folder = (req.folder or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
     return manager.enqueue(url, req.mode, req.quality, folder, title=req.title)
+
+
+@app.post("/api/pick-folder")
+def pick_folder() -> dict:
+    return {"folder": dialogs.pick_folder()}
 
 
 @app.get("/api/jobs")

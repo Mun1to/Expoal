@@ -251,15 +251,31 @@ async function init() {
     });
   }
 
-  // El selector nativo de carpetas solo existe dentro de la ventana de escritorio.
-  if (window.pywebview) {
+  // El explorador nativo lo abre el servidor (corre en el mismo PC), así que
+  // funciona igual en el navegador y en la ventana de escritorio.
+  $("#folder-btn").addEventListener("click", async () => {
     const folderBtn = $("#folder-btn");
-    folderBtn.classList.remove("hidden");
-    folderBtn.addEventListener("click", async () => {
-      const folder = await window.pywebview.api.pick_folder();
-      if (folder) $("#folder-input").value = folder;
-    });
-  }
+    folderBtn.disabled = true;
+    try {
+      const res = await api("/api/pick-folder", { method: "POST" });
+      if (res.folder) $("#folder-input").value = res.folder;
+    } catch (_) {
+      // Si el diálogo no está disponible, queda el cuadro de texto.
+    } finally {
+      folderBtn.disabled = false;
+    }
+  });
+
+  $("#theme-toggle").addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("expoal-theme", next);
+    // Reflow síncrono: algunos motores no re-resuelven los var() de los
+    // descendientes al cambiar el atributo; esto fuerza el recálculo sin parpadeo.
+    document.body.style.display = "none";
+    void document.body.offsetHeight;
+    document.body.style.display = "";
+  });
 
   try {
     const cfg = await api("/api/config");

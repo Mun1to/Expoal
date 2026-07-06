@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import socket
+import sys
 import threading
 import time
 import webbrowser
@@ -10,6 +11,7 @@ import webbrowser
 import uvicorn
 
 DEFAULT_PORT = 8710
+APP_USER_MODEL_ID = "Orquio.Expoal"
 
 
 def _free_port() -> int:
@@ -29,32 +31,26 @@ def _wait_for_port(port: int, timeout: float = 10.0) -> None:
 
 
 def _serve(port: int) -> None:
+    # Import directo (no string) para que PyInstaller incluya el módulo en el .exe.
+    from .server import app
+
     # Solo 127.0.0.1: la app nunca se expone a la red local.
-    uvicorn.run("expoal.server:app", host="127.0.0.1", port=port, log_level="warning")
-
-
-class _DesktopApi:
-    """Funciones nativas expuestas a la interfaz cuando corre dentro de la ventana."""
-
-    window = None
-
-    def pick_folder(self) -> str | None:
-        import webview
-
-        result = self.window.create_file_dialog(webview.FOLDER_DIALOG)
-        return result[0] if result else None
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 
 def _run_desktop() -> None:
     import webview
 
+    if sys.platform == "win32":
+        # Identidad propia en la barra de tareas (icono y agrupación correctos).
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+
     port = _free_port()
     threading.Thread(target=_serve, args=(port,), daemon=True).start()
     _wait_for_port(port)
-    api = _DesktopApi()
-    api.window = webview.create_window(
-        "Expoal", f"http://127.0.0.1:{port}", width=1024, height=760, js_api=api
-    )
+    webview.create_window("Expoal", f"http://127.0.0.1:{port}", width=1024, height=760)
     webview.start()
 
 
@@ -73,7 +69,10 @@ def main() -> None:
         return
 
     url = f"http://127.0.0.1:{args.port}"
-    print(f"Expoal running at {url}")
+    if sys.stdout is not None:
+        # En apps empaquetadas sin consola (PyInstaller --windowed) stdout es None
+        # y print() lanzaría AttributeError antes de arrancar el servidor.
+        print(f"Expoal running at {url}")
     if not args.no_browser:
         threading.Timer(0.8, webbrowser.open, args=(url,)).start()
     _serve(args.port)
