@@ -26,6 +26,7 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 - Download queue with live progress, speed and ETA
 - Persistent download history
 - Light and dark theme with a toggle (remembers your choice, follows the system by default)
+- One-click self-update: the app checks GitHub on startup and updates itself when a new version is out
 - Two ways to use it, same app:
   - Web mode: a local page in your browser
   - Desktop mode: a native window you can pin to the taskbar
@@ -35,10 +36,12 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 Grab the latest build from the [**releases page**](https://github.com/Mun1to/Expoal/releases/latest). Two options:
 
-- **`Expoal-1.0.0-setup.exe` (installer, recommended)** — a normal Windows setup wizard. It installs the app, adds Start menu (and optionally desktop) shortcuts, and registers an uninstaller in "Add or remove programs". No admin rights needed.
+- **`Expoal-<version>-setup.exe` (installer, recommended)** — a normal Windows setup wizard. It installs the app, adds Start menu (and optionally desktop) shortcuts, and registers an uninstaller in "Add or remove programs". No admin rights needed.
 - **`Expoal-windows.zip` (portable)** — unzip anywhere and run `Expoal.exe`, nothing to install.
 
 Either way, double-clicking opens the desktop window, which you can then pin to the taskbar. Everything (Python and all dependencies) is bundled.
+
+Once installed, Expoal checks for a newer release on startup. When one is available, a banner appears and a single click downloads and installs it (the download is verified against the release checksums).
 
 > FFmpeg is not bundled (it is large). Install it for MP3 export and top-quality merges:
 > `winget install Gyan.FFmpeg`
@@ -84,7 +87,19 @@ The result is in `dist\Expoal\Expoal.exe`. To build the installer as well (requi
 & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\expoal.iss
 ```
 
-This produces `dist\Expoal-1.0.0-setup.exe`.
+This produces `dist\Expoal-<version>-setup.exe`.
+
+## Releasing a new version
+
+Releases are built and published automatically. To ship a new version:
+
+1. Bump `version` in `pyproject.toml` and `__version__` in `src/expoal/__init__.py`.
+2. Commit, then push a matching tag:
+   ```bash
+   git tag v1.2.0 && git push origin v1.2.0
+   ```
+
+The [release workflow](.github/workflows/release.yml) then builds the `.exe` and the installer on Windows, generates `SHA256SUMS.txt`, and publishes the GitHub release with all the assets. Users on an older version get the in-app update banner automatically.
 
 ## How it works
 

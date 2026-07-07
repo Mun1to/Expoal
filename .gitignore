@@ -6,5 +6,5 @@ build/
 *.spec
 *.egg-info/
 .env
-assets/header-check.png
+assets/*-check.png
 assets/header-tune.png

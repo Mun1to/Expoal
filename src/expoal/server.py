@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, dialogs
+from . import __version__, config, dialogs, updater
 from .downloader import DownloadManager, clean_error
 from .history import History
 
@@ -113,6 +113,19 @@ def start_download(req: DownloadRequest) -> dict:
 @app.post("/api/pick-folder")
 def pick_folder() -> dict:
     return {"folder": dialogs.pick_folder()}
+
+
+@app.get("/api/update/check")
+def update_check(force: bool = False) -> dict:
+    return updater.check_for_update(force=force)
+
+
+@app.post("/api/update/apply")
+def update_apply() -> dict:
+    result = updater.apply_update()
+    if not result.get("ok"):
+        raise HTTPException(status_code=422, detail=result.get("error", "no se pudo actualizar"))
+    return result
 
 
 @app.get("/api/jobs")

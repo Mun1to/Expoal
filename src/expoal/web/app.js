@@ -290,8 +290,52 @@ async function init() {
     }
   } catch (_) { /* se reintenta al refrescar */ }
 
+  checkForUpdate();
   refresh();
   setInterval(refresh, 1500);
+}
+
+async function checkForUpdate() {
+  let info;
+  try {
+    info = await api("/api/update/check");
+  } catch (_) {
+    return; // sin conexión: no molestamos
+  }
+  if (!info || !info.update_available) return;
+
+  const banner = $("#update-banner");
+  $("#update-version").textContent = `v${info.latest}`;
+  const notes = $("#update-notes");
+  if (info.notes_url) notes.href = info.notes_url;
+  else notes.classList.add("hidden");
+
+  const btn = $("#update-btn");
+  const status = $("#update-status");
+
+  if (info.can_auto_install) {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      status.classList.remove("hidden", "err");
+      status.textContent = "Descargando la actualización... Expoal se reiniciará solo.";
+      try {
+        await api("/api/update/apply", { method: "POST" });
+        status.textContent = "Instalando... la aplicación se cerrará en un momento.";
+      } catch (err) {
+        status.classList.add("err");
+        status.textContent = err.message;
+        btn.disabled = false;
+      }
+    });
+  } else {
+    // En modo web/navegador no hay instalador: el botón lleva a la descarga.
+    btn.textContent = "Descargar";
+    btn.addEventListener("click", () => {
+      window.open(info.notes_url || "https://github.com/Mun1to/Expoal/releases/latest", "_blank");
+    });
+  }
+
+  banner.classList.remove("hidden");
 }
 
 init();

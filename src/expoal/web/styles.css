@@ -146,6 +146,28 @@ main {
   font-size: 12.5px;
 }
 
+.banner.update {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-color: var(--primary-strong);
+  box-shadow: var(--glow-btn);
+}
+.update-main { display: flex; align-items: center; gap: 12px; }
+.update-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--primary-strong);
+  box-shadow: 0 0 0 4px rgba(95, 125, 218, 0.22);
+  flex-shrink: 0;
+}
+.update-main strong { font-weight: 650; }
+.update-version { color: var(--muted); font-size: 13px; margin-left: 6px; font-family: var(--mono); }
+.update-actions { display: flex; gap: 8px; align-items: center; }
+.update-status { width: 100%; margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.update-status.err { color: var(--error); }
+
 .url-row { display: flex; gap: 10px; }
 .url-row input {
   flex: 1;

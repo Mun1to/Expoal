@@ -42,10 +42,13 @@ def _run_desktop() -> None:
     import webview
 
     if sys.platform == "win32":
-        # Identidad propia en la barra de tareas (icono y agrupación correctos).
         import ctypes
 
+        # Identidad propia en la barra de tareas (icono y agrupación correctos).
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+        # Mutex con nombre para que el instalador (AppMutex) detecte que Expoal está
+        # abierto y lo cierre durante una actualización. El handle vive con el proceso.
+        ctypes.windll.kernel32.CreateMutexW(None, False, "ExpoalRunningMutex")
 
     port = _free_port()
     threading.Thread(target=_serve, args=(port,), daemon=True).start()

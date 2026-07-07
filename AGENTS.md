@@ -58,7 +58,17 @@ src/expoal/
 - **Instalador**: `installer/expoal.iss` (Inno Setup 6, ISCC en `%LOCALAPPDATA%\Programs\Inno Setup 6`).
   Instala sin admin (PrivilegesRequired=lowest), crea accesos y desinstalador. `AppId` es un GUID
   fijo: NO cambiarlo entre versiones (identifica la app para updates/uninstall). Genera
-  `dist/Expoal-<version>-setup.exe`. Se adjunta al release junto al zip portable.
+  `dist/Expoal-<version>-setup.exe`. La versión se inyecta con `ISCC /DMyAppVersion=x.y.z`
+  (el `#ifndef` deja un default). `CloseApplications=yes` + `AppMutex=ExpoalRunningMutex`
+  (creado en `__main__`) permiten que el auto-update cierre y reabra la app.
+- **Auto-update**: `updater.py` consulta el último release del repo oficial (solo GitHub por HTTPS),
+  compara semver, descarga el instalador, verifica `SHA256SUMS.txt` si existe y lo lanza en silent.
+  Endpoints `/api/update/check` y `/api/update/apply`. La UI muestra un banner (aviso + 1 clic);
+  `can_auto_install` es True solo en el .exe empaquetado (en web el banner enlaza a la descarga).
+- **Release automático**: `.github/workflows/release.yml` se dispara con un tag `v*`, compila exe +
+  instalador en windows-latest, genera checksums y publica el release. La versión canónica es
+  `__version__`; el tag debe coincidir (el workflow lo verifica). Para sacar versión: subir
+  `__version__` + `pyproject`, commit, y `git push origin vX.Y.Z`.
 - **Capturas/OG**: `scripts/capture_screenshots.py` (README/landing) y `scripts/make_og.py` (redes)
   con Playwright; requieren server en :8710 e historial de ejemplo (Blender) escrito temporalmente
   en `%LOCALAPPDATA%\Expoal\history.json` y restaurado después. `scripts/capture_header.py` es

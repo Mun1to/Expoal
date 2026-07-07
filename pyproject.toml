@@ -1,6 +1,6 @@
 [project]
 name = "expoal"
-version = "1.0.0"
+version = "1.1.0"
 description = "Paste a link from YouTube, TikTok or Instagram and save the video to your own disk. 100% local, no third-party sites."
 readme = "README.md"
 requires-python = ">=3.10"

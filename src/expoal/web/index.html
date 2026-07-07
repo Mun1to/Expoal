@@ -37,6 +37,21 @@
   </header>
 
   <main>
+    <div id="update-banner" class="banner update hidden">
+      <div class="update-main">
+        <span class="update-dot"></span>
+        <div>
+          <strong id="update-title">Hay una versión nueva</strong>
+          <span id="update-version" class="update-version"></span>
+        </div>
+      </div>
+      <div class="update-actions">
+        <a id="update-notes" href="#" target="_blank" rel="noopener" class="btn ghost small">Ver novedades</a>
+        <button type="button" id="update-btn" class="btn primary small">Actualizar</button>
+      </div>
+      <p id="update-status" class="update-status hidden"></p>
+    </div>
+
     <div id="ffmpeg-banner" class="banner hidden">
       Sin FFmpeg no hay MP3 ni calidades máximas fusionadas. Instálalo con
       <code>winget install Gyan.FFmpeg</code> y reinicia Expoal.

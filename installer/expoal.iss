@@ -3,7 +3,10 @@
 ; Genera dist\Expoal-<version>-setup.exe a partir de dist\Expoal (build de PyInstaller).
 
 #define MyAppName "Expoal"
-#define MyAppVersion "1.0.0"
+; La versión puede inyectarse desde la línea de comandos: ISCC /DMyAppVersion=1.2.3
+#ifndef MyAppVersion
+  #define MyAppVersion "1.1.0"
+#endif
 #define MyAppPublisher "Munir Torres"
 #define MyAppURL "https://mun1to.github.io/Expoal/"
 #define MyAppExeName "Expoal.exe"
@@ -30,6 +33,10 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesInstallIn64BitMode=x64compatible
+; Auto-update: si Expoal está corriendo, ciérralo antes de instalar (detección por mutex).
+CloseApplications=yes
+RestartApplications=no
+AppMutex=ExpoalRunningMutex
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -46,4 +53,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
+; Instalación interactiva: casilla "Ejecutar Expoal" al terminar.
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+; Actualización silenciosa (auto-update): reabre Expoal automáticamente.
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait; Check: WizardSilent
