@@ -19,16 +19,16 @@
   <meta name="twitter:image" content="https://mun1to.github.io/Expoal/assets/og.png">
   <!-- Progressive enhancement + control central de movimiento:
        .js     → hay JavaScript
-       .motion → las animaciones están permitidas. Se concede si el usuario NO pidió
-                 menos movimiento en su sistema, O si la URL fuerza ?motion=force
-                 (interruptor de desarrollador para probar en equipos con animaciones off). -->
+       .motion → las animaciones están activas. Decisión de diseño: se muestran a TODOS
+                 los visitantes (estilo awwwards), también a quien tiene "reducir movimiento"
+                 en su sistema. La URL ?motion=off las desactiva manualmente (válvula de
+                 escape para pruebas o para quien de verdad prefiera la versión quieta). -->
   <script>
     (function () {
       var d = document.documentElement;
       d.classList.add("js");
-      var force = /[?&]motion=force/.test(location.search);
-      var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (force || !reduce) d.classList.add("motion");
+      var off = /[?&]motion=off/.test(location.search);
+      if (!off) d.classList.add("motion");
     })();
   </script>
   <style>
