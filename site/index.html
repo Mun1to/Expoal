@@ -17,6 +17,20 @@
   <meta name="twitter:title" content="Expoal - Del link a tu disco">
   <meta name="twitter:description" content="Descargador de vídeos 100% local y open source. Pega un enlace y el vídeo cae en tu disco.">
   <meta name="twitter:image" content="https://mun1to.github.io/Expoal/assets/og.png">
+  <!-- Progressive enhancement + control central de movimiento:
+       .js     → hay JavaScript
+       .motion → las animaciones están permitidas. Se concede si el usuario NO pidió
+                 menos movimiento en su sistema, O si la URL fuerza ?motion=force
+                 (interruptor de desarrollador para probar en equipos con animaciones off). -->
+  <script>
+    (function () {
+      var d = document.documentElement;
+      d.classList.add("js");
+      var force = /[?&]motion=force/.test(location.search);
+      var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (force || !reduce) d.classList.add("motion");
+    })();
+  </script>
   <style>
     :root {
       --bg: #0B0F1F;
@@ -29,6 +43,8 @@
       --primary-strong: #5F7DDA;
       --accent: #E8B84B;
       --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+      /* La curva premium (ease-out-quint): arranque rápido, aterrizaje suave */
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -41,6 +57,17 @@
       -webkit-font-smoothing: antialiased;
     }
     a { color: inherit; text-decoration: none; }
+    ::selection { background: rgba(95, 125, 218, 0.45); }
+
+    /* ---------- Grano sutil (textura premium, tendencia 2026) ---------- */
+    .grain {
+      position: fixed; inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      opacity: 0.05;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    }
 
     /* ---------- Capas de fondo con parallax ---------- */
     .backdrop {
@@ -113,7 +140,7 @@
       font-size: clamp(44px, 8vw, 84px);
       font-weight: 760;
       letter-spacing: -2.2px;
-      line-height: 1.02;
+      line-height: 1.06;
       margin-bottom: 24px;
     }
     h1 .grad {
@@ -134,14 +161,14 @@
       padding: 15px 30px;
       border-radius: 13px;
       font-size: 16px; font-weight: 600;
-      transition: transform 0.15s, box-shadow 0.2s, background 0.15s, border-color 0.15s;
+      transition: box-shadow 0.2s, background 0.15s, border-color 0.15s;
     }
     .btn.primary {
       background: var(--primary);
       color: #fff;
       box-shadow: 0 8px 34px rgba(95, 125, 218, 0.45);
     }
-    .btn.primary:hover { background: var(--primary-strong); transform: translateY(-2px); }
+    .btn.primary:hover { background: var(--primary-strong); box-shadow: 0 10px 44px rgba(95, 125, 218, 0.6); }
     .btn.ghost {
       background: rgba(17, 25, 49, 0.7);
       border: 1px solid var(--border-strong);
@@ -150,12 +177,39 @@
     .btn.ghost:hover { border-color: var(--primary-strong); }
     .os-note { margin-top: 16px; font-size: 13px; color: var(--muted); }
 
-    /* Captura con profundidad */
+    /* ==========================================================================
+       ENTRADA DEL HERO — "line mask reveal" (el truco marca de la casa Dennis):
+       cada línea del titular vive dentro de una caja con overflow:hidden y sube
+       desde abajo, en cascada. Solo transform → GPU.
+       ========================================================================== */
+    .line { display: block; overflow: hidden; }
+    .line > span { display: block; }
+    html.motion .line > span {
+      transform: translateY(112%);
+      transition: transform 1s var(--ease);
+      transition-delay: calc(var(--i, 0) * 110ms);
+    }
+    html.motion body.ready .line > span { transform: none; }
+
+    /* El resto del hero (pill, sub, cta) hace fade-up escalonado tras el titular */
+    html.motion .fade-up {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+      transition-delay: calc(var(--i, 0) * 110ms + 300ms);
+    }
+    html.motion body.ready .fade-up { opacity: 1; transform: none; }
+
+    /* Cuando la entrada del hero termina (body.settled), se apagan sus transiciones
+       para que el motor de parallax pueda mover esos elementos frame a frame. */
+    html.motion body.settled .fade-up,
+    html.motion body.settled .line > span { transition: none; }
+
+    /* ---------- Captura: entra con tilt 3D ligado al scroll ---------- */
     .shot {
       margin: 64px auto -40px;
       max-width: 880px;
       width: 100%;
-      will-change: transform;
     }
     .shot img {
       width: 100%;
@@ -165,9 +219,7 @@
       border-bottom: none;
       box-shadow: 0 -10px 90px rgba(95, 125, 218, 0.22), 0 30px 80px rgba(0, 0, 0, 0.6);
     }
-    .shot-fade {
-      position: relative;
-    }
+    .shot-fade { position: relative; }
     .shot-fade::after {
       content: "";
       position: absolute;
@@ -175,12 +227,44 @@
       height: 180px;
       background: linear-gradient(180deg, transparent, var(--bg));
     }
+    /* Fallback universal: reveal clásico vía IntersectionObserver */
+    html.motion .shot {
+      opacity: 0;
+      transform: translateY(48px);
+      transition: opacity 1s var(--ease), transform 1s var(--ease);
+    }
+    html.motion .shot.in { opacity: 1; transform: none; }
+    /* Mejora progresiva: si el navegador soporta CSS scroll-driven animations,
+       la captura se "endereza" en 3D ATADA al scroll (scrub nativo, 0 JS, GPU). */
+    @supports (animation-timeline: view()) {
+      html.motion .shot, html.motion .shot.in {
+        opacity: 1; transform: none; transition: none;
+        transform-origin: 50% 100%;
+        animation: shot-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 45%;
+      }
+      @keyframes shot-rise {
+        from { opacity: 0.3; transform: perspective(1200px) rotateX(16deg) translateY(70px) scale(0.94); }
+        to   { opacity: 1; transform: none; }
+      }
+    }
 
     /* ---------- Secciones ---------- */
     section { max-width: 1000px; margin: 0 auto; padding: 110px 24px 0; }
 
-    .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s ease, transform 0.7s ease; }
-    .reveal.in { opacity: 1; transform: none; }
+    /* ==========================================================================
+       RECETA Nº2 FrontLaxWeb — REVEAL + STAGGER:
+       estado oculto solo si hay JS; el stagger lo marca la variable --i por hijo
+       (delay = --i × 90ms); el IntersectionObserver añade .in al asomar.
+       ========================================================================== */
+    html.motion [data-reveal] {
+      opacity: 0;
+      transform: translateY(26px);
+      transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+      transition-delay: calc(var(--i, 0) * 90ms);
+    }
+    html.motion [data-reveal].in { opacity: 1; transform: none; }
 
     .kicker {
       text-align: center;
@@ -211,9 +295,9 @@
       border-radius: 15px;
       padding: 24px 20px;
       text-align: center;
-      transition: border-color 0.15s, transform 0.15s;
+      transition: border-color 0.15s, translate 0.25s var(--ease);
     }
-    .point:hover { border-color: var(--border-strong); transform: translateY(-3px); }
+    .point:hover { border-color: var(--border-strong); translate: 0 -3px; }
     .point .ic { font-size: 24px; margin-bottom: 10px; }
     .point h3 { font-size: 15.5px; margin-bottom: 5px; font-weight: 650; }
     .point p { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
@@ -248,21 +332,28 @@
 
     @media (max-width: 820px) { .points { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 460px) { .points { grid-template-columns: 1fr; } }
+
+    /* ==========================================================================
+       ACCESIBILIDAD — no negociable (WCAG 2.3.3): sin la clase .motion (usuario
+       pidió menos movimiento y no hay ?motion=force), NADA se oculta ni anima:
+       la página se pinta completa y quieta desde el primer frame.
+       ========================================================================== */
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
-      .reveal { opacity: 1; transform: none; transition: none; }
     }
   </style>
 </head>
 <body>
+  <div class="grain" aria-hidden="true"></div>
+
   <!-- Capas de fondo: cada orbe se mueve a su velocidad (parallax) -->
   <div class="backdrop" aria-hidden="true">
-    <div class="orb orb-a" data-speed="0.30"></div>
-    <div class="orb orb-b" data-speed="0.18"></div>
-    <div class="orb orb-c" data-speed="0.10"></div>
+    <div class="orb orb-a" data-speed="0.45" data-mouse="34"></div>
+    <div class="orb orb-b" data-speed="0.26" data-mouse="52"></div>
+    <div class="orb orb-c" data-speed="0.14" data-mouse="20"></div>
   </div>
 
-  <nav>
+  <nav class="fade-up" style="--i:0">
     <a class="brand" href="#">
       <img src="assets/icon-256.png" alt="Expoal">
       <span>Expoal</span>
@@ -271,49 +362,52 @@
   </nav>
 
   <header class="hero">
-    <span class="pill">Open source · <b>100% local</b> · gratis</span>
-    <h1>Del link a tu disco.<br><span class="grad">Sin intermediarios.</span></h1>
-    <p class="sub">
+    <span class="pill fade-up" data-parallax="-0.05" style="--i:0">Open source · <b>100% local</b> · gratis</span>
+    <h1 data-parallax="-0.12">
+      <span class="line"><span style="--i:0">Del link a tu disco.</span></span>
+      <span class="line"><span class="grad" style="--i:1">Sin intermediarios.</span></span>
+    </h1>
+    <p class="sub fade-up" data-parallax="-0.08" style="--i:1">
       Pega un enlace de YouTube, TikTok o Instagram y Expoal guarda el vídeo
       en tu propio ordenador.
     </p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
+    <div class="cta fade-up" data-parallax="-0.04" style="--i:2">
+      <a class="btn primary" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
         Descargar para Windows
       </a>
-      <a class="btn ghost" href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">
+      <a class="btn ghost" data-magnetic href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">
         Ver el código
       </a>
     </div>
-    <p class="os-note">Windows 10/11 · se actualiza solo · también funciona en el navegador</p>
+    <p class="os-note fade-up" style="--i:3">Windows 10/11 · se actualiza solo · también funciona en el navegador</p>
 
-    <div class="shot shot-fade" data-speed="-0.06">
+    <div class="shot shot-fade">
       <img src="assets/screenshot-dark.png" alt="Interfaz de Expoal">
     </div>
   </header>
 
   <section>
-    <p class="kicker reveal">Sin anuncios ni pasos de más</p>
-    <h2 class="reveal">Todo lo que necesitas, nada que no</h2>
-    <p class="section-sub reveal">Una herramienta directa que corre entera en tu PC.</p>
+    <p class="kicker" data-reveal>Sin anuncios ni pasos de más</p>
+    <h2 data-reveal style="--i:1">Todo lo que necesitas, nada que no</h2>
+    <p class="section-sub" data-reveal style="--i:2">Una herramienta directa que corre entera en tu PC.</p>
     <div class="points">
-      <div class="point reveal">
+      <div class="point" data-reveal style="--i:0">
         <div class="ic">🔒</div>
         <h3>100% privado</h3>
         <p>Tus enlaces y archivos nunca salen de tu ordenador.</p>
       </div>
-      <div class="point reveal">
+      <div class="point" data-reveal style="--i:1">
         <div class="ic">🎬</div>
         <h3>MP4 o MP3</h3>
         <p>Elige formato y calidad, hasta la máxima disponible.</p>
       </div>
-      <div class="point reveal">
+      <div class="point" data-reveal style="--i:2">
         <div class="ic">📥</div>
         <h3>Cola e historial</h3>
         <p>Varias descargas con progreso en vivo y registro de todo.</p>
       </div>
-      <div class="point reveal">
+      <div class="point" data-reveal style="--i:3">
         <div class="ic">🔄</div>
         <h3>Se actualiza solo</h3>
         <p>Un aviso, un clic, y siempre tienes la última versión.</p>
@@ -322,20 +416,20 @@
   </section>
 
   <section>
-    <p class="kicker reveal">Así de corto</p>
-    <div class="steps reveal">
-      <b>Pega el enlace</b>
-      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
-      <b>Elige formato</b>
-      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
-      <b>A tu disco</b>
+    <p class="kicker" data-reveal>Así de corto</p>
+    <div class="steps">
+      <b data-reveal style="--i:1">Pega el enlace</b>
+      <svg data-reveal style="--i:2" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
+      <b data-reveal style="--i:3">Elige formato</b>
+      <svg data-reveal style="--i:4" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
+      <b data-reveal style="--i:5">A tu disco</b>
     </div>
   </section>
 
   <section class="final">
-    <h2 class="reveal">Empieza a guardar tus vídeos</h2>
-    <p class="section-sub reveal">Gratis y open source. Sin registros, sin cuentas.</p>
-    <a class="btn primary reveal" href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
+    <h2 data-reveal>Empieza a guardar tus vídeos</h2>
+    <p class="section-sub" data-reveal style="--i:1">Gratis y open source. Sin registros, sin cuentas.</p>
+    <a class="btn primary" data-magnetic data-reveal style="--i:2" href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
       Descargar para Windows
     </a>
@@ -351,32 +445,123 @@
 
   <script>
     (function () {
-      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // El script del <head> ya decidió: .motion presente = animaciones permitidas
+      // (respeta prefers-reduced-motion salvo que la URL traiga ?motion=force).
+      const reduced = !document.documentElement.classList.contains("motion");
 
-      // Parallax: cada capa con data-speed se desplaza a su ritmo al hacer scroll.
+      // 1) Entrada del hero: dos frames después de pintar, body.ready dispara las
+      //    transiciones de las líneas del titular y los fade-up (todo en CSS).
+      //    Cinturón de seguridad: si rAF no dispara (pestaña en segundo plano),
+      //    el setTimeout garantiza que el contenido nunca se queda oculto.
+      const ready = () => document.body.classList.add("ready");
+      requestAnimationFrame(() => requestAnimationFrame(ready));
+      setTimeout(ready, 700);
+
+      // 2) MOTOR DE PARALLAX (receta nº1 — multicapa):
+      //    a) Capas de fondo [data-speed]: cada una baja a SU velocidad con el scroll
+      //       y además deriva hacia el ratón según su profundidad [data-mouse].
+      //    b) Capas del hero [data-parallax]: titular/subtítulo/botones se separan a
+      //       distinta velocidad al bajar (parallax relativo a su posición original).
+      //       Espera a que termine la animación de entrada para tomar el control.
       if (!reduced) {
-        const layers = Array.from(document.querySelectorAll("[data-speed]"));
-        let ticking = false;
-        const update = () => {
-          const y = window.scrollY;
-          for (const el of layers) {
-            el.style.transform = "translate3d(0," + (y * parseFloat(el.dataset.speed)).toFixed(1) + "px,0)";
+        const layers = [...document.querySelectorAll("[data-speed]")].map((el) => ({
+          el, speed: parseFloat(el.dataset.speed), depth: parseFloat(el.dataset.mouse || 0)
+        }));
+        const relItems = [...document.querySelectorAll("[data-parallax]")].map((el) => ({
+          el, speed: parseFloat(el.dataset.parallax), center: 0
+        }));
+        let heroLive = false;
+        const measure = () => {
+          // Posición REAL en el documento (limpiando el transform antes de medir,
+          // para no medir el elemento ya desplazado — evita el bucle de feedback).
+          for (const it of relItems) {
+            it.el.style.transform = "none";
+            const r = it.el.getBoundingClientRect();
+            it.center = r.top + window.scrollY + r.height / 2;
           }
-          ticking = false;
         };
-        window.addEventListener("scroll", () => {
-          if (!ticking) { requestAnimationFrame(update); ticking = true; }
+        let mx = 0, my = 0, cmx = 0, cmy = 0, lastY = -1;
+        addEventListener("mousemove", (e) => {
+          mx = (e.clientX / innerWidth - 0.5) * 2;    // normalizado a -1 … 1
+          my = (e.clientY / innerHeight - 0.5) * 2;
         }, { passive: true });
-        update();
+        addEventListener("resize", () => { if (heroLive) { measure(); lastY = -1; } }, { passive: true });
+        const paint = () => {
+          const y = window.scrollY;
+          const drifting = Math.abs(mx - cmx) + Math.abs(my - cmy) > 0.002;
+          if (y !== lastY || drifting) {              // solo escribe si algo cambió
+            cmx += (mx - cmx) * 0.06;                 // lerp: la deriva llega con retardo suave
+            cmy += (my - cmy) * 0.06;
+            for (const l of layers) {
+              l.el.style.transform = "translate3d(" + (cmx * l.depth).toFixed(1) + "px," +
+                (y * l.speed + cmy * l.depth).toFixed(1) + "px,0)";
+            }
+            if (heroLive) {
+              const mid = y + innerHeight / 2;
+              for (const it of relItems) {
+                it.el.style.transform = "translate3d(0," +
+                  ((mid - it.center) * it.speed).toFixed(1) + "px,0)";
+              }
+            }
+            lastY = y;
+          }
+          requestAnimationFrame(paint);
+        };
+        requestAnimationFrame(paint);
+        // La entrada del hero dura ~1,5s; después, el parallax toma el mando.
+        setTimeout(() => {
+          document.body.classList.add("settled");
+          measure();
+          heroLive = true;
+          lastY = -1;                                 // fuerza el primer repintado
+        }, 1600);
       }
 
-      // Reveal: las secciones aparecen suavemente al entrar en pantalla.
+      // 3) Receta nº2 — reveal + stagger: el observer añade .in al asomar un 15%;
+      //    los tiempos de la cascada los pone el CSS con --i. Una vez visto, se
+      //    des-observa (anima una sola vez, memoria libre).
       const io = new IntersectionObserver((entries) => {
         for (const e of entries) {
           if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
         }
-      }, { threshold: 0.15 });
-      document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+      }, { threshold: 0.15, rootMargin: "0px 0px -8% 0px" });
+      document.querySelectorAll("[data-reveal], .shot").forEach((el) => io.observe(el));
+
+      // Red de seguridad: si el navegador tarda en entregar las observaciones
+      // (pestaña en segundo plano, webviews incrustados), revela lo que ya está
+      // a la vista tras cargar. Nunca dejes contenido invisible por un observer mudo.
+      addEventListener("load", () => setTimeout(() => {
+        document.querySelectorAll("[data-reveal]:not(.in), .shot:not(.in)").forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.top < innerHeight && r.bottom > 0) el.classList.add("in");
+        });
+      }, 400));
+
+      // 4) Botones magnéticos (micro-interacción de puntero, receta nº9): el botón
+      //    se inclina hacia el cursor con un lerp suave. Solo en dispositivos con
+      //    ratón de verdad y si el usuario no pidió menos movimiento. Usa la
+      //    propiedad CSS `translate` para no pisar el transform del hover.
+      if (!reduced && matchMedia("(hover: hover) and (pointer: fine)").matches) {
+        document.querySelectorAll("[data-magnetic]").forEach((el) => {
+          let tx = 0, ty = 0, cx = 0, cy = 0, raf = null;
+          const tick = () => {
+            cx += (tx - cx) * 0.18;   // lerp: acércate un 18% al objetivo en cada frame
+            cy += (ty - cy) * 0.18;
+            el.style.translate = cx.toFixed(2) + "px " + cy.toFixed(2) + "px";
+            if (Math.abs(tx - cx) > 0.15 || Math.abs(ty - cy) > 0.15) {
+              raf = requestAnimationFrame(tick);
+            } else { raf = null; }
+          };
+          const wake = () => { if (!raf) raf = requestAnimationFrame(tick); };
+          el.addEventListener("mousemove", (e) => {
+            const r = el.getBoundingClientRect();
+            tx = (e.clientX - r.left - r.width / 2) * 0.35;   // 35% de la distancia al centro
+            ty = (e.clientY - r.top - r.height / 2) * 0.35;
+            wake();
+          });
+          el.addEventListener("mouseleave", () => { tx = 0; ty = 0; wake(); });
+        });
+      }
     })();
   </script>
 </body>
