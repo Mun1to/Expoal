@@ -10,6 +10,12 @@
     document.documentElement.dataset.theme =
       localStorage.getItem("expoal-theme") ||
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    // Sigue al sistema EN VIVO mientras el usuario no haya fijado un tema con el
+    // botón (en cuanto hay elección guardada, esa manda y esto deja de aplicar).
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+      if (!localStorage.getItem("expoal-theme"))
+        document.documentElement.dataset.theme = e.matches ? "dark" : "light";
+    });
   </script>
   <link rel="stylesheet" href="styles.css">
 </head>

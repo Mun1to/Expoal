@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0B0F1F">
   <title>Expoal - Del link a tu disco</title>
   <meta name="description" content="Pega un enlace de YouTube, TikTok o Instagram y guarda el vídeo en tu propio disco. 100% local, open source, sin webs de terceros.">
   <link rel="icon" type="image/png" href="assets/icon-256.png">
@@ -33,6 +35,9 @@
   </script>
   <style>
     :root {
+      /* Landing monotema oscura por diseño: se declara al navegador para que los
+         controles nativos (scrollbar, inputs) también rendericen en oscuro. */
+      color-scheme: dark;
       --bg: #0B0F1F;
       --surface: #111931;
       --border: #243052;
@@ -334,9 +339,12 @@
     @media (max-width: 460px) { .points { grid-template-columns: 1fr; } }
 
     /* ==========================================================================
-       ACCESIBILIDAD — no negociable (WCAG 2.3.3): sin la clase .motion (usuario
-       pidió menos movimiento y no hay ?motion=force), NADA se oculta ni anima:
-       la página se pinta completa y quieta desde el primer frame.
+       POLÍTICA DE MOVIMIENTO (decisión consciente, 2026-07-08): las animaciones
+       se muestran a TODOS los visitantes, ignorando prefers-reduced-motion
+       (estilo Awwwards/Dennis Snellenberg). La válvula de escape es ?motion=off
+       en la URL: sin la clase .motion, NADA se oculta ni anima y la página se
+       pinta completa y quieta desde el primer frame. NO "arreglar" esto pensando
+       que es un bug de accesibilidad.
        ========================================================================== */
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
@@ -446,7 +454,7 @@
   <script>
     (function () {
       // El script del <head> ya decidió: .motion presente = animaciones permitidas
-      // (respeta prefers-reduced-motion salvo que la URL traiga ?motion=force).
+      // (siempre, salvo que la URL traiga ?motion=off — política "todo para todos").
       const reduced = !document.documentElement.classList.contains("motion");
 
       // 1) Entrada del hero: dos frames después de pintar, body.ready dispara las
