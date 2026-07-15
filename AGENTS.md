@@ -12,7 +12,9 @@ necesita más adelante, se extraerá lo común entonces.
 Lee y aplica **[../Reglas_de_los_proyectos.md](../Reglas_de_los_proyectos.md)** (dictado por voz,
 entender antes de arreglar, ciberseguridad, cerrar explicando, README/commits en inglés,
 lluvia de ideas ante decisiones con entidad, pnpm en proyectos Node, guion normal en lo público,
-trato «Munito»/«socio», nunca Co-Authored-By, preguntar antes de push).
+trato «Munito»/«socio», nunca Co-Authored-By, preguntar antes de push, confirmar la intención
+antes de ejecutar preguntando hasta estar seguro, y simplicidad primero con cambios quirúrgicos:
+código mínimo, tocar solo lo que la tarea pide y verificar contra el objetivo antes de dar por hecho).
 
 Antes de cualquier tarea, lee [FEEDBACK.md](FEEDBACK.md) para no repetir errores pasados.
 
@@ -65,10 +67,18 @@ src/expoal/
   compara semver, descarga el instalador, verifica `SHA256SUMS.txt` si existe y lo lanza en silent.
   Endpoints `/api/update/check` y `/api/update/apply`. La UI muestra un banner (aviso + 1 clic);
   `can_auto_install` es True solo en el .exe empaquetado (en web el banner enlaza a la descarga).
-- **Release automático**: `.github/workflows/release.yml` se dispara con un tag `v*`, compila exe +
-  instalador en windows-latest, genera checksums y publica el release. La versión canónica es
-  `__version__`; el tag debe coincidir (el workflow lo verifica). Para sacar versión: subir
-  `__version__` + `pyproject`, commit, y `git push origin vX.Y.Z`.
+- **Release automático**: `.github/workflows/release.yml` se dispara con un tag `v*`. Tiene 4 jobs:
+  `version` (lee `__version__` y verifica que el tag coincide), `build-windows` (exe + instalador +
+  zip), `build-linux` (AppImage) y `release` (junta artifacts, genera checksums y publica). La
+  versión canónica es `__version__`. Para sacar versión: subir `__version__` + `pyproject`, commit,
+  y `git push origin vX.Y.Z`.
+- **Linux (AppImage)**: PyInstaller **no cross-compila**, por eso el build de Linux corre en
+  `ubuntu-latest`. Gotchas: el separador de `--add-data` es `:` en Linux (`;` en Windows), no se usa
+  `--windowed`, y `appimagetool` necesita `--appimage-extract-and-run` (el runner no tiene FUSE).
+  En Linux la app abre en el **navegador** a propósito: pywebview depende de WebKitGTK del sistema y
+  no empaqueta fiable entre distros (por eso `launcher.py` solo añade `--desktop` en win32).
+  El auto-update solo aplica a Windows (`can_auto_install` exige `sys.platform == "win32"`), porque
+  el asset es un instalador `.exe`; en Linux el banner enlaza a la descarga.
 - **Capturas/OG**: `scripts/capture_screenshots.py` (README/landing) y `scripts/make_og.py` (redes)
   con Playwright; requieren server en :8710 e historial de ejemplo (Blender) escrito temporalmente
   en `%LOCALAPPDATA%\Expoal\history.json` y restaurado después. `scripts/capture_header.py` es

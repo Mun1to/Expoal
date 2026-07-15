@@ -181,6 +181,8 @@
     }
     .btn.ghost:hover { border-color: var(--primary-strong); }
     .os-note { margin-top: 16px; font-size: 13px; color: var(--muted); }
+    .inline-link { text-decoration: underline; text-underline-offset: 2px; transition: color 0.15s; }
+    .inline-link:hover { color: var(--text); }
 
     /* ==========================================================================
        ENTRADA DEL HERO — "line mask reveal" (el truco marca de la casa Dennis):
@@ -384,11 +386,15 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
         Descargar para Windows
       </a>
-      <a class="btn ghost" data-magnetic href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">
-        Ver el código
+      <a class="btn ghost" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
+        Descargar para Linux
       </a>
     </div>
-    <p class="os-note fade-up" style="--i:3">Windows 10/11 · se actualiza solo · también funciona en el navegador</p>
+    <p class="os-note fade-up" style="--i:3">
+      Windows 10/11 · AppImage para Linux · se actualiza solo ·
+      <a class="inline-link" href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">ver el código</a>
+    </p>
 
     <div class="shot shot-fade">
       <img src="assets/screenshot-dark.png" alt="Interfaz de Expoal">
@@ -437,10 +443,16 @@
   <section class="final">
     <h2 data-reveal>Empieza a guardar tus vídeos</h2>
     <p class="section-sub" data-reveal style="--i:1">Gratis y open source. Sin registros, sin cuentas.</p>
-    <a class="btn primary" data-magnetic data-reveal style="--i:2" href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
-      Descargar para Windows
-    </a>
+    <div class="cta" data-reveal style="--i:2">
+      <a class="btn primary" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
+        Descargar para Windows
+      </a>
+      <a class="btn ghost" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
+        Descargar para Linux
+      </a>
+    </div>
   </section>
 
   <footer>

@@ -1,7 +1,7 @@
 name: Build and publish release
 
-# Al empujar un tag como v1.1.0, compila el .exe y el instalador en Windows,
-# genera los checksums y publica el release con todos los assets.
+# Al empujar un tag como v1.2.0, compila en Windows (.exe + instalador) y en Linux
+# (AppImage), genera los checksums y publica el release con todos los assets.
 on:
   push:
     tags:
@@ -12,33 +12,33 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read app version
+        id: ver
+        run: |
+          v=$(grep -oP '__version__ = "\K[^"]+' src/expoal/__init__.py)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "App version: $v"
+      - name: Check tag matches version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          if [ -n "$tag" ] && [ "$tag" != "${{ steps.ver.outputs.version }}" ]; then
+            echo "El tag ($tag) no coincide con __version__ (${{ steps.ver.outputs.version }})"
+            exit 1
+          fi
+
+  build-windows:
+    needs: version
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Read app version
-        id: ver
-        shell: pwsh
-        run: |
-          $v = (Select-String -Path src/expoal/__init__.py -Pattern '__version__ = "([^"]+)"').Matches.Groups[1].Value
-          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "App version: $v"
-
-      - name: Check tag matches version
-        shell: pwsh
-        run: |
-          $tag = "${{ github.ref_name }}".TrimStart('v')
-          if ($tag -and $tag -ne "${{ steps.ver.outputs.version }}") {
-            Write-Error "El tag ($tag) no coincide con __version__ (${{ steps.ver.outputs.version }})"
-            exit 1
-          }
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
 
       - name: Build executable (PyInstaller)
         run: uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets/expoal.ico --add-data "src/expoal/web;expoal/web" launcher.py
@@ -48,33 +48,117 @@ jobs:
         run: |
           choco install innosetup --no-progress -y
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          & $iscc "/DMyAppVersion=${{ steps.ver.outputs.version }}" installer\expoal.iss
+          & $iscc "/DMyAppVersion=${{ needs.version.outputs.version }}" installer\expoal.iss
 
-      - name: Package portable zip and checksums
+      - name: Package portable zip
         shell: pwsh
+        run: Compress-Archive -Path dist\Expoal -DestinationPath dist\Expoal-windows.zip -CompressionLevel Optimal
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/Expoal-${{ needs.version.outputs.version }}-setup.exe
+            dist/Expoal-windows.zip
+
+  build-linux:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+
+      # En Linux el separador de --add-data es ':' (no ';') y no se usa --windowed:
+      # la app abre en el navegador, así que es un binario normal.
+      - name: Build executable (PyInstaller)
+        run: uv run pyinstaller --noconfirm --name Expoal --add-data "src/expoal/web:expoal/web" launcher.py
+
+      - name: Assemble AppDir
         run: |
-          Compress-Archive -Path dist\Expoal -DestinationPath dist\Expoal-windows.zip -CompressionLevel Optimal
-          Set-Location dist
-          $files = @("Expoal-${{ steps.ver.outputs.version }}-setup.exe", "Expoal-windows.zip")
-          $lines = foreach ($f in $files) { "$((Get-FileHash $f -Algorithm SHA256).Hash.ToLower())  $f" }
-          $lines | Out-File -FilePath SHA256SUMS.txt -Encoding ascii
+          mkdir -p AppDir/usr/bin
+          cp -r dist/Expoal AppDir/usr/bin/Expoal
+          cp assets/icon-256.png AppDir/expoal.png
+
+          cat > AppDir/expoal.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Expoal
+          Comment=Del link a tu disco
+          Exec=Expoal
+          Icon=expoal
+          Categories=AudioVideo;Network;Utility;
+          Terminal=false
+          EOF
+
+          cat > AppDir/AppRun <<'EOF'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          exec "${HERE}/usr/bin/Expoal/Expoal" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+
+      - name: Build AppImage
+        run: |
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          # Sin FUSE en el runner: hay que extraer y ejecutar.
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run \
+            AppDir "dist/Expoal-${VERSION}-x86_64.AppImage"
+          ls -lh dist/*.AppImage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/Expoal-${{ needs.version.outputs.version }}-x86_64.AppImage
+
+  release:
+    needs: [version, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect assets and checksums
+        run: |
+          mkdir -p dist
+          find artifacts -type f -exec cp {} dist/ \;
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          name: Expoal ${{ steps.ver.outputs.version }}
+          name: Expoal ${{ env.VERSION }}
           generate_release_notes: true
           body: |
             ## Download
-            - **`Expoal-${{ steps.ver.outputs.version }}-setup.exe` (installer, recommended)** - a normal setup wizard with shortcuts and an uninstaller. No admin rights needed.
-            - **`Expoal-windows.zip` (portable)** - unzip anywhere and run `Expoal.exe`.
 
-            If Expoal is already installed, it can update itself from inside the app (one click).
+            **Windows**
+            - `Expoal-${{ env.VERSION }}-setup.exe` (installer, recommended) - setup wizard with shortcuts and an uninstaller. No admin rights needed.
+            - `Expoal-windows.zip` (portable) - unzip anywhere and run `Expoal.exe`.
+
+            **Linux**
+            - `Expoal-${{ env.VERSION }}-x86_64.AppImage` - one file, works on any distro. Make it executable and run it:
+              ```bash
+              chmod +x Expoal-${{ env.VERSION }}-x86_64.AppImage
+              ./Expoal-${{ env.VERSION }}-x86_64.AppImage
+              ```
+              It opens Expoal in your browser (still 100% local).
+
+            On Windows the app can update itself from inside (one click).
 
             > **"Windows protected your PC"?** The app is not signed with a paid certificate, so SmartScreen may warn you the first time. Click **More info** -> **Run anyway**.
 
-            > For MP3 and top-quality merges, install FFmpeg: `winget install Gyan.FFmpeg`
+            > For MP3 and top-quality merges, install FFmpeg (`winget install Gyan.FFmpeg` on Windows, or your distro's package on Linux).
           files: |
-            dist/Expoal-${{ steps.ver.outputs.version }}-setup.exe
+            dist/Expoal-${{ env.VERSION }}-setup.exe
             dist/Expoal-windows.zip
+            dist/Expoal-${{ env.VERSION }}-x86_64.AppImage
             dist/SHA256SUMS.txt

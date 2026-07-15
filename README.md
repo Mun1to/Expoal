@@ -26,7 +26,8 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 - Download queue with live progress, speed and ETA
 - Persistent download history
 - Light and dark theme with a toggle (remembers your choice, follows the system by default)
-- One-click self-update: the app checks GitHub on startup and updates itself when a new version is out
+- One-click self-update on Windows: the app checks GitHub on startup and updates itself when a new version is out
+- Runs on Windows (native window) and Linux (AppImage, opens in your browser)
 - Two ways to use it, same app:
   - Web mode: a local page in your browser
   - Desktop mode: a native window you can pin to the taskbar
@@ -34,12 +35,25 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 ## Download
 
-Grab the latest build from the [**releases page**](https://github.com/Mun1to/Expoal/releases/latest). Two options:
+Grab the latest build from the [**releases page**](https://github.com/Mun1to/Expoal/releases/latest).
+
+**Windows**
 
 - **`Expoal-<version>-setup.exe` (installer, recommended)** — a normal Windows setup wizard. It installs the app, adds Start menu (and optionally desktop) shortcuts, and registers an uninstaller in "Add or remove programs". No admin rights needed.
 - **`Expoal-windows.zip` (portable)** — unzip anywhere and run `Expoal.exe`, nothing to install.
 
-Either way, double-clicking opens the desktop window, which you can then pin to the taskbar. Everything (Python and all dependencies) is bundled.
+Double-clicking opens the app in its own window, which you can then pin to the taskbar.
+
+**Linux**
+
+- **`Expoal-<version>-x86_64.AppImage`** — a single file that runs on any distro:
+  ```bash
+  chmod +x Expoal-*-x86_64.AppImage
+  ./Expoal-*-x86_64.AppImage
+  ```
+  It opens Expoal in your browser (still 100% local, the server only listens on 127.0.0.1).
+
+Everything (Python and all dependencies) is bundled on both platforms.
 
 Once installed, Expoal checks for a newer release on startup. When one is available, a banner appears and a single click downloads and installs it (the download is verified against the release checksums).
 

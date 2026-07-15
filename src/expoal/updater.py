@@ -93,8 +93,13 @@ def check_for_update(force: bool = False) -> dict:
             "notes_url": data.get("html_url"),
             "installer_url": installer_url,
             "checksums_url": checksums_url,
-            # Solo se puede autoinstalar en la app empaquetada (con instalador).
-            "can_auto_install": bool(installer_url) and bool(getattr(sys, "frozen", False)),
+            # Solo se autoinstala en la app empaquetada de Windows: el asset es un
+            # instalador .exe. En Linux (AppImage) el banner enlaza a la descarga.
+            "can_auto_install": (
+                bool(installer_url)
+                and bool(getattr(sys, "frozen", False))
+                and sys.platform == "win32"
+            ),
         }
     )
     with _lock:
