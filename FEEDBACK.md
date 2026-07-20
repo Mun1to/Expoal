@@ -51,6 +51,24 @@ Leer SIEMPRE antes de empezar una tarea en este proyecto.
   `[System.IO.File]::WriteAllText` con `UTF8Encoding($false)`). Aprendizaje: nunca generar con
   `Out-File -Encoding utf8` archivos que va a parsear otra herramienta.
 
+## 2026-07-20 — El auto-update cerraba la app pero NO actualizaba (AppMutex)
+
+- **Síntoma:** pulsar "Actualizar" cerraba Expoal y no pasaba nada más: ni se instalaba la
+  versión nueva ni se reabría la app. La descarga sí funcionaba (el .exe aparecía en `%TEMP%`).
+- **Diagnóstico:** ejecutar el instalador a mano con `/LOG` reprodujo el fallo (exit code **1**).
+  El log lo decía literal:
+  `Defaulting to Cancel for suppressed message box: "...ha detectado que Expoal está
+  ejecutándose. Por favor, ciérrelo ahora..."` → `Got EAbort exception`.
+- **Causa raíz:** el `AppMutex=ExpoalRunningMutex` del .iss. Con AppMutex, Setup detecta la app
+  viva y muestra un cuadro "ciérrela y pulse Aceptar"; en modo `/SILENT /SUPPRESSMSGBOXES` ese
+  cuadro se auto-responde **Cancelar** y aborta. Justo lo contrario de lo que se buscaba.
+- **Solución:** quitar `AppMutex` (y el `CreateMutexW` de `__main__.py`) y dejar que
+  `CloseApplications=yes` + `CloseApplicationsFilter=Expoal.exe` cierren la app vía Windows
+  Restart Manager, que SÍ funciona en silencioso. Verificado: `Installation process succeeded`,
+  versión actualizada y app reabierta sola.
+- **Gotcha del test:** no probar el instalador con `Start-Process -Wait`; como el setup relanza
+  la app al terminar, `-Wait` se queda colgado esperando a que esa app se cierre.
+
 ## 2026-07-06 — Alinear el tagline del logo con "Expoal"
 
 - **Problema:** "DEL LINK A TU DISCO" se veía descentrado respecto a "Expoal".

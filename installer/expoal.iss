@@ -33,10 +33,13 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesInstallIn64BitMode=x64compatible
-; Auto-update: si Expoal está corriendo, ciérralo antes de instalar (detección por mutex).
+; Auto-update: si Expoal está corriendo, Windows Restart Manager lo cierra solo antes
+; de instalar. OJO: NO usar AppMutex aquí. Con AppMutex, Setup muestra un "cierre la
+; aplicación y pulse Aceptar" que en modo /SILENT+/SUPPRESSMSGBOXES se auto-responde
+; Cancelar y ABORTA la actualización (bug real, ver FEEDBACK.md 2026-07-20).
 CloseApplications=yes
+CloseApplicationsFilter=Expoal.exe
 RestartApplications=no
-AppMutex=ExpoalRunningMutex
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
