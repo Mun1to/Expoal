@@ -157,6 +157,36 @@ function collectEdits() {
   };
 }
 
+function renderCropPreview(crop, info, bad) {
+  // Las franjas se colocan en porcentaje del vídeo, así la vista previa refleja
+  // el recorte real sea cual sea el tamaño de la miniatura.
+  const pct = (px, total) => `${Math.min(100, Math.max(0, (px / total) * 100))}%`;
+  const top = pct(crop.top, info.height);
+  const bottom = pct(crop.bottom, info.height);
+  const left = pct(crop.left, info.width);
+  const right = pct(crop.right, info.width);
+
+  const shade = (side) => document.querySelector(`.crop-shade[data-side="${side}"]`);
+  shade("top").style.height = top;
+  shade("bottom").style.height = bottom;
+  const sideLeft = shade("left");
+  const sideRight = shade("right");
+  sideLeft.style.width = left;
+  sideRight.style.width = right;
+  // Las franjas laterales solo cubren la parte que queda entre las horizontales.
+  for (const el of [sideLeft, sideRight]) {
+    el.style.top = top;
+    el.style.bottom = bottom;
+  }
+
+  const frame = $("#crop-frame");
+  frame.style.top = top;
+  frame.style.bottom = bottom;
+  frame.style.left = left;
+  frame.style.right = right;
+  frame.style.display = bad ? "none" : "block";
+}
+
 function renderEdit() {
   const { start, end, duration } = state.edit;
 
@@ -173,7 +203,7 @@ function renderEdit() {
   if (document.activeElement !== $("#trim-end")) $("#trim-end").value = formatTime(end);
   $("#trim-hint").textContent = duration ? `de ${formatTime(duration)}` : "";
 
-  // Recorte de bordes: mostramos el tamaño resultante y avisamos si es imposible
+  // Recorte de bordes: tamaño resultante, aviso si es imposible y vista previa
   const crop = cropValues();
   const info = state.info || {};
   const result = $("#crop-result");
@@ -187,6 +217,7 @@ function renderEdit() {
     result.textContent = bad
       ? "El recorte deja el vídeo sin imagen"
       : `${info.width}x${info.height} queda en ${w}x${h}`;
+    renderCropPreview(crop, info, bad);
   } else {
     result.textContent = "";
   }
@@ -288,9 +319,25 @@ function resetEdit() {
   state.edit = { start: 0, end: duration, duration };
   for (const id of ["#crop-top", "#crop-bottom", "#crop-left", "#crop-right"]) $(id).value = 0;
   $("#mute-check").checked = false;
-  $("#crop-hint").textContent = state.info?.width
-    ? `(vídeo de ${state.info.width}x${state.info.height} px)`
+  const info = state.info || {};
+  $("#crop-hint").textContent = info.width
+    ? `(vídeo de ${info.width}x${info.height} px)`
     : "";
+  // La vista previa toma la proporción real del vídeo (no la de la miniatura, que
+  // en YouTube siempre viene en 16:9 aunque el vídeo sea vertical).
+  const preview = $("#crop-preview");
+  if (info.width && info.height) {
+    preview.style.aspectRatio = `${info.width} / ${info.height}`;
+    // Fijamos solo el lado largo y dejamos que el otro lo calcule el aspecto: así
+    // un vídeo vertical (Twitter, Shorts) no se estira ni desborda el panel.
+    const vertical = info.height > info.width;
+    preview.style.height = vertical ? "184px" : "auto";
+    preview.style.width = vertical ? "auto" : "150px";
+    $("#crop-preview-img").src = info.thumbnail || "";
+    preview.classList.remove("hidden");
+  } else {
+    preview.classList.add("hidden");
+  }
   // La edición solo aplica a vídeo, y necesita FFmpeg.
   const usable = state.mode === "video" && duration > 0 && state.ffmpeg;
   $("#edit-section").classList.toggle("hidden", !usable);

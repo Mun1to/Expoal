@@ -385,11 +385,47 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
 .trim-fields input:focus { border-color: var(--primary-strong); box-shadow: var(--ring); }
 .btn.tiny { padding: 5px 11px; font-size: 12px; margin-left: auto; }
 
-/* Recorte de bordes */
-.crop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.crop-field { display: flex; flex-direction: column; gap: 5px; }
+/* Recorte de bordes: vista previa a la izquierda, campos 2x2 a la derecha */
+.crop-layout { display: flex; gap: 16px; align-items: flex-start; }
+
+/* El tamaño lo fija el JS según la orientación del vídeo (ver resetEdit), para que
+   el marco de recorte siempre cuadre con la imagen. */
+.crop-preview {
+  position: relative;
+  margin: 0;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--field);
+}
+.crop-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* Zonas que se van a recortar: se oscurecen */
+.crop-shade { position: absolute; background: rgba(11, 15, 31, 0.72); pointer-events: none; }
+.crop-shade[data-side="top"] { top: 0; left: 0; right: 0; }
+.crop-shade[data-side="bottom"] { bottom: 0; left: 0; right: 0; }
+.crop-shade[data-side="left"] { left: 0; }
+.crop-shade[data-side="right"] { right: 0; }
+/* Marco de lo que se conserva */
+.crop-frame {
+  position: absolute;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 1px rgba(11, 15, 31, 0.5);
+  pointer-events: none;
+  transition: all 0.12s ease-out;
+}
+
+.crop-grid {
+  flex: 1;
+  min-width: 0;                                   /* deja que los campos se encojan */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.crop-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .crop-field span { font-size: 11.5px; color: var(--muted); }
 .crop-field input {
+  width: 100%;
   padding: 8px 10px;
   font-family: var(--mono);
   font-size: 13px;
@@ -400,13 +436,22 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
   outline: none;
 }
 .crop-field input:focus { border-color: var(--primary-strong); box-shadow: var(--ring); }
-.crop-result { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.crop-result {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
 .crop-result.err { color: var(--error); }
 
 .check { display: flex; align-items: center; gap: 9px; font-size: 13.5px; cursor: pointer; }
 .check input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
 
-@media (max-width: 560px) { .crop-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) {
+  .crop-layout { flex-direction: column; align-items: center; }
+  .crop-grid { width: 100%; }
+}
 
 /* ---------- Cola e historial ---------- */
 

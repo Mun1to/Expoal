@@ -137,25 +137,35 @@
 
           <div class="edit-block">
             <label>Recortar bordes <span class="hint" id="crop-hint"></span></label>
-            <div class="crop-grid">
-              <div class="crop-field">
-                <span>Arriba</span>
-                <input type="number" id="crop-top" min="0" step="2" value="0">
-              </div>
-              <div class="crop-field">
-                <span>Abajo</span>
-                <input type="number" id="crop-bottom" min="0" step="2" value="0">
-              </div>
-              <div class="crop-field">
-                <span>Izquierda</span>
-                <input type="number" id="crop-left" min="0" step="2" value="0">
-              </div>
-              <div class="crop-field">
-                <span>Derecha</span>
-                <input type="number" id="crop-right" min="0" step="2" value="0">
+            <div class="crop-layout">
+              <figure class="crop-preview" id="crop-preview">
+                <img id="crop-preview-img" alt="" referrerpolicy="no-referrer">
+                <div class="crop-shade" data-side="top"></div>
+                <div class="crop-shade" data-side="bottom"></div>
+                <div class="crop-shade" data-side="left"></div>
+                <div class="crop-shade" data-side="right"></div>
+                <div class="crop-frame" id="crop-frame"></div>
+              </figure>
+              <div class="crop-grid">
+                <div class="crop-field">
+                  <span>Arriba</span>
+                  <input type="number" id="crop-top" min="0" step="2" value="0">
+                </div>
+                <div class="crop-field">
+                  <span>Abajo</span>
+                  <input type="number" id="crop-bottom" min="0" step="2" value="0">
+                </div>
+                <div class="crop-field">
+                  <span>Izquierda</span>
+                  <input type="number" id="crop-left" min="0" step="2" value="0">
+                </div>
+                <div class="crop-field">
+                  <span>Derecha</span>
+                  <input type="number" id="crop-right" min="0" step="2" value="0">
+                </div>
+                <p class="crop-result" id="crop-result"></p>
               </div>
             </div>
-            <p class="crop-result" id="crop-result"></p>
           </div>
 
           <label class="check">
