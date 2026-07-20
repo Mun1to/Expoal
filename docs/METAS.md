@@ -18,6 +18,8 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] Rediseño profesional: plano, glow sutil, tipografía y branding propios (icono + favicon)
 - [x] Explorador de archivos nativo para elegir carpeta (funciona en web y en escritorio)
 - [x] Empaquetado como Expoal.exe (PyInstaller) anclable a la barra de tareas
+- [x] Edición al vuelo: recortar duración (barra visual + tiempos), recortar bordes por píxeles
+      y quitar el audio del MP4 (`editor.py` con FFmpeg)
 - [ ] Cancelar una descarga en curso / limpiar trabajos de la cola
 - [ ] Soporte de contenido privado con `cookiesfrombrowser` (Instagram logueado, etc.)
 - [ ] Playlists y perfiles completos (hoy `noplaylist: True`)

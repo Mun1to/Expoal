@@ -23,6 +23,7 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 - Paste a link, preview the video and download it in the best available quality
 - Choose the format: MP4 video or MP3 audio (audio extraction requires FFmpeg)
 - Pick the resolution, and choose the destination folder with a native file browser
+- Edit while you download: trim the length (visual slider or exact timecodes), crop the edges by pixels, and strip the audio track
 - Download queue with live progress, speed and ETA
 - Persistent download history
 - Light and dark theme with a toggle (remembers your choice, follows the system by default)

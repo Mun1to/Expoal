@@ -281,6 +281,133 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
 .folder-row { display: flex; gap: 8px; }
 .folder-row input { flex: 1; font-family: var(--mono); font-size: 12.5px; }
 
+/* ---------- Edición del vídeo (recorte, bordes, audio) ---------- */
+
+.edit { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+.edit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 2px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.edit-toggle:hover { color: var(--text); }
+.edit-toggle .chev { margin-left: auto; transition: transform 0.2s; }
+.edit-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.edit-toggle[aria-expanded="true"] { color: var(--text); }
+.edit-summary {
+  font-weight: 500;
+  font-size: 12.5px;
+  font-family: var(--mono);
+  color: var(--muted);
+  opacity: 0.8;
+}
+.edit-toggle.dirty .edit-summary { color: var(--accent); opacity: 1; }
+
+.edit-body { display: flex; flex-direction: column; gap: 20px; padding: 12px 2px 4px; }
+.edit-block { display: flex; flex-direction: column; gap: 9px; }
+.edit-block > label {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.hint { font-family: var(--mono); font-size: 11px; opacity: 0.75; text-transform: none; letter-spacing: 0; }
+
+/* Barra de recorte de duración con dos tiradores */
+.trim-bar {
+  position: relative;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--field);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  touch-action: none;
+}
+.trim-sel {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  background: rgba(95, 125, 218, 0.22);
+  border: 1px solid var(--primary-strong);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.trim-handle {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 26px;
+  margin-left: -6px;
+  transform: translateY(-50%);
+  border-radius: 5px;
+  background: var(--primary-strong);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.trim-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 10px;
+  margin: -5px 0 0 -1px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.75);
+}
+.trim-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.trim-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.trim-fields input {
+  width: 72px;
+  padding: 7px 9px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+}
+.trim-fields input:focus { border-color: var(--primary-strong); box-shadow: var(--ring); }
+.btn.tiny { padding: 5px 11px; font-size: 12px; margin-left: auto; }
+
+/* Recorte de bordes */
+.crop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.crop-field { display: flex; flex-direction: column; gap: 5px; }
+.crop-field span { font-size: 11.5px; color: var(--muted); }
+.crop-field input {
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+}
+.crop-field input:focus { border-color: var(--primary-strong); box-shadow: var(--ring); }
+.crop-result { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.crop-result.err { color: var(--error); }
+
+.check { display: flex; align-items: center; gap: 9px; font-size: 13.5px; cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+
+@media (max-width: 560px) { .crop-grid { grid-template-columns: repeat(2, 1fr); } }
+
 /* ---------- Cola e historial ---------- */
 
 .list-section { margin-top: 30px; }

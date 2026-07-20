@@ -6,6 +6,8 @@ const state = {
   info: null,
   mode: "video",
   ffmpeg: false,
+  // Edición del vídeo: recorte de duración (segundos), bordes (píxeles) y silenciado.
+  edit: { start: 0, end: 0, duration: 0 },
 };
 
 async function api(path, options) {
@@ -50,9 +52,27 @@ const STATUS_LABELS = {
   en_cola: "En cola",
   descargando: "Descargando...",
   procesando: "Procesando...",
+  editando: "Editando...",
   completado: "Completado",
   error: "Error",
 };
+
+// --- Edición: tiempos ---
+
+function parseTime(text) {
+  // Acepta "90", "1:30" y "1:02:03". Devuelve segundos o null si no es válido.
+  const parts = String(text).trim().split(":").map((p) => p.trim());
+  if (parts.some((p) => p === "" || isNaN(Number(p)))) return null;
+  return parts.reduce((total, p) => total * 60 + Number(p), 0);
+}
+
+function formatTime(seconds) {
+  const s = Math.max(0, Math.round(seconds));
+  const m = Math.floor(s / 60);
+  const rest = String(s % 60).padStart(2, "0");
+  if (m >= 60) return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}:${rest}`;
+  return `${m}:${rest}`;
+}
 
 // --- Análisis del enlace ---
 
@@ -85,6 +105,7 @@ function renderPreview() {
   if (info.duration) parts.push(formatDuration(info.duration));
   $("#preview-sub").textContent = parts.join(" · ");
   renderQualityOptions();
+  resetEdit();
   hideError($("#download-error"));
   $("#preview").classList.remove("hidden");
 }
@@ -107,6 +128,177 @@ function renderQualityOptions() {
   }
 }
 
+// --- Edición del vídeo ---
+
+function cropValues() {
+  return {
+    top: Math.max(0, Number($("#crop-top").value) || 0),
+    bottom: Math.max(0, Number($("#crop-bottom").value) || 0),
+    left: Math.max(0, Number($("#crop-left").value) || 0),
+    right: Math.max(0, Number($("#crop-right").value) || 0),
+  };
+}
+
+function collectEdits() {
+  const { start, end, duration } = state.edit;
+  const crop = cropValues();
+  const mute = $("#mute-check").checked;
+  const trimmed = duration > 0 && (start > 0 || end < duration);
+  const cropped = crop.top || crop.bottom || crop.left || crop.right;
+  if (!trimmed && !cropped && !mute) return null;
+  return {
+    trim_start: trimmed && start > 0 ? start : null,
+    trim_end: trimmed && end < duration ? end : null,
+    crop_top: crop.top,
+    crop_bottom: crop.bottom,
+    crop_left: crop.left,
+    crop_right: crop.right,
+    mute,
+  };
+}
+
+function renderEdit() {
+  const { start, end, duration } = state.edit;
+
+  // Barra y tiradores
+  if (duration > 0) {
+    const a = (start / duration) * 100;
+    const b = (end / duration) * 100;
+    $("#trim-sel").style.left = `${a}%`;
+    $("#trim-sel").style.width = `${Math.max(0, b - a)}%`;
+    $("#trim-h-start").style.left = `${a}%`;
+    $("#trim-h-end").style.left = `${b}%`;
+  }
+  if (document.activeElement !== $("#trim-start")) $("#trim-start").value = formatTime(start);
+  if (document.activeElement !== $("#trim-end")) $("#trim-end").value = formatTime(end);
+  $("#trim-hint").textContent = duration ? `de ${formatTime(duration)}` : "";
+
+  // Recorte de bordes: mostramos el tamaño resultante y avisamos si es imposible
+  const crop = cropValues();
+  const info = state.info || {};
+  const result = $("#crop-result");
+  if (info.width && info.height) {
+    let w = info.width - crop.left - crop.right;
+    let h = info.height - crop.top - crop.bottom;
+    w -= w % 2;
+    h -= h % 2;
+    const bad = w <= 0 || h <= 0;
+    result.classList.toggle("err", bad);
+    result.textContent = bad
+      ? "El recorte deja el vídeo sin imagen"
+      : `${info.width}x${info.height} queda en ${w}x${h}`;
+  } else {
+    result.textContent = "";
+  }
+
+  // Resumen en la cabecera plegable
+  const parts = [];
+  if (duration > 0 && (start > 0 || end < duration)) {
+    parts.push(`${formatTime(start)}-${formatTime(end)}`);
+  }
+  if (crop.top || crop.bottom || crop.left || crop.right) parts.push("bordes");
+  if ($("#mute-check").checked) parts.push("sin audio");
+  const summary = $("#edit-summary");
+  summary.textContent = parts.length ? parts.join(" · ") : "sin cambios";
+  $("#edit-toggle").classList.toggle("dirty", parts.length > 0);
+}
+
+function setupEdit() {
+  $("#edit-toggle").addEventListener("click", () => {
+    const body = $("#edit-body");
+    const open = body.classList.toggle("hidden");
+    $("#edit-toggle").setAttribute("aria-expanded", String(!open));
+  });
+
+  // Arrastre de los tiradores sobre la barra
+  const bar = $("#trim-bar");
+  const posToTime = (clientX) => {
+    const r = bar.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+    return ratio * state.edit.duration;
+  };
+  const drag = (which) => (ev) => {
+    if (!state.edit.duration) return;
+    ev.preventDefault();
+    const move = (e) => {
+      const t = posToTime(e.clientX);
+      if (which === "start") state.edit.start = Math.min(t, state.edit.end - 0.5);
+      else state.edit.end = Math.max(t, state.edit.start + 0.5);
+      state.edit.start = Math.max(0, state.edit.start);
+      state.edit.end = Math.min(state.edit.duration, state.edit.end);
+      renderEdit();
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  $("#trim-h-start").addEventListener("pointerdown", drag("start"));
+  $("#trim-h-end").addEventListener("pointerdown", drag("end"));
+
+  // Flechas del teclado para ajuste fino (accesibilidad)
+  const nudge = (which) => (ev) => {
+    const step = ev.shiftKey ? 5 : 1;
+    if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+    ev.preventDefault();
+    const delta = ev.key === "ArrowLeft" ? -step : step;
+    if (which === "start") {
+      state.edit.start = Math.max(0, Math.min(state.edit.start + delta, state.edit.end - 0.5));
+    } else {
+      state.edit.end = Math.min(state.edit.duration, Math.max(state.edit.end + delta, state.edit.start + 0.5));
+    }
+    renderEdit();
+  };
+  $("#trim-h-start").addEventListener("keydown", nudge("start"));
+  $("#trim-h-end").addEventListener("keydown", nudge("end"));
+
+  // Campos de texto: escribir el tiempo mueve los tiradores
+  const applyField = (which) => () => {
+    const el = which === "start" ? $("#trim-start") : $("#trim-end");
+    const t = parseTime(el.value);
+    if (t === null || !state.edit.duration) return renderEdit();
+    if (which === "start") {
+      state.edit.start = Math.max(0, Math.min(t, state.edit.end - 0.5));
+    } else {
+      state.edit.end = Math.min(state.edit.duration, Math.max(t, state.edit.start + 0.5));
+    }
+    renderEdit();
+  };
+  $("#trim-start").addEventListener("change", applyField("start"));
+  $("#trim-end").addEventListener("change", applyField("end"));
+  $("#trim-start").addEventListener("blur", applyField("start"));
+  $("#trim-end").addEventListener("blur", applyField("end"));
+
+  $("#trim-reset").addEventListener("click", () => {
+    state.edit.start = 0;
+    state.edit.end = state.edit.duration;
+    renderEdit();
+  });
+
+  for (const id of ["#crop-top", "#crop-bottom", "#crop-left", "#crop-right"]) {
+    $(id).addEventListener("input", renderEdit);
+  }
+  $("#mute-check").addEventListener("change", renderEdit);
+}
+
+function resetEdit() {
+  const duration = Number(state.info?.duration) || 0;
+  state.edit = { start: 0, end: duration, duration };
+  for (const id of ["#crop-top", "#crop-bottom", "#crop-left", "#crop-right"]) $(id).value = 0;
+  $("#mute-check").checked = false;
+  $("#crop-hint").textContent = state.info?.width
+    ? `(vídeo de ${state.info.width}x${state.info.height} px)`
+    : "";
+  // La edición solo aplica a vídeo, y necesita FFmpeg.
+  const usable = state.mode === "video" && duration > 0 && state.ffmpeg;
+  $("#edit-section").classList.toggle("hidden", !usable);
+  $("#edit-body").classList.add("hidden");
+  $("#edit-toggle").setAttribute("aria-expanded", "false");
+  renderEdit();
+}
+
 // --- Descarga ---
 
 async function download() {
@@ -121,6 +313,7 @@ async function download() {
       quality: $("#quality-select").value,
       folder: $("#folder-input").value,
       title: state.info.title,
+      edits: state.mode === "video" ? collectEdits() : null,
     });
     $("#preview").classList.add("hidden");
     $("#url-input").value = "";
@@ -248,6 +441,8 @@ async function init() {
         b.classList.toggle("active", b === btn);
       }
       renderQualityOptions();
+      // La sección de edición solo tiene sentido con vídeo.
+      if (state.info) resetEdit();
     });
   }
 
@@ -290,6 +485,7 @@ async function init() {
     }
   } catch (_) { /* se reintenta al refrescar */ }
 
+  setupEdit();
   checkForUpdate();
   refresh();
   setInterval(refresh, 1500);

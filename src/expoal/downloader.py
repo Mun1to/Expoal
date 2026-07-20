@@ -12,6 +12,7 @@ from pathlib import Path
 import yt_dlp
 
 from . import config
+from .editor import Edits, apply as apply_edits
 from .history import History
 
 
@@ -69,6 +70,7 @@ class Job:
     quality: str
     folder: str
     title: str = ""
+    edits: Edits | None = None
     status: str = "en_cola"  # en_cola | descargando | procesando | completado | error
     progress: float = 0.0
     speed: str = ""
@@ -103,7 +105,8 @@ class DownloadManager:
         self._worker = threading.Thread(target=self._run, daemon=True)
         self._worker.start()
 
-    def enqueue(self, url: str, mode: str, quality: str, folder: str, title: str = "") -> dict:
+    def enqueue(self, url: str, mode: str, quality: str, folder: str, title: str = "",
+                edits: Edits | None = None) -> dict:
         job = Job(
             id=uuid.uuid4().hex[:12],
             url=url,
@@ -111,6 +114,7 @@ class DownloadManager:
             quality=quality,
             folder=folder,
             title=title,
+            edits=edits,
         )
         with self._lock:
             self._jobs[job.id] = job
@@ -182,6 +186,22 @@ class DownloadManager:
 
         job.title = job.title or info.get("title") or job.url
         job.file_path = _final_path(info)
+
+        # Ediciones (recorte de duración, recorte de bordes, silenciar) sobre el archivo ya
+        # descargado. Solo aplica a vídeo: en modo audio no tienen sentido.
+        if job.mode == "video" and job.edits and job.edits.has_any and job.file_path:
+            if not has_ffmpeg:
+                raise RuntimeError("Para editar el vídeo hace falta FFmpeg")
+            job.status = "editando"
+            job.progress = 100.0
+            apply_edits(
+                Path(job.file_path),
+                job.edits,
+                ffmpeg_path,
+                width=info.get("width") or 0,
+                height=info.get("height") or 0,
+            )
+
         job.status = "completado"
         job.progress = 100.0
         self._history.add(

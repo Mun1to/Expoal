@@ -101,6 +101,70 @@
           </div>
         </div>
       </div>
+      <section class="edit hidden" id="edit-section">
+        <button type="button" class="edit-toggle" id="edit-toggle" aria-expanded="false">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14.5 4l5.5 5.5M3 21l4-1 11-11a2.5 2.5 0 0 0-3.5-3.5L3.5 16.5 3 21z"/>
+          </svg>
+          <span>Editar vídeo</span>
+          <span class="edit-summary" id="edit-summary">sin cambios</span>
+          <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+
+        <div class="edit-body hidden" id="edit-body">
+          <div class="edit-block">
+            <label>Duración</label>
+            <div class="trim-bar" id="trim-bar">
+              <div class="trim-sel" id="trim-sel"></div>
+              <div class="trim-handle" id="trim-h-start" role="slider" tabindex="0"
+                   aria-label="Inicio del recorte"></div>
+              <div class="trim-handle" id="trim-h-end" role="slider" tabindex="0"
+                   aria-label="Final del recorte"></div>
+            </div>
+            <div class="trim-fields">
+              <span>Desde</span>
+              <input type="text" id="trim-start" inputmode="numeric" placeholder="0:00" spellcheck="false">
+              <span>hasta</span>
+              <input type="text" id="trim-end" inputmode="numeric" placeholder="0:00" spellcheck="false">
+              <span class="hint" id="trim-hint"></span>
+              <button type="button" class="btn ghost tiny" id="trim-reset">Todo</button>
+            </div>
+          </div>
+
+          <div class="edit-block">
+            <label>Recortar bordes <span class="hint" id="crop-hint"></span></label>
+            <div class="crop-grid">
+              <div class="crop-field">
+                <span>Arriba</span>
+                <input type="number" id="crop-top" min="0" step="2" value="0">
+              </div>
+              <div class="crop-field">
+                <span>Abajo</span>
+                <input type="number" id="crop-bottom" min="0" step="2" value="0">
+              </div>
+              <div class="crop-field">
+                <span>Izquierda</span>
+                <input type="number" id="crop-left" min="0" step="2" value="0">
+              </div>
+              <div class="crop-field">
+                <span>Derecha</span>
+                <input type="number" id="crop-right" min="0" step="2" value="0">
+              </div>
+            </div>
+            <p class="crop-result" id="crop-result"></p>
+          </div>
+
+          <label class="check">
+            <input type="checkbox" id="mute-check">
+            <span>Quitar el audio (vídeo mudo)</span>
+          </label>
+        </div>
+      </section>
+
       <button type="button" id="download-btn" class="btn primary big">Añadir a la cola</button>
       <p id="download-error" class="error hidden"></p>
     </section>

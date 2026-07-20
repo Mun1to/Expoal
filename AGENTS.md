@@ -66,6 +66,11 @@ src/expoal/
   `dist/Expoal-<version>-setup.exe`. La versión se inyecta con `ISCC /DMyAppVersion=x.y.z`
   (el `#ifndef` deja un default). `CloseApplications=yes` + `AppMutex=ExpoalRunningMutex`
   (creado en `__main__`) permiten que el auto-update cierre y reabra la app.
+- **Edición de vídeo**: `editor.py` post-procesa con FFmpeg lo ya descargado (`Edits`: trim_start/end,
+  crop por lados, mute). Regla de coste: si NO hay recorte de bordes se copian los flujos (`-c copy`,
+  instantáneo); con crop hay que recodificar (libx264 veryfast). El crop fuerza dimensiones pares
+  (H.264 lo exige) y rechaza recortes que dejen el vídeo sin imagen. Se aplica solo en modo vídeo.
+  La UI es una sección plegable con barra de dos tiradores + campos de tiempo sincronizados.
 - **Auto-update**: `updater.py` consulta el último release del repo oficial (solo GitHub por HTTPS),
   compara semver, descarga el instalador, verifica `SHA256SUMS.txt` si existe y lo lanza en silent.
   Endpoints `/api/update/check` y `/api/update/apply`. La UI muestra un banner (aviso + 1 clic);

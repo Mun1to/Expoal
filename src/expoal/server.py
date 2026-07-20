@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from . import __version__, config, dialogs, updater
 from .downloader import DownloadManager, clean_error
+from .editor import Edits
 from .history import History
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -42,12 +43,25 @@ class InfoRequest(BaseModel):
     url: str
 
 
+class EditRequest(BaseModel):
+    """Ediciones opcionales sobre el vídeo descargado."""
+
+    trim_start: float | None = None
+    trim_end: float | None = None
+    crop_top: int = 0
+    crop_bottom: int = 0
+    crop_left: int = 0
+    crop_right: int = 0
+    mute: bool = False
+
+
 class DownloadRequest(BaseModel):
     url: str
     mode: str = "video"
     quality: str = "best"  # "best" o una altura en píxeles ("1080", "720"...)
     folder: str | None = None
     title: str = ""
+    edits: EditRequest | None = None
 
 
 def _validate_url(url: str) -> str:
@@ -91,6 +105,10 @@ def video_info(req: InfoRequest) -> dict:
         "duration": info.get("duration"),
         "platform": info.get("extractor_key", ""),
         "heights": heights,
+        # Dimensiones del vídeo: la interfaz las necesita para el recorte de bordes.
+        "width": info.get("width") or 0,
+        "height": info.get("height") or 0,
+        "ffmpeg": config.ffmpeg_available(),
     }
 
 
@@ -106,8 +124,31 @@ def start_download(req: DownloadRequest) -> dict:
             status_code=422,
             detail="Para extraer MP3 hace falta FFmpeg (winget install Gyan.FFmpeg)",
         )
+    edits = None
+    if req.mode == "video" and req.edits:
+        e = req.edits
+        edits = Edits(
+            trim_start=e.trim_start,
+            trim_end=e.trim_end,
+            crop_top=max(0, e.crop_top),
+            crop_bottom=max(0, e.crop_bottom),
+            crop_left=max(0, e.crop_left),
+            crop_right=max(0, e.crop_right),
+            mute=e.mute,
+        )
+        if edits.has_any and not config.ffmpeg_available():
+            raise HTTPException(
+                status_code=422,
+                detail="Para editar el vídeo hace falta FFmpeg (winget install Gyan.FFmpeg)",
+            )
+        if edits.trim_start is not None and edits.trim_end is not None:
+            if edits.trim_end <= edits.trim_start:
+                raise HTTPException(status_code=422, detail="El final debe ir después del inicio")
+        if not edits.has_any:
+            edits = None
+
     folder = (req.folder or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
-    return manager.enqueue(url, req.mode, req.quality, folder, title=req.title)
+    return manager.enqueue(url, req.mode, req.quality, folder, title=req.title, edits=edits)
 
 
 @app.post("/api/pick-folder")
