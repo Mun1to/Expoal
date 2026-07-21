@@ -79,7 +79,8 @@ body {
 }
 
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand-icon { width: 30px; height: 30px; border-radius: 8px; }
+/* Logo suelto (sin lienzo): el fondo de la cabecera ya es nuestro. */
+.brand-icon { width: 40px; height: 40px; object-fit: contain; }
 .brand h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.4px; line-height: 1; }
 .tagline {
   color: var(--muted);

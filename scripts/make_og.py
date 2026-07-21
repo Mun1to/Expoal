@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).parent.parent
 SHOT = (ROOT / "assets" / "screenshot-dark.png").resolve().as_uri()
-ICON = (ROOT / "assets" / "icon-256.png").resolve().as_uri()
+ICON = (ROOT / "assets" / "logo-512.png").resolve().as_uri()
 
 HTML = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
@@ -20,20 +20,20 @@ HTML = f"""<!DOCTYPE html>
   body {{
     font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
     background:
-      radial-gradient(700px 500px at 78% 30%, rgba(91,123,214,0.28), transparent 60%),
+      radial-gradient(700px 500px at 78% 30%, rgba(0,105,255,0.30), transparent 60%),
       #0B0F1F;
     color: #E9EDF8; display: flex; align-items: center; height: 630px;
   }}
   .left {{ width: 560px; padding: 0 0 0 72px; flex-shrink: 0; }}
   .brand {{ display: flex; align-items: center; gap: 16px; margin-bottom: 30px; }}
-  .brand img {{ width: 60px; height: 60px; border-radius: 14px; }}
+  .brand img {{ width: 78px; height: 78px; object-fit: contain; }}
   .brand span {{ font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }}
   h1 {{
     font-size: 62px; font-weight: 750; line-height: 1.04; letter-spacing: -1.6px;
     margin-bottom: 22px;
   }}
   h1 .grad {{
-    background: linear-gradient(120deg, #7E97E8, #E8B84B);
+    background: linear-gradient(120deg, #3B87FF, #E8B84B);
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }}
   p {{ font-size: 25px; color: #93A0C7; line-height: 1.4; margin-bottom: 30px; }}

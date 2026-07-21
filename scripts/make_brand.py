@@ -85,6 +85,18 @@ def main() -> None:
     plain.thumbnail((512, 512), Image.LANCZOS)
     plain.save(ROOT / "assets" / "logo-512.png", optimize=True)
     print("logo suelto:", ROOT / "assets" / "logo-512.png")
+
+    # Logo transparente para las cabeceras de la app y de la web, donde el fondo lo
+    # controlamos nosotros y el lienzo blanco sobraría.
+    header = logo.copy()
+    header.thumbnail((160, 160), Image.LANCZOS)
+    for path in (
+        ROOT / "src" / "expoal" / "web" / "logo.png",
+        ROOT / "site" / "assets" / "logo.png",
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        header.save(path, optimize=True)
+        print("logo de cabecera:", path)
     print("azul de marca:", BRAND_BLUE)
 
 
