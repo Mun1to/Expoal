@@ -20,6 +20,8 @@ const I18N = (function () {
       cropbad: "El recorte deja el vídeo sin imagen",
       auto: (name) => `${name} (automático)`,
       videosize: (w, h) => `(vídeo de ${w}x${h} px)`,
+      oftotal: (t) => `de ${t}`,
+      cropresult: (from, to) => `${from} queda en ${to}`,
       needsffmpeg: "Requiere FFmpeg",
       download: "Descargar",
       updating: "Descargando la actualización... Expoal se reiniciará solo.",
@@ -47,6 +49,8 @@ const I18N = (function () {
       cropbad: "The crop leaves the video with no image",
       auto: (name) => `${name} (automatic)`,
       videosize: (w, h) => `(video, ${w}x${h} px)`,
+      oftotal: (t) => `of ${t}`,
+      cropresult: (from, to) => `${from} becomes ${to}`,
       needsffmpeg: "Requires FFmpeg",
       download: "Download",
       updating: "Downloading the update... Expoal will restart by itself.",
@@ -375,7 +379,7 @@ function renderEdit() {
   }
   if (document.activeElement !== $("#trim-start")) $("#trim-start").value = formatTime(start);
   if (document.activeElement !== $("#trim-end")) $("#trim-end").value = formatTime(end);
-  $("#trim-hint").textContent = duration ? `de ${formatTime(duration)}` : "";
+  $("#trim-hint").textContent = duration ? I18N.t("oftotal")(formatTime(duration)) : "";
 
   // Recorte de bordes: tamaño resultante, aviso si es imposible y vista previa
   const crop = cropValues();
@@ -390,7 +394,7 @@ function renderEdit() {
     result.classList.toggle("err", bad);
     result.textContent = bad
       ? I18N.t("cropbad")
-      : `${info.width}x${info.height} queda en ${w}x${h}`;
+      : I18N.t("cropresult")(`${info.width}x${info.height}`, `${w}x${h}`);
     renderCropPreview(crop, info, bad);
   } else {
     result.textContent = "";

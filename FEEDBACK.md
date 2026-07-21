@@ -91,3 +91,20 @@ Leer SIEMPRE antes de empezar una tarea en este proyecto.
   (valor elegido con `scripts/tune_header.py`, que compara offsets con una línea guía). OJO: el
   `.exe`/instalador empaquetan el CSS, así que un cambio de estilo obliga a recompilar y resubir
   los assets del release, no solo a pushear.
+
+## 2026-07-21 — Dos textos del editor se quedaron en español con la interfaz en inglés
+
+- **Problema:** con la app en inglés, el recorte mostraba `de 1:45:34` bajo la barra de duración
+  y `1920x800 queda en 1920x800` bajo el recorte de bordes. Lo detectó Munir mirando SUS propias
+  capturas, no ninguna prueba: el barrido de traducciones nunca había mirado el editor abierto.
+- **Causa raíz:** los dos textos estaban interpolados a pelo en `renderEdit()` en vez de pasar
+  por `DICT`. El resto del archivo sí usaba `I18N.t`, así que cantaban solo al desplegar
+  "Editar vídeo", que es justo lo que ninguna captura enseñaba.
+- **Solución:** claves `oftotal` y `cropresult` en ambos idiomas del `DICT`. `renderEdit()` ya
+  estaba en el `I18N.onChange`, así que el cambio en caliente funcionó sin tocar nada más.
+- **Cómo cazarlos en el futuro (vale para cualquier UI bilingüe):** poner la app en inglés,
+  abrirlo TODO (incluidas las secciones plegables) y barrer con Playwright el texto de cada
+  elemento hoja visible más los `placeholder`/`title`, buscando tildes y palabras españolas
+  comunes. Falsos positivos esperables: el botón de idioma (dice a qué idioma saltas) y los
+  datos del usuario (títulos de vídeo, rutas). El script quedó en el scratchpad de la sesión;
+  reescribirlo son cinco minutos.
