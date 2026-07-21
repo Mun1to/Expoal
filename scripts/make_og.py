@@ -32,16 +32,9 @@ HTML = f"""<!DOCTYPE html>
     font-size: 62px; font-weight: 750; line-height: 1.04; letter-spacing: -1.6px;
     margin-bottom: 22px;
   }}
-  h1 .grad {{
-    background: linear-gradient(120deg, #3B87FF, #E8B84B);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }}
+  h1 .grad {{ color: #3B87FF; }}
   p {{ font-size: 25px; color: #93A0C7; line-height: 1.4; margin-bottom: 30px; }}
-  .pill {{
-    display: inline-block; border: 1px solid #35426F; color: #E9EDF8;
-    background: #111931; font-size: 21px; padding: 10px 22px; border-radius: 999px;
-  }}
-  .pill b {{ color: #E8B84B; }}
+  p b {{ color: #E9EDF8; font-weight: 600; }}
   .right {{ flex: 1; height: 630px; position: relative; overflow: hidden; }}
   .right img {{
     position: absolute; top: 82px; left: 40px; width: 760px;
@@ -53,8 +46,7 @@ HTML = f"""<!DOCTYPE html>
   <div class="left">
     <div class="brand"><img src="{ICON}"><span>Expoal</span></div>
     <h1>Del link<br><span class="grad">a tu disco</span></h1>
-    <p>Descarga vídeos de YouTube, TikTok e Instagram directo a tu ordenador.</p>
-    <div class="pill">Open source · <b>100% local</b> · gratis</div>
+    <p>Descarga vídeos de YouTube, TikTok e Instagram directo a tu ordenador.<br><b>100% open source, local y gratis.</b></p>
   </div>
   <div class="right"><img src="{SHOT}"></div>
 </body></html>

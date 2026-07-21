@@ -8,11 +8,16 @@
 
 No third-party download sites, no ads, no uploads. Everything runs locally on your machine, powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
-[![Download](https://img.shields.io/github/v/release/Mun1to/Expoal?label=download&style=for-the-badge&color=4E6CC8)](https://github.com/Mun1to/Expoal/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-E8B84B?style=for-the-badge)](LICENSE)
-[![Website](https://img.shields.io/badge/website-expoal-4E6CC8?style=for-the-badge)](https://mun1to.github.io/Expoal/)
+### One-click download
 
-[**Website**](https://mun1to.github.io/Expoal/) · [**Download**](https://github.com/Mun1to/Expoal/releases/latest)
+[![Download for Windows](https://img.shields.io/badge/Download_for-Windows-0069FF?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Mun1to/Expoal/releases/latest/download/Expoal-setup.exe)
+[![Download for Linux](https://img.shields.io/badge/Download_for-Linux-0069FF?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/Mun1to/Expoal/releases/latest/download/Expoal-linux-x86_64.AppImage)
+
+[![Version](https://img.shields.io/github/v/release/Mun1to/Expoal?style=flat-square&color=0069FF&label=version)](https://github.com/Mun1to/Expoal/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-E8B84B?style=flat-square)](LICENSE)
+[![Website](https://img.shields.io/badge/website-expoal-0069FF?style=flat-square)](https://mun1to.github.io/Expoal/)
+
+[**Website**](https://mun1to.github.io/Expoal/) · [**All downloads**](https://github.com/Mun1to/Expoal/releases/latest)
 
 <img src="assets/screenshot-dark.png" width="820" alt="Expoal screenshot">
 

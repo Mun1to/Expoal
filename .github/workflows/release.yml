@@ -129,6 +129,10 @@ jobs:
           mkdir -p dist
           find artifacts -type f -exec cp {} dist/ \;
           cd dist
+          # Copias con nombre fijo: dan una URL de descarga permanente
+          # (releases/latest/download/Expoal-setup.exe) para los botones de un clic.
+          cp "Expoal-${VERSION}-setup.exe" "Expoal-setup.exe"
+          cp "Expoal-${VERSION}-x86_64.AppImage" "Expoal-linux-x86_64.AppImage"
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
@@ -161,4 +165,6 @@ jobs:
             dist/Expoal-${{ env.VERSION }}-setup.exe
             dist/Expoal-windows.zip
             dist/Expoal-${{ env.VERSION }}-x86_64.AppImage
+            dist/Expoal-setup.exe
+            dist/Expoal-linux-x86_64.AppImage
             dist/SHA256SUMS.txt

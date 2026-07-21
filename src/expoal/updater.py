@@ -95,17 +95,24 @@ def check_for_update(force: bool = False) -> dict:
         return result
 
     latest_tag = data.get("tag_name", "")
+    version = latest_tag.lstrip("vV")
     installer_url = None
     appimage_url = None
     checksums_url = None
     for asset in data.get("assets", []):
         name = asset.get("name", "")
+        url = asset.get("browser_download_url")
+        # El release publica cada binario dos veces: con la versión en el nombre y con
+        # un alias fijo (para los enlaces de descarga permanentes de la web). Nos
+        # quedamos con el versionado, que es el canónico.
         if name.endswith(INSTALLER_SUFFIX):
-            installer_url = asset.get("browser_download_url")
+            if installer_url is None or version in name:
+                installer_url = url
         elif name.endswith(APPIMAGE_SUFFIX):
-            appimage_url = asset.get("browser_download_url")
+            if appimage_url is None or version in name:
+                appimage_url = url
         elif name == CHECKSUMS_ASSET:
-            checksums_url = asset.get("browser_download_url")
+            checksums_url = url
 
     # El asset que toca según la plataforma: instalador en Windows, AppImage en Linux.
     frozen = bool(getattr(sys, "frozen", False))
