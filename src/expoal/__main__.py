@@ -63,7 +63,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(
         prog="expoal",
-        description="Download videos from YouTube, TikTok or Instagram to your local disk.",
+        description="Download videos from YouTube, TikTok, Instagram and thousands of other sites to your local disk.",
     )
     parser.add_argument("--desktop", action="store_true", help="open in a native window")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="web mode port")

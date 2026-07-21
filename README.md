@@ -4,7 +4,7 @@
 
 # Expoal
 
-**Paste a link from YouTube, TikTok or Instagram and get the video saved on your own disk.**
+**Paste a link from YouTube, TikTok, Instagram or thousands of other sites, and get the video saved on your own disk.**
 
 No third-party download sites, no ads, no uploads. Everything runs locally on your machine, powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
@@ -50,6 +50,7 @@ for the times you want a window, and for the people who would never open a termi
 
 ## Features
 
+- Works with YouTube, TikTok, Instagram and every other site yt-dlp supports (thousands of them)
 - Paste a link, preview the video and download it in the best available quality
 - Choose the output format: MP4, MKV, MOV or WEBM for video; MP3, M4A, WAV, FLAC or OPUS for audio (requires FFmpeg)
 - Extract the transcript: save subtitles as clean text or as timed `.srt`, in any of the languages the video offers, either instead of the video or alongside it

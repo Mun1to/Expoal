@@ -48,7 +48,7 @@ HTML = f"""<!DOCTYPE html>
   <div class="left">
     <div class="brand"><img src="{ICON}"><span>Expoal</span></div>
     <h1>From link<br><span class="grad">to disk.</span></h1>
-    <p>Download videos from YouTube, TikTok and Instagram straight to your computer.<br><b>100% open source, local and free.</b></p>
+    <p>Download videos from YouTube, TikTok, Instagram and thousands of other sites.<br><b>100% open source, local and free.</b></p>
   </div>
   <div class="right"><img src="{SHOT}"></div>
 </body></html>

@@ -1,7 +1,9 @@
 # Expoal — Guía para agentes
 
 Descargador de vídeos **100% local y open source**: pegas un link de YouTube/TikTok/Instagram
-y el vídeo cae en tu disco. Sin webs de terceros, sin anuncios, sin subir nada a ningún sitio.
+(o de cualquiera de los miles de sitios que soporta yt-dlp) y el vídeo cae en tu disco. Sin webs
+de terceros, sin anuncios, sin subir nada a ningún sitio. En lo público SIEMPRE se nombra a los
+tres grandes Y "miles de sitios más": solo los tres vende de menos (pedido por Munir 2026-07-21).
 
 Proyecto independiente de Munir (repo público). Correlacionado con **Rolyal** (ambos comparten
 el paso «link → vídeo descargado»), pero **sin core compartido por ahora**: si Rolyal lo
