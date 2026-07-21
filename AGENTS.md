@@ -167,11 +167,26 @@ src/expoal/
   `scripts/capture_header.py` es solo para revisar la alineación del logo (su salida
   `assets/header-check.png` no se versiona).
 - **Prueba visible del producto**: la landing tiene, después de los puntos fuertes, una sección con
-  la captura REAL enmarcada como ventana (`.shot`) que dice explícitamente que la demo de arriba es
+  capturas REALES enmarcadas como ventana (`.shot`) que dice explícitamente que la demo de arriba es
   una recreación. Nació de feedback externo ("add pictures how the app actually looks"): antes solo
-  se veía la demo simulada y la gente no sabía si la app existía. La imagen cambia con el idioma vía
+  se veía la demo simulada y la gente no sabía si la app existía. Cada imagen cambia con el idioma vía
   `data-en-src` (mismo patrón que `data-en`, resuelto en `apply()`). El README, por lo mismo,
   responde de frente a "is it just a yt-dlp wrapper?" en vez de dejar la pregunta en el aire.
+  Las capturas están numeradas (`.shot-card`, "01", "02"...) en una **pila sticky**: la misma
+  receta de `.hero-wrap`/`.sheet` (sticky + tarjeta sólida que sube y tapa), aplicada a escala de
+  tarjeta en vez de a escala de página (`--stack` creciente sube el `top` y el `z-index` de cada
+  una). Sin GSAP ni ninguna librería nueva: el proyecto no carga NINGÚN script externo y esto se
+  queda así con CSS puro. En pantallas ≤720px el sticky se desactiva (`position: static`): poco
+  recorrido de scroll para apreciarlo y complica el layout sin aportar nada. Añadir una captura
+  nueva es copiar un `.shot-card` entero y subir `--stack` en 1.
+  Cada captura tiene **zoom al clic** (`<dialog>` nativo, `#lightbox`): Escape, clic fuera y un
+  botón de cerrar la cierran. GOTCHA: el `<dialog>` NO abierto se oculta solo por una regla nativa
+  del navegador (`dialog:not([open]) { display: none }`); si el CSS propio pone `display: flex`
+  sin condicionarlo a `[open]`, un selector por ID le gana en especificidad a esa regla nativa y el
+  diálogo se queda ocupando espacio y bloqueando clics aunque `.open` sea `false` (lo cazó
+  Playwright probando un clic justo después de cerrar con Escape, no se veía a ojo). El
+  aria-label traducible de los botones sin texto (el propio zoom, el cerrar) usa un patrón nuevo,
+  `data-en-aria`, resuelto en el mismo `apply()` de la landing junto a `data-en`/`data-en-src`.
 - **Contenido de las capturas públicas**: SIEMPRE vídeos libres (Blender Foundation, charlas TED).
   Nunca una película o serie comercial, aunque sea lo que uno descargue de verdad probando: la
   propia app dice en el pie "descarga solo contenido que sea tuyo o para el que tengas permiso", y

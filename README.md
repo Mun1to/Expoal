@@ -25,14 +25,19 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 ## What it looks like
 
-That is the whole app: paste a link, Expoal reads the video and shows you the formats and
-resolutions it can pull, you pick a destination folder and it lands on your disk. Below, a
-history of everything you have saved. There is a light theme too, and the interface is in
-English or Spanish.
+Two real screenshots, not mockups. Click either one to open it full size.
+
+### 01 · Analyze and download
+
+Paste a link, Expoal reads the video and shows you the formats and resolutions it can pull,
+you pick a destination folder and it lands on your disk. Below, a history of everything you
+have saved. There is a light theme too, and the interface is in English or Spanish.
 
 <div align="center">
 <img src="assets/screenshot-light-en.png" width="740" alt="Expoal in light mode">
 </div>
+
+### 02 · Live download queue
 
 Once a download starts you get the queue: progress, speed and time left for the one running,
 a cancel button next to it, and a folder button on the ones already finished that opens the

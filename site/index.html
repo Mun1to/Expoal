@@ -345,12 +345,9 @@
     /* La captura de la app de verdad. Va enmarcada como una ventana para que se
        lea como producto real y no se confunda con la demo recreada de arriba. */
     .shot {
-      max-width: 880px;
-      margin: 0 auto;
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 34px 80px rgba(0, 0, 0, 0.5);
     }
     .shot-bar {
       display: flex;
@@ -367,7 +364,94 @@
       background: var(--border-strong);
     }
     .shot img { display: block; width: 100%; height: auto; }
-    .shot-foot { text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px; }
+
+    /* ==========================================================================
+       PILA DE CAPTURAS — misma receta que .hero-wrap/.sheet (sticky + tarjeta
+       sólida que sube y tapa la anterior), aplicada a escala de tarjeta. Cada
+       .shot-card se pega un poco más abajo que la de antes (--stack creciente),
+       así al scrollear la cabecera de la anterior se queda asomando arriba.
+       ========================================================================== */
+    .shots { position: relative; }
+    .shot-card {
+      max-width: 900px;
+      margin: 0 auto 30px;
+      padding: 20px 20px 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+      position: sticky;
+      top: calc(24px + (var(--stack) - 1) * 34px);
+      z-index: var(--stack);
+    }
+    .shot-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .shot-num {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .shot-head h3 { flex: 1; font-size: 16.5px; font-weight: 650; }
+    .shot-cap { text-align: center; color: var(--muted); font-size: 13px; margin-top: 14px; }
+
+    /* Zoom al clic: el cursor y un aro sutil al enfocar avisan de que se puede
+       ampliar (el teclado también funciona, es tabindex+role=button). */
+    .shot.zoomable { cursor: zoom-in; transition: outline-color 0.15s; outline: 2px solid transparent; outline-offset: 3px; }
+    .shot.zoomable:hover, .shot.zoomable:focus-visible { outline-color: var(--primary-strong); }
+
+    /* En pantallas estrechas el sticky-stack no aporta (poco recorrido de scroll
+       para apreciarlo) y complica el layout: las tarjetas vuelven a apilarse en
+       flujo normal, una debajo de otra, sin pegarse ni superponerse. */
+    @media (max-width: 720px) {
+      .shot-card { position: static; }
+    }
+
+    /* Zoom de capturas: <dialog> nativo a pantalla completa, imagen centrada. */
+    #lightbox {
+      border: none;
+      padding: 0;
+      max-width: 100vw;
+      max-height: 100vh;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(5, 7, 16, 0.92);
+      align-items: center;
+      justify-content: center;
+    }
+    /* display solo cuando está abierto: si no, pisaría la regla nativa del
+       navegador que oculta el <dialog> cerrado y seguiría bloqueando clics. */
+    #lightbox[open] { display: flex; animation: lightbox-in 0.2s var(--ease); }
+    #lightbox::backdrop { background: transparent; }
+    @keyframes lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+    #lightbox img {
+      max-width: 92vw;
+      max-height: 92vh;
+      width: auto;
+      border-radius: 10px;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+    }
+    #lightbox-close {
+      position: fixed;
+      top: 22px;
+      right: 22px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(17, 25, 49, 0.85);
+      border: 1px solid var(--border-strong);
+      border-radius: 50%;
+      color: var(--text);
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    #lightbox-close:hover { background: rgba(233, 237, 248, 0.14); }
 
     .steps {
       display: flex;
@@ -930,22 +1014,57 @@
     <p class="section-sub" data-reveal style="--i:2"
        data-en="A real screenshot of Expoal running. What you see up there is a recreation; this is the actual thing.">
       Una captura de verdad de Expoal funcionando. Lo de ahí arriba es una recreación; esto es lo real.</p>
-    <div class="shot" data-reveal style="--i:3">
-      <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-      <img src="assets/screenshot-dark-es.png" data-en-src="assets/screenshot-dark-en.png"
-           width="2160" height="1620" loading="lazy" decoding="async"
-           alt="Expoal con un enlace pegado, el vídeo listo para descargar y el historial debajo">
+
+    <!-- Pila de capturas: misma receta que .hero-wrap/.sheet (sticky + tarjeta
+         sólida que sube y tapa), a escala de tarjeta en vez de a escala de página.
+         Añadir una nueva captura es copiar un .shot-card y subir --stack en 1. -->
+    <div class="shots">
+      <div class="shot-card" style="--stack:1">
+        <div class="shot-head" data-reveal style="--i:3">
+          <span class="shot-num">01</span>
+          <h3 data-en="Analyze and download">Analiza y descarga</h3>
+          <span class="demo-badge" data-en="Real screenshot">Captura real</span>
+        </div>
+        <div class="shot zoomable" data-reveal style="--i:3" tabindex="0" role="button"
+             aria-label="Ampliar la captura" data-en-aria="Enlarge the screenshot">
+          <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="assets/screenshot-dark-es.png" data-en-src="assets/screenshot-dark-en.png"
+               width="2160" height="1620" loading="lazy" decoding="async"
+               alt="Expoal con un enlace pegado, el vídeo listo para descargar y el historial debajo">
+        </div>
+        <p class="shot-cap" data-reveal style="--i:4"
+           data-en="Paste a link, Expoal reads the video and lets you pick the format, quality and folder.">
+          Pega un enlace, Expoal lee el vídeo y te deja elegir formato, calidad y carpeta.</p>
+      </div>
+
+      <div class="shot-card" style="--stack:2">
+        <div class="shot-head" data-reveal style="--i:4">
+          <span class="shot-num">02</span>
+          <h3 data-en="Live download queue">Cola de descargas en vivo</h3>
+          <span class="demo-badge" data-en="Real screenshot">Captura real</span>
+        </div>
+        <div class="shot zoomable" data-reveal style="--i:4" tabindex="0" role="button"
+             aria-label="Ampliar la captura" data-en-aria="Enlarge the screenshot">
+          <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="assets/screenshot-queue-dark-es.png" data-en-src="assets/screenshot-queue-dark-en.png"
+               width="2160" height="1620" loading="lazy" decoding="async"
+               alt="La cola de Expoal: un vídeo descargando con su progreso y velocidad, otro terminado y el historial debajo">
+        </div>
+        <p class="shot-cap" data-reveal style="--i:5"
+           data-en="Progress, speed and time left while it downloads; cancel it with one click.">
+          Progreso, velocidad y tiempo restante mientras descarga; cancélala con un clic.</p>
+      </div>
     </div>
-    <div class="shot" data-reveal style="--i:4">
-      <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-      <img src="assets/screenshot-queue-dark-es.png" data-en-src="assets/screenshot-queue-dark-en.png"
-           width="2160" height="1620" loading="lazy" decoding="async"
-           alt="La cola de Expoal: un vídeo descargando con su progreso y velocidad, otro terminado y el historial debajo">
-    </div>
-    <p class="shot-foot" data-reveal style="--i:5"
-       data-en="Progress, speed and time left while it downloads. Dark and light theme, English and Spanish.">
-      Progreso, velocidad y tiempo restante mientras descarga. Tema oscuro y claro, en español e inglés.</p>
   </section>
+
+  <!-- Zoom de capturas: <dialog> nativo, Escape y clic fuera cierran solos. -->
+  <dialog id="lightbox">
+    <button type="button" id="lightbox-close" aria-label="Cerrar" data-en-aria="Close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+           stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <img id="lightbox-img" src="" alt="">
+  </dialog>
 
   <section data-rise>
     <p class="kicker" data-reveal data-en="That short">Así de corto</p>
@@ -1190,6 +1309,35 @@
     })();
 
     /* ==========================================================================
+       ZOOM DE CAPTURAS — clic (o Enter/Espacio) en una captura abre un <dialog>
+       nativo a pantalla completa con la MISMA imagen que se ve en ese momento
+       (respeta el idioma activo). Escape y el propio <dialog> lo cierran solos.
+       ========================================================================== */
+    (function () {
+      const lightbox = document.getElementById("lightbox");
+      if (!lightbox) return;
+      const lbImg = document.getElementById("lightbox-img");
+      const open = (shot) => {
+        const img = shot.querySelector("img");
+        if (!img) return;
+        lbImg.src = img.currentSrc || img.src;
+        lbImg.alt = img.alt;
+        lightbox.showModal();
+      };
+      document.querySelectorAll(".shot.zoomable").forEach((shot) => {
+        shot.addEventListener("click", () => open(shot));
+        shot.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(shot); }
+        });
+      });
+      document.getElementById("lightbox-close").addEventListener("click", () => lightbox.close());
+      // Clic en el fondo (fuera de la imagen) también cierra: el <dialog> ocupa
+      // toda la pantalla, así que basta con comprobar que el clic fue en él y
+      // no en un descendiente (la imagen o el botón de cerrar).
+      lightbox.addEventListener("click", (e) => { if (e.target === lightbox) lightbox.close(); });
+    })();
+
+    /* ==========================================================================
        IDIOMA (es / en) — el español vive en el HTML y la traducción viaja al
        lado, en data-en. Así el texto y su traducción se editan juntos y no hay
        forma de que se desincronicen. El idioma inicial ya lo fijó el script del
@@ -1222,6 +1370,10 @@
       // Imágenes que tienen versión por idioma (la captura de la app)
       const imgs = [...document.querySelectorAll("[data-en-src]")];
       imgs.forEach((n) => { n.dataset.esSrc = n.getAttribute("src"); });
+      // Botones sin texto visible (el zoom, el cerrar del lightbox): su
+      // traducción viaja en el aria-label, mismo patrón que data-en.
+      const ariaEls = [...document.querySelectorAll("[data-en-aria]")];
+      ariaEls.forEach((n) => { n.dataset.esAria = n.getAttribute("aria-label") || ""; });
       const listeners = [];
 
       function apply() {
@@ -1233,6 +1385,9 @@
         }
         for (const n of imgs) {
           n.src = lang === "en" ? n.dataset.enSrc : n.dataset.esSrc;
+        }
+        for (const n of ariaEls) {
+          n.setAttribute("aria-label", lang === "en" ? n.dataset.enAria : n.dataset.esAria);
         }
         document.title = DICT[lang].title;
         const md = document.querySelector('meta[name="description"]');
