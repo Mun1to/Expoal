@@ -117,6 +117,17 @@ body {
   transition: background-color 0.18s, color 0.18s;
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+
+/* Botones pequeños dentro de las filas de la cola y el historial */
+.row-btn {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  align-self: center;
+}
+.row-btn:disabled { opacity: 0.5; cursor: default; }
+.job-cancel:hover { color: var(--error); background: var(--surface-2); }
+.row-btn.err { color: var(--error); }
 html[data-theme="dark"] #icon-moon { display: none; }
 html[data-theme="light"] #icon-sun { display: none; }
 

@@ -55,6 +55,12 @@ def _run_desktop() -> None:
 
 
 def main() -> None:
+    # El motor descargado (yt-dlp renovado) debe engancharse antes del primer
+    # import de yt_dlp, y el primero ocurre al importar el servidor.
+    from . import engine
+
+    engine.activate()
+
     parser = argparse.ArgumentParser(
         prog="expoal",
         description="Download videos from YouTube, TikTok or Instagram to your local disk.",

@@ -24,10 +24,16 @@ const I18N = (function () {
       download: "Descargar",
       updating: "Descargando la actualización... Expoal se reiniciará solo.",
       installing: "Instalando... la aplicación se cerrará en un momento.",
+      enginedl: "Actualizando el motor...",
+      enginedone: "Motor actualizado. Cierra y abre Expoal para estrenarlo.",
+      cancel: "Cancelar descarga",
+      openfolder: "Abrir la carpeta del archivo",
+      filegone: "El archivo ya no está ahí",
       edges: "bordes", noaudio: "sin audio",
       status: {
         en_cola: "En cola", descargando: "Descargando...", procesando: "Procesando...",
         editando: "Editando...", completado: "Completado", error: "Error",
+        cancelado: "Cancelada",
       },
       badges: { audio: "MP3", text: "TEXTO" },
       mins: (m, s) => `${m}:${s} min`,
@@ -45,10 +51,16 @@ const I18N = (function () {
       download: "Download",
       updating: "Downloading the update... Expoal will restart by itself.",
       installing: "Installing... the app will close in a moment.",
+      enginedl: "Updating the engine...",
+      enginedone: "Engine updated. Close and reopen Expoal to use it.",
+      cancel: "Cancel download",
+      openfolder: "Open the file's folder",
+      filegone: "The file is not there anymore",
       edges: "edges", noaudio: "no audio",
       status: {
         en_cola: "Queued", descargando: "Downloading...", procesando: "Processing...",
         editando: "Editing...", completado: "Done", error: "Error",
+        cancelado: "Cancelled",
       },
       badges: { audio: "MP3", text: "TEXT" },
       mins: (m, s) => `${m}:${s} min`,
@@ -541,6 +553,44 @@ async function download() {
 
 // --- Cola e historial ---
 
+// Iconos de los botones de fila. innerHTML seguro: cadenas constantes de este
+// archivo, jamás construidas con datos del vídeo.
+const ICON_X =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const ICON_FOLDER =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>';
+
+function iconButton(icon, title) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "icon-btn row-btn";
+  btn.innerHTML = icon;
+  btn.title = title;
+  btn.setAttribute("aria-label", title);
+  return btn;
+}
+
+function folderButton(path) {
+  const btn = iconButton(ICON_FOLDER, I18N.t("openfolder"));
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      await post("/api/open-folder", { path });
+    } catch (_) {
+      // Da igual si fue 403 o 404: para quien mira, el archivo no aparece.
+      btn.classList.add("err");
+      btn.title = I18N.t("filegone");
+      btn.setAttribute("aria-label", btn.title);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  return btn;
+}
+
 function renderJob(job) {
   const item = document.createElement("div");
   item.className = "job";
@@ -562,6 +612,23 @@ function renderJob(job) {
   }
   status.textContent = statusText;
   head.append(title, status);
+  if (job.status === "en_cola" || job.status === "descargando") {
+    const cancel = iconButton(ICON_X, I18N.t("cancel"));
+    cancel.classList.add("job-cancel");
+    cancel.addEventListener("click", async () => {
+      cancel.disabled = true;
+      try {
+        await api(`/api/jobs/${job.id}/cancel`, { method: "POST" });
+        refresh();
+      } catch (_) {
+        cancel.disabled = false;
+      }
+    });
+    head.appendChild(cancel);
+  }
+  if (job.status === "completado" && job.file_path) {
+    head.appendChild(folderButton(job.file_path));
+  }
   item.appendChild(head);
 
   if (job.status === "descargando" || job.status === "procesando" || job.status === "en_cola") {
@@ -606,6 +673,7 @@ function renderHistoryItem(entry) {
   date.className = "history-date";
   date.textContent = (entry.downloaded_at || "").replace("T", " ");
   head.append(badge, title, date);
+  if (entry.file_path) head.appendChild(folderButton(entry.file_path));
   item.appendChild(head);
 
   if (entry.file_path) {
@@ -628,6 +696,10 @@ async function refresh() {
     const queueList = $("#queue-list");
     queueList.replaceChildren(...jobs.map(renderJob));
     $("#queue-section").classList.toggle("hidden", jobs.length === 0);
+    // "Limpiar terminadas" solo cuando hay algo que limpiar.
+    const doneStates = ["completado", "error", "cancelado"];
+    const hasDone = jobs.some((j) => doneStates.includes(j.status));
+    $("#clear-queue").classList.toggle("hidden", !hasDone);
 
     const historyList = $("#history-list");
     historyList.replaceChildren(...historyEntries.map(renderHistoryItem));
@@ -644,6 +716,10 @@ async function init() {
   $("#download-btn").addEventListener("click", download);
   $("#clear-history").addEventListener("click", async () => {
     await api("/api/history", { method: "DELETE" });
+    refresh();
+  });
+  $("#clear-queue").addEventListener("click", async () => {
+    await api("/api/jobs", { method: "DELETE" });
     refresh();
   });
 
@@ -739,7 +815,14 @@ async function checkForUpdate() {
   } catch (_) {
     return; // sin conexión: no molestamos
   }
-  if (!info || !info.update_available) return;
+  if (!info) return;
+
+  // Si hay app nueva se ofrece esa (trae el motor al día); si no, y el motor
+  // (yt-dlp) se ha quedado viejo, se ofrece renovar solo el motor.
+  if (!info.update_available) {
+    if (info.engine && info.engine.update_available) showEngineBanner(info.engine);
+    return;
+  }
 
   const banner = $("#update-banner");
   $("#update-version").textContent = `v${info.latest}`;
@@ -772,6 +855,28 @@ async function checkForUpdate() {
     });
   }
 
+  banner.classList.remove("hidden");
+}
+
+function showEngineBanner(engineInfo) {
+  const banner = $("#engine-banner");
+  $("#engine-version").textContent = `yt-dlp ${engineInfo.latest}`;
+  const btn = $("#engine-btn");
+  const status = $("#engine-status");
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    status.classList.remove("hidden", "err");
+    status.textContent = I18N.t("enginedl");
+    try {
+      await api("/api/update/engine", { method: "POST" });
+      status.textContent = I18N.t("enginedone");
+      btn.classList.add("hidden");
+    } catch (err) {
+      status.classList.add("err");
+      status.textContent = err.message;
+      btn.disabled = false;
+    }
+  });
   banner.classList.remove("hidden");
 }
 

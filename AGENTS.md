@@ -95,6 +95,29 @@ src/expoal/
   instantáneo); con crop hay que recodificar (libx264 veryfast). El crop fuerza dimensiones pares
   (H.264 lo exige) y rechaza recortes que dejen el vídeo sin imagen. Se aplica solo en modo vídeo.
   La UI es una sección plegable con barra de dos tiradores + campos de tiempo sincronizados.
+- **Motor actualizable** (`engine.py`, v1.9.0): yt-dlp empaquetado se queda viejo en semanas y
+  entonces "Expoal no funciona" para el usuario. La app baja el wheel oficial de PyPI (HTTPS,
+  sha256 verificado contra el JSON de PyPI, solo `files.pythonhosted.org`), lo extrae en
+  `%LOCALAPPDATA%\Expoal\engine\` (filtrando rutas: solo `yt_dlp/`, anti zip-slip) y lo carga en
+  el próximo arranque. GOTCHA CRÍTICO: en el .exe congelado NO sirve `sys.path` (el finder de
+  PyInstaller puede ganar); `activate()` inserta un finder propio al PRINCIPIO de `sys.meta_path`
+  que reclama `yt_dlp` Y sus submódulos (si no, se mezclan paquete nuevo con submódulos viejos), y
+  se llama en la PRIMERA línea de `main()` antes de cualquier `import yt_dlp`. Autolimpieza: si la
+  app se actualizó desde que se bajó el motor (`engine.json` guarda la versión de app), la copia se
+  borra, porque la app nueva ya trae su yt-dlp y así no hay que comparar versiones con el
+  empaquetado. Aplicar el motor exige reiniciar (yt_dlp ya está importado) y el endpoint devuelve
+  409 si hay descargas activas (sus módulos se cargan perezosamente y cambiarlos a mitad rompe).
+  El banner solo sale si NO hay versión nueva de la app (la app nueva ya trae motor al día).
+- **Cancelar descargas** (v1.9.0): `Job.cancel_event`; el hook de progreso lo mira en cada tick y
+  lanza `JobCancelled`. GOTCHA: yt-dlp envuelve la excepción del hook (llega como `DownloadError`),
+  así que el worker clasifica por `cancel_event.is_set()`, no por el tipo. Al cancelar se borran
+  los restos (`current_file`/`current_tmp` + `.part`/`.ytdl`, apuntados desde el hook). En
+  `procesando`/`editando` ya no se cancela (FFmpeg escribiendo). `clear_finished()` saca de la
+  lista los terminados; el worker usa `self._jobs.get(job_id)` porque el trabajo puede haberse
+  limpiado mientras esperaba en la cola.
+- **Abrir carpeta** (`/api/open-folder`, v1.9.0): solo acepta rutas que la propia app produjo
+  (historial ∪ trabajos), nunca una arbitraria, aunque la petición venga de localhost. En Windows
+  `explorer /select,<ruta>` vía Popen (explorer siempre devuelve ≠0: no comprobar el código).
 - **Auto-update**: `updater.py` consulta el último release del repo oficial (solo GitHub por HTTPS),
   compara semver, descarga el instalador, verifica `SHA256SUMS.txt` si existe y lo lanza en silent.
   Endpoints `/api/update/check` y `/api/update/apply`. La UI muestra un banner (aviso + 1 clic).

@@ -55,8 +55,9 @@ for the times you want a window, and for the people who would never open a termi
 - Extract the transcript: save subtitles as clean text or as timed `.srt`, in any of the languages the video offers, either instead of the video or alongside it
 - Pick the resolution, and choose the destination folder with a native file browser
 - Edit while you download: trim the length (visual slider or exact timecodes), crop the edges by pixels, and strip the audio track
-- Download queue with live progress, speed and ETA
-- Persistent download history
+- Download queue with live progress, speed and ETA, and one-click cancel for any download
+- Persistent download history, with a button to open any file's folder right from the app
+- The download engine (yt-dlp) refreshes itself between app releases, so videos keep working when platforms change
 - Light and dark theme with a toggle (remembers your choice, follows the system by default)
 - One-click self-update on Windows and Linux: the app checks GitHub on startup and updates itself when a new version is out
 - Runs on Windows (native window) and Linux (AppImage, opens in your browser)

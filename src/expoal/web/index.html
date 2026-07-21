@@ -64,6 +64,20 @@
       <p id="update-status" class="update-status hidden"></p>
     </div>
 
+    <div id="engine-banner" class="banner update hidden">
+      <div class="update-main">
+        <span class="update-dot"></span>
+        <div>
+          <strong data-en="The download engine has a new version">El motor de descargas tiene versión nueva</strong>
+          <span id="engine-version" class="update-version"></span>
+        </div>
+      </div>
+      <div class="update-actions">
+        <button type="button" id="engine-btn" class="btn primary small" data-en="Update engine">Actualizar motor</button>
+      </div>
+      <p id="engine-status" class="update-status hidden"></p>
+    </div>
+
     <div id="ffmpeg-banner" class="banner hidden"
          data-en="Without FFmpeg there is no MP3 and no merged top qualities. Install it with &lt;code&gt;winget install Gyan.FFmpeg&lt;/code&gt; and restart Expoal.">
       Sin FFmpeg no hay MP3 ni calidades máximas fusionadas. Instálalo con
@@ -209,7 +223,10 @@
     </section>
 
     <section class="list-section hidden" id="queue-section">
-      <h3 data-en="Download queue">Cola de descargas</h3>
+      <div class="section-head">
+        <h3 data-en="Download queue">Cola de descargas</h3>
+        <button type="button" id="clear-queue" class="btn ghost small hidden" data-en="Clear finished">Limpiar terminadas</button>
+      </div>
       <div id="queue-list"></div>
     </section>
 

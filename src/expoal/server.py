@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, dialogs, subtitles, updater
+from . import __version__, config, dialogs, engine, subtitles, updater
 from .downloader import AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error
 from .editor import Edits
 from .history import History
@@ -80,6 +80,7 @@ def _validate_url(url: str) -> str:
 def get_config() -> dict:
     return {
         "version": __version__,
+        "engine": engine.current_version(),
         "default_folder": str(config.DEFAULT_DOWNLOAD_DIR),
         "ffmpeg": config.ffmpeg_available(),
     }
@@ -188,7 +189,10 @@ def pick_folder() -> dict:
 
 @app.get("/api/update/check")
 def update_check(force: bool = False) -> dict:
-    return updater.check_for_update(force=force)
+    result = dict(updater.check_for_update(force=force))
+    # El motor (yt-dlp) se comprueba aparte: se renueva sin sacar versión de la app.
+    result["engine"] = engine.check(force=force)
+    return result
 
 
 @app.post("/api/update/apply")
@@ -199,9 +203,55 @@ def update_apply() -> dict:
     return result
 
 
+ACTIVE_STATUSES = {"descargando", "procesando", "editando"}
+
+
+@app.post("/api/update/engine")
+def update_engine() -> dict:
+    # Con una descarga en marcha no se toca el motor: sus módulos se cargan
+    # perezosamente y cambiar los archivos a mitad podría romperla.
+    if any(j["status"] in ACTIVE_STATUSES for j in manager.snapshot()):
+        raise HTTPException(status_code=409, detail="Espera a que terminen las descargas en curso")
+    result = engine.apply()
+    if not result.get("ok"):
+        raise HTTPException(status_code=422, detail=result.get("error", "no se pudo actualizar el motor"))
+    return result
+
+
 @app.get("/api/jobs")
 def list_jobs() -> list[dict]:
     return manager.snapshot()
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job(job_id: str) -> dict:
+    result = manager.cancel(job_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Trabajo no encontrado")
+    return result
+
+
+@app.delete("/api/jobs")
+def clear_jobs() -> dict:
+    return {"removed": manager.clear_finished()}
+
+
+class OpenRequest(BaseModel):
+    path: str
+
+
+@app.post("/api/open-folder")
+def open_folder(req: OpenRequest) -> dict:
+    # Solo rutas que la propia app produjo (historial o trabajos terminados):
+    # nunca una arbitraria, aunque la petición venga del propio equipo.
+    known = {e.get("file_path") for e in history.entries()}
+    known |= {j["file_path"] for j in manager.snapshot() if j.get("file_path")}
+    if req.path not in known:
+        raise HTTPException(status_code=403, detail="Ruta no reconocida")
+    if not Path(req.path).exists():
+        raise HTTPException(status_code=404, detail="El archivo ya no está ahí")
+    dialogs.reveal_in_folder(req.path)
+    return {"ok": True}
 
 
 @app.get("/api/history")

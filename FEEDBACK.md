@@ -69,6 +69,18 @@ Leer SIEMPRE antes de empezar una tarea en este proyecto.
 - **Gotcha del test:** no probar el instalador con `Start-Process -Wait`; como el setup relanza
   la app al terminar, `-Wait` se queda colgado esperando a que esa app se cierre.
 
+## 2026-07-21 — "This video is not available" NO era yt-dlp viejo
+
+- **Síntoma:** `youtu.be/NS8DsXzU2Xg` fallaba con "This video is not available" y la sospecha
+  era que el yt-dlp instalado (2026.07.04) se había quedado viejo.
+- **Diagnóstico:** con el yt-dlp MÁS NUEVO de PyPI (2026.7.4, el mismo) el vídeo seguía fallando
+  y un vídeo de control (Big Buck Bunny) funcionaba. Conclusión: el vídeo está borrado, privado
+  o bloqueado por región; no es bug de Expoal ni cuestión de versión.
+- **Receta para la próxima vez:** probar el MISMO enlace con yt-dlp a pelo y un vídeo de control
+  en la misma sesión. Si ambos fallan → motor viejo; si solo falla uno → es ese vídeo.
+- **De regalo:** de esta investigación salió el motor actualizable (`engine.py`, v1.9.0), porque
+  el caso "yt-dlp viejo rompe la app instalada" es real aunque esta vez no fuera eso.
+
 ## 2026-07-06 — Alinear el tagline del logo con "Expoal"
 
 - **Problema:** "DEL LINK A TU DISCO" se veía descentrado respecto a "Expoal".

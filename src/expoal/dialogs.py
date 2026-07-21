@@ -24,6 +24,22 @@ _TK_SCRIPT = (
 )
 
 
+def reveal_in_folder(path: str) -> None:
+    """Abre el explorador del sistema con el archivo seleccionado.
+
+    En Windows, explorer.exe siempre devuelve código distinto de 0, así que no
+    se comprueba el resultado; con Popen tampoco se bloquea el servidor.
+    """
+    if sys.platform == "win32":
+        subprocess.Popen(["explorer", f"/select,{path}"], close_fds=True)
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", "-R", path], close_fds=True)
+    else:
+        from pathlib import Path
+
+        subprocess.Popen(["xdg-open", str(Path(path).parent)], close_fds=True)
+
+
 def pick_folder() -> str | None:
     with _lock:
         try:

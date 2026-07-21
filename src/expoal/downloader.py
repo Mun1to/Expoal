@@ -23,6 +23,10 @@ def clean_error(exc: BaseException) -> str:
     return msg or exc.__class__.__name__
 
 
+class JobCancelled(Exception):
+    """El usuario canceló el trabajo; no es un error."""
+
+
 # Formatos de salida que ofrecemos. Los de vídeo se obtienen remuxeando (cambiar el
 # envoltorio sin tocar los datos, casi instantáneo) salvo WEBM, que obliga a recodificar
 # porque necesita códecs distintos. Los de audio los produce FFmpeg al extraer.
@@ -112,13 +116,18 @@ class Job:
     sub_lang: str = ""          # código de idioma de los subtítulos
     sub_format: str = "txt"     # "txt" (texto limpio) o "srt" (con tiempos)
     out_format: str = ""        # contenedor de vídeo o códec de audio pedido
-    status: str = "en_cola"  # en_cola | descargando | procesando | completado | error
+    status: str = "en_cola"  # en_cola | descargando | procesando | editando | completado | error | cancelado
     progress: float = 0.0
     speed: str = ""
     eta: str = ""
     error: str = ""
     file_path: str = ""
     created_at: float = field(default_factory=time.time)
+    # Cancelación: el hook de progreso mira este evento en cada tick y aborta.
+    cancel_event: threading.Event = field(default_factory=threading.Event)
+    # Archivos en curso, para poder borrar los restos (.part) al cancelar.
+    current_file: str = ""
+    current_tmp: str = ""
 
     def public(self) -> dict:
         return {
@@ -172,17 +181,70 @@ class DownloadManager:
         with self._lock:
             return [self._jobs[job_id].public() for job_id in reversed(self._order)]
 
+    def cancel(self, job_id: str) -> dict | None:
+        """Cancela un trabajo en cola o descargando. Devuelve None si no existe."""
+        with self._lock:
+            job = self._jobs.get(job_id)
+        if job is None:
+            return None
+        if job.status == "en_cola":
+            job.cancel_event.set()
+            job.status = "cancelado"
+        elif job.status == "descargando":
+            # El hook de progreso lo verá en el siguiente tick y abortará.
+            job.cancel_event.set()
+        # procesando/editando ya no se cancelan: FFmpeg está en plena escritura.
+        return job.public()
+
+    TERMINAL = {"completado", "error", "cancelado"}
+
+    def clear_finished(self) -> int:
+        """Quita de la lista los trabajos ya terminados (en cualquier sentido)."""
+        with self._lock:
+            keep = [jid for jid in self._order if self._jobs[jid].status not in self.TERMINAL]
+            removed = len(self._order) - len(keep)
+            self._jobs = {jid: self._jobs[jid] for jid in keep}
+            self._order = keep
+        return removed
+
     def _run(self) -> None:
         while True:
             job_id = self._queue.get()
-            job = self._jobs[job_id]
             try:
+                # .get(): el trabajo puede haber salido de la lista con "Limpiar"
+                # mientras esperaba en la cola.
+                job = self._jobs.get(job_id)
+                if job is None or job.cancel_event.is_set():
+                    if job is not None:
+                        job.status = "cancelado"
+                    continue
                 self._download(job)
             except Exception as exc:  # noqa: BLE001 - el worker nunca debe morir
-                job.status = "error"
-                job.error = clean_error(exc)
+                if job.cancel_event.is_set():
+                    # yt-dlp envuelve la excepción del hook, así que se clasifica
+                    # por el evento y no por el tipo que llegue hasta aquí.
+                    job.status = "cancelado"
+                    job.error = ""
+                    job.speed = ""
+                    job.eta = ""
+                    self._cleanup_partial(job)
+                else:
+                    job.status = "error"
+                    job.error = clean_error(exc)
             finally:
                 self._queue.task_done()
+
+    @staticmethod
+    def _cleanup_partial(job: Job) -> None:
+        """Borra los restos de una descarga cancelada (.part y compañía)."""
+        for name in (job.current_tmp, job.current_file):
+            if not name:
+                continue
+            for path in (Path(name), Path(name + ".part"), Path(name + ".ytdl")):
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass  # un resto bloqueado no debe tumbar el worker
 
     def _download(self, job: Job) -> None:
         folder = Path(job.folder).expanduser()
@@ -192,6 +254,13 @@ class DownloadManager:
         job.status = "descargando"
 
         def hook(d: dict) -> None:
+            if job.cancel_event.is_set():
+                raise JobCancelled("cancelado por el usuario")
+            # Se apuntan los archivos en curso para poder limpiar al cancelar.
+            if d.get("tmpfilename"):
+                job.current_tmp = d["tmpfilename"]
+            if d.get("filename"):
+                job.current_file = d["filename"]
             if d["status"] == "downloading":
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
                 if total:

@@ -12,7 +12,7 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] Modo web y modo escritorio con un solo código
 - [x] Detección de FFmpeg (PATH + winget) con aviso en la UI
 
-## Nivel 2 — Pulido de producto ✅ (parcial)
+## Nivel 2 — Pulido de producto ✅
 
 - [x] Modo claro/oscuro con toggle persistente (recuerda elección, sigue al sistema por defecto)
 - [x] Rediseño profesional: plano, glow sutil, tipografía y branding propios (icono + favicon)
@@ -21,11 +21,10 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] Edición al vuelo: recortar duración (barra visual + tiempos), recortar bordes por píxeles
       y quitar el audio del MP4 (`editor.py` con FFmpeg)
 - [x] Elegir formato de salida: MP4/MKV/MOV/WEBM y MP3/M4A/WAV/FLAC/OPUS
-- [ ] Cancelar una descarga en curso / limpiar trabajos de la cola
-- [ ] Soporte de contenido privado con `cookiesfrombrowser` (Instagram logueado, etc.)
-- [ ] Playlists y perfiles completos (hoy `noplaylist: True`)
-- [ ] i18n: interfaz en inglés además de español
-- [ ] Abrir la carpeta del archivo descargado desde la UI
+- [x] Cancelar una descarga en curso (botón ✕, limpia los `.part`) y limpiar los trabajos
+      terminados de la cola (v1.9.0)
+- [x] i18n: interfaz en inglés además de español (v1.8.0, patrón `data-en` + `DICT`)
+- [x] Abrir la carpeta del archivo descargado desde la UI (historial y cola, v1.9.0)
 
 ## Nivel 3 — Ecosistema
 
@@ -35,7 +34,11 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] Auto-actualización también en Linux (el AppImage se reemplaza a sí mismo)
 - [x] Extraer subtítulos: modo "Texto" (en vez del vídeo) y casilla para guardarlos junto al vídeo;
       salida en texto limpio o `.srt` con tiempos, eligiendo idioma
+- [x] **Motor actualizable** (v1.9.0): yt-dlp se renueva desde la app sin reinstalarla
+      (`engine.py`; el punto más frágil del producto, YouTube cambia cada pocas semanas)
 - [ ] Build para macOS (.dmg / .app) — requiere runner macOS
+- [ ] Soporte de contenido privado con `cookiesfrombrowser` (Instagram logueado, etc.)
+- [ ] Playlists y perfiles completos (hoy `noplaylist: True`; decisión de producto pendiente)
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor
-- [ ] Recorte de fragmentos (descargar solo del minuto X al Y)
-- [ ] Subtítulos (descargar .srt junto al vídeo)
+- [ ] Descargar solo un fragmento SIN bajar el vídeo entero (hoy el recorte de duración
+      descarga todo y corta después; esto sería ahorro de datos, no una función nueva)
