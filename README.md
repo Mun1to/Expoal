@@ -21,13 +21,14 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 ## Features
 
 - Paste a link, preview the video and download it in the best available quality
-- Choose the format: MP4 video or MP3 audio (audio extraction requires FFmpeg)
+- Choose the format: MP4 video, MP3 audio (requires FFmpeg) or the video's text
+- Extract the transcript: save subtitles as clean text or as timed `.srt`, in any of the languages the video offers, either instead of the video or alongside it
 - Pick the resolution, and choose the destination folder with a native file browser
 - Edit while you download: trim the length (visual slider or exact timecodes), crop the edges by pixels, and strip the audio track
 - Download queue with live progress, speed and ETA
 - Persistent download history
 - Light and dark theme with a toggle (remembers your choice, follows the system by default)
-- One-click self-update on Windows: the app checks GitHub on startup and updates itself when a new version is out
+- One-click self-update on Windows and Linux: the app checks GitHub on startup and updates itself when a new version is out
 - Runs on Windows (native window) and Linux (AppImage, opens in your browser)
 - Two ways to use it, same app:
   - Web mode: a local page in your browser

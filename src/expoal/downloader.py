@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yt_dlp
 
-from . import config
+from . import config, subtitles
 from .editor import Edits, apply as apply_edits
 from .history import History
 
@@ -55,6 +55,23 @@ def _fmt_eta(eta: float | None) -> str:
     return f"{eta}s"
 
 
+def _find_subtitle(info: dict, folder: Path) -> Path | None:
+    """Localiza el archivo de subtítulos que acaba de escribir yt-dlp."""
+    requested = info.get("requested_subtitles") or {}
+    for track in requested.values():
+        path = (track or {}).get("filepath")
+        if path and Path(path).exists():
+            return Path(path)
+    # Respaldo: buscar por el id del vídeo en la carpeta de destino.
+    video_id = info.get("id") or ""
+    if video_id:
+        for ext in ("srt", "vtt"):
+            matches = sorted(folder.glob(f"*[[]{video_id}[]]*.{ext}"))
+            if matches:
+                return matches[0]
+    return None
+
+
 def _final_path(info: dict) -> str:
     requested = info.get("requested_downloads") or []
     if requested and requested[0].get("filepath"):
@@ -71,6 +88,9 @@ class Job:
     folder: str
     title: str = ""
     edits: Edits | None = None
+    subs: bool = False          # descargar también los subtítulos (modo vídeo)
+    sub_lang: str = ""          # código de idioma de los subtítulos
+    sub_format: str = "txt"     # "txt" (texto limpio) o "srt" (con tiempos)
     status: str = "en_cola"  # en_cola | descargando | procesando | completado | error
     progress: float = 0.0
     speed: str = ""
@@ -106,7 +126,8 @@ class DownloadManager:
         self._worker.start()
 
     def enqueue(self, url: str, mode: str, quality: str, folder: str, title: str = "",
-                edits: Edits | None = None) -> dict:
+                edits: Edits | None = None, subs: bool = False, sub_lang: str = "",
+                sub_format: str = "txt") -> dict:
         job = Job(
             id=uuid.uuid4().hex[:12],
             url=url,
@@ -115,6 +136,9 @@ class DownloadManager:
             folder=folder,
             title=title,
             edits=edits,
+            subs=subs,
+            sub_lang=sub_lang,
+            sub_format=sub_format,
         )
         with self._lock:
             self._jobs[job.id] = job
@@ -181,11 +205,42 @@ class DownloadManager:
                 }
             ]
 
+        # Subtítulos: en modo "texto" solo se bajan ellos; en vídeo pueden ir de acompañantes.
+        wants_subs = job.mode == "text" or job.subs
+        if wants_subs:
+            lang = job.sub_lang or "en"
+            opts.update(
+                {
+                    "writesubtitles": True,
+                    "writeautomaticsub": True,  # respaldo si no hay subtítulos propios
+                    "subtitleslangs": [lang],
+                    "subtitlesformat": "srt/vtt/best",
+                }
+            )
+            if job.mode == "text":
+                opts["skip_download"] = True
+                opts["format"] = None
+
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(job.url, download=True)
 
         job.title = job.title or info.get("title") or job.url
         job.file_path = _final_path(info)
+
+        # Subtítulos: yt-dlp los deja como "<nombre>.<idioma>.srt" junto al vídeo.
+        if wants_subs:
+            sub_file = _find_subtitle(info, folder)
+            if not sub_file:
+                if job.mode == "text":
+                    raise RuntimeError("Este vídeo no tiene subtítulos disponibles")
+            elif job.sub_format == "txt":
+                text = subtitles.to_text(sub_file)
+                txt_file = sub_file.with_suffix(".txt")
+                txt_file.write_text(text, encoding="utf-8")
+                sub_file.unlink(missing_ok=True)
+                sub_file = txt_file
+            if sub_file and job.mode == "text":
+                job.file_path = str(sub_file)
 
         # Ediciones (recorte de duración, recorte de bordes, silenciar) sobre el archivo ya
         # descargado. Solo aplica a vídeo: en modo audio no tienen sentido.

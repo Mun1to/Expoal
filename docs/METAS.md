@@ -31,7 +31,9 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] Instalador con Inno Setup (accesos directos automáticos, desinstalador) — `installer/expoal.iss`
 - [x] Auto-actualización con un clic (banner en la app) + release automático con GitHub Actions
 - [x] Build para **Linux** (AppImage, abre en el navegador) publicado junto al .exe de Windows
-- [ ] Auto-actualización también en Linux (reemplazo del propio AppImage)
+- [x] Auto-actualización también en Linux (el AppImage se reemplaza a sí mismo)
+- [x] Extraer subtítulos: modo "Texto" (en vez del vídeo) y casilla para guardarlos junto al vídeo;
+      salida en texto limpio o `.srt` con tiempos, eligiendo idioma
 - [ ] Build para macOS (.dmg / .app) — requiere runner macOS
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor
 - [ ] Recorte de fragmentos (descargar solo del minuto X al Y)

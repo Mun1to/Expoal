@@ -87,11 +87,23 @@
           <div class="segmented" id="mode-group">
             <button type="button" data-mode="video" class="active">Vídeo MP4</button>
             <button type="button" data-mode="audio" id="audio-btn">Audio MP3</button>
+            <button type="button" data-mode="text" id="text-btn">Texto</button>
           </div>
         </div>
-        <div class="option">
+        <div class="option" id="quality-option">
           <label for="quality-select">Calidad</label>
           <select id="quality-select"></select>
+        </div>
+        <div class="option hidden" id="sub-lang-option">
+          <label for="sub-lang-select">Idioma del texto</label>
+          <select id="sub-lang-select"></select>
+        </div>
+        <div class="option hidden" id="sub-format-option">
+          <label>Formato del texto</label>
+          <div class="segmented" id="sub-format-group">
+            <button type="button" data-subfmt="txt" class="active">Solo texto</button>
+            <button type="button" data-subfmt="srt">Con tiempos</button>
+          </div>
         </div>
         <div class="option grow">
           <label for="folder-input">Carpeta de destino</label>
@@ -171,6 +183,11 @@
           <label class="check">
             <input type="checkbox" id="mute-check">
             <span>Quitar el audio (vídeo mudo)</span>
+          </label>
+
+          <label class="check" id="subs-check-row">
+            <input type="checkbox" id="subs-check">
+            <span>Guardar también el texto del vídeo (subtítulos aparte)</span>
           </label>
         </div>
       </section>

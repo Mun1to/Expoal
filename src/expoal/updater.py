@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -20,7 +22,9 @@ from . import __version__
 
 REPO = "Mun1to/Expoal"
 API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
-INSTALLER_SUFFIX = "-setup.exe"
+# Cada plataforma se actualiza con su propio asset.
+INSTALLER_SUFFIX = "-setup.exe"      # Windows: instalador Inno Setup
+APPIMAGE_SUFFIX = ".AppImage"        # Linux: se reemplaza el propio AppImage
 CHECKSUMS_ASSET = "SHA256SUMS.txt"
 USER_AGENT = f"Expoal/{__version__}"
 # La descarga solo se acepta desde estos orígenes de GitHub.
@@ -60,6 +64,20 @@ def _host_allowed(url: str) -> bool:
     return host in ALLOWED_HOSTS or host.endswith(".githubusercontent.com")
 
 
+def running_appimage() -> Path | None:
+    """Ruta del AppImage en ejecución, o None si no estamos dentro de uno.
+
+    AppImage exporta la variable APPIMAGE con la ruta del archivo original.
+    """
+    if sys.platform != "linux":
+        return None
+    path = os.environ.get("APPIMAGE")
+    if not path:
+        return None
+    p = Path(path)
+    return p if p.exists() else None
+
+
 def check_for_update(force: bool = False) -> dict:
     global _cache
     with _lock:
@@ -78,28 +96,34 @@ def check_for_update(force: bool = False) -> dict:
 
     latest_tag = data.get("tag_name", "")
     installer_url = None
+    appimage_url = None
     checksums_url = None
     for asset in data.get("assets", []):
         name = asset.get("name", "")
         if name.endswith(INSTALLER_SUFFIX):
             installer_url = asset.get("browser_download_url")
+        elif name.endswith(APPIMAGE_SUFFIX):
+            appimage_url = asset.get("browser_download_url")
         elif name == CHECKSUMS_ASSET:
             checksums_url = asset.get("browser_download_url")
+
+    # El asset que toca según la plataforma: instalador en Windows, AppImage en Linux.
+    frozen = bool(getattr(sys, "frozen", False))
+    if sys.platform == "win32":
+        asset_url = installer_url
+        can_auto = bool(asset_url) and frozen
+    else:
+        asset_url = appimage_url
+        can_auto = bool(asset_url) and running_appimage() is not None
 
     result.update(
         {
             "update_available": _parse_version(latest_tag) > _parse_version(__version__),
             "latest": latest_tag.lstrip("vV"),
             "notes_url": data.get("html_url"),
-            "installer_url": installer_url,
+            "installer_url": asset_url,
             "checksums_url": checksums_url,
-            # Solo se autoinstala en la app empaquetada de Windows: el asset es un
-            # instalador .exe. En Linux (AppImage) el banner enlaza a la descarga.
-            "can_auto_install": (
-                bool(installer_url)
-                and bool(getattr(sys, "frozen", False))
-                and sys.platform == "win32"
-            ),
+            "can_auto_install": can_auto,
         }
     )
     with _lock:
@@ -135,6 +159,53 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _quit_soon(delay: float = 1.2) -> None:
+    """Cierra la app en segundo plano para que el instalador pueda reemplazarla."""
+
+    def _quit() -> None:
+        import time
+
+        time.sleep(delay)
+        os._exit(0)
+
+    threading.Thread(target=_quit, daemon=True).start()
+
+
+def _update_windows(dst: Path) -> dict:
+    """Lanza el instalador en silencioso; él cierra la app, instala y la reabre."""
+    try:
+        subprocess.Popen(
+            [str(dst), "/SILENT", "/NORESTART", "/SUPPRESSMSGBOXES"],
+            close_fds=True,
+        )
+    except OSError as exc:
+        return {"ok": False, "error": f"no se pudo iniciar el instalador: {exc}"}
+    _quit_soon()
+    return {"ok": True}
+
+
+def _update_appimage(new_file: Path, current: Path) -> dict:
+    """Sustituye el AppImage en marcha por el nuevo y relanza la app.
+
+    En Linux se puede reemplazar el archivo de un ejecutable en uso: el proceso
+    actual sigue con el inodo antiguo hasta que termina. El rename es atómico solo
+    dentro del mismo sistema de archivos, así que el descargado ya viene al lado.
+    """
+    try:
+        new_file.chmod(new_file.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        os.replace(new_file, current)
+    except OSError as exc:
+        new_file.unlink(missing_ok=True)
+        return {"ok": False, "error": f"no se pudo reemplazar el AppImage: {exc}"}
+
+    try:
+        subprocess.Popen([str(current)], close_fds=True, start_new_session=True)
+    except OSError as exc:
+        return {"ok": False, "error": f"actualizado, pero no se pudo relanzar: {exc}"}
+    _quit_soon()
+    return {"ok": True}
+
+
 def apply_update() -> dict:
     info = check_for_update()
     url = info.get("installer_url")
@@ -143,8 +214,14 @@ def apply_update() -> dict:
     if not _host_allowed(url):
         return {"ok": False, "error": "origen de descarga no confiable"}
 
-    installer_name = url.rsplit("/", 1)[-1]
-    dst = Path(tempfile.gettempdir()) / installer_name
+    asset_name = url.rsplit("/", 1)[-1]
+    appimage = running_appimage()
+    # En Linux se descarga junto al AppImage para que el reemplazo sea atómico.
+    dst = (
+        appimage.with_name(f".{asset_name}.new")
+        if appimage
+        else Path(tempfile.gettempdir()) / asset_name
+    )
     try:
         _download(url, dst)
     except Exception as exc:  # noqa: BLE001
@@ -152,26 +229,11 @@ def apply_update() -> dict:
 
     # Verifica el checksum si el release lo publica.
     if info.get("checksums_url"):
-        expected = _expected_sha256(info["checksums_url"], installer_name)
+        expected = _expected_sha256(info["checksums_url"], asset_name)
         if expected and _sha256(dst) != expected:
             dst.unlink(missing_ok=True)
             return {"ok": False, "error": "el checksum no coincide; descarga abortada"}
 
-    # Lanza el instalador en modo silencioso (cierra y reabre la app) y sale.
-    try:
-        subprocess.Popen(
-            [str(dst), "/SILENT", "/NORESTART", "/SUPPRESSMSGBOXES"],
-            close_fds=True,
-        )
-    except OSError as exc:
-        return {"ok": False, "error": f"no se pudo iniciar el instalador: {exc}"}
-
-    def _quit() -> None:
-        import os
-        import time
-
-        time.sleep(1.2)
-        os._exit(0)
-
-    threading.Thread(target=_quit, daemon=True).start()
-    return {"ok": True}
+    if appimage:
+        return _update_appimage(dst, appimage)
+    return _update_windows(dst)

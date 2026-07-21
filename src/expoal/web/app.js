@@ -5,6 +5,7 @@ const $ = (sel) => document.querySelector(sel);
 const state = {
   info: null,
   mode: "video",
+  subFormat: "txt",
   ffmpeg: false,
   // Edición del vídeo: recorte de duración (segundos), bordes (píxeles) y silenciado.
   edit: { start: 0, end: 0, duration: 0 },
@@ -105,15 +106,15 @@ function renderPreview() {
   if (info.duration) parts.push(formatDuration(info.duration));
   $("#preview-sub").textContent = parts.join(" · ");
   renderQualityOptions();
+  renderSubtitleOptions();
   resetEdit();
-  hideError($("#download-error"));
   $("#preview").classList.remove("hidden");
 }
 
 function renderQualityOptions() {
   const select = $("#quality-select");
   select.innerHTML = "";
-  select.disabled = state.mode === "audio";
+  select.disabled = state.mode !== "video";
   const best = document.createElement("option");
   best.value = "best";
   best.textContent = "Máxima disponible";
@@ -125,6 +126,44 @@ function renderQualityOptions() {
       opt.textContent = `${height}p`;
       select.appendChild(opt);
     }
+  }
+}
+
+// --- Subtítulos / texto del vídeo ---
+
+function renderSubtitleOptions() {
+  const tracks = state.info?.subtitles || [];
+  const select = $("#sub-lang-select");
+  if (select.options.length !== tracks.length || select.dataset.url !== state.info?.url) {
+    select.innerHTML = "";
+    for (const t of tracks) {
+      const opt = document.createElement("option");
+      opt.value = t.code;
+      opt.textContent = t.automatic ? `${t.name} (automático)` : t.name;
+      select.appendChild(opt);
+    }
+    select.dataset.url = state.info?.url || "";
+    // Preseleccionamos español si existe; si no, el primero (propios van antes).
+    const es = tracks.find((t) => t.code === "es" || t.code.startsWith("es-"));
+    if (es) select.value = es.code;
+  }
+
+  const isText = state.mode === "text";
+  const hasSubs = tracks.length > 0;
+  // En modo texto el idioma y el formato mandan; la calidad no pinta nada.
+  $("#quality-option").classList.toggle("hidden", isText);
+  $("#sub-lang-option").classList.toggle("hidden", !isText || !hasSubs);
+  $("#sub-format-option").classList.toggle("hidden", !isText || !hasSubs);
+  // La casilla de "guardar también el texto" solo aplica al vídeo.
+  $("#subs-check-row").classList.toggle("hidden", state.mode !== "video" || !hasSubs);
+  if (state.mode !== "video") $("#subs-check").checked = false;
+
+  const noSubs = isText && !hasSubs;
+  $("#download-btn").disabled = noSubs;
+  if (noSubs) {
+    showError($("#download-error"), "Este vídeo no tiene subtítulos disponibles");
+  } else {
+    hideError($("#download-error"));
   }
 }
 
@@ -361,6 +400,9 @@ async function download() {
       folder: $("#folder-input").value,
       title: state.info.title,
       edits: state.mode === "video" ? collectEdits() : null,
+      subs: state.mode === "video" && $("#subs-check").checked,
+      sub_lang: $("#sub-lang-select").value || "",
+      sub_format: state.subFormat,
     });
     $("#preview").classList.add("hidden");
     $("#url-input").value = "";
@@ -432,7 +474,8 @@ function renderHistoryItem(entry) {
   head.className = "history-head";
   const badge = document.createElement("span");
   badge.className = "badge";
-  badge.textContent = entry.mode === "audio" ? "MP3" : (entry.platform || "Vídeo");
+  const MODE_BADGES = { audio: "MP3", text: "TEXTO" };
+  badge.textContent = MODE_BADGES[entry.mode] || entry.platform || "Vídeo";
   const title = document.createElement("span");
   title.className = "history-title";
   title.textContent = entry.title || entry.url;
@@ -488,8 +531,11 @@ async function init() {
         b.classList.toggle("active", b === btn);
       }
       renderQualityOptions();
-      // La sección de edición solo tiene sentido con vídeo.
-      if (state.info) resetEdit();
+      // La sección de edición y los subtítulos dependen del modo elegido.
+      if (state.info) {
+        renderSubtitleOptions();
+        resetEdit();
+      }
     });
   }
 
@@ -531,6 +577,15 @@ async function init() {
       audioBtn.title = "Requiere FFmpeg";
     }
   } catch (_) { /* se reintenta al refrescar */ }
+
+  for (const btn of document.querySelectorAll("#sub-format-group button")) {
+    btn.addEventListener("click", () => {
+      state.subFormat = btn.dataset.subfmt;
+      for (const b of document.querySelectorAll("#sub-format-group button")) {
+        b.classList.toggle("active", b === btn);
+      }
+    });
+  }
 
   setupEdit();
   checkForUpdate();

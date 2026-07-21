@@ -66,6 +66,12 @@ src/expoal/
   `dist/Expoal-<version>-setup.exe`. La versión se inyecta con `ISCC /DMyAppVersion=x.y.z`
   (el `#ifndef` deja un default). `CloseApplications=yes` + `AppMutex=ExpoalRunningMutex`
   (creado en `__main__`) permiten que el auto-update cierre y reabra la app.
+- **Subtítulos / texto**: `subtitles.py`. `languages(info)` lista los idiomas (propios primero,
+  automáticos después) desde `subtitles` + `automatic_captions`. `to_text()` limpia el SRT/VTT:
+  quita tiempos, etiquetas y **las líneas repetidas** (los subtítulos automáticos repiten la frase
+  anterior en cada cue). Tres modos en la UI: `video`, `audio` y `text`; en `text` se usa
+  `skip_download=True` y el job devuelve el .txt/.srt como `file_path`. En modo vídeo, la casilla
+  `subs` los guarda aparte. `writeautomaticsub=True` actúa de respaldo si no hay subtítulos propios.
 - **Edición de vídeo**: `editor.py` post-procesa con FFmpeg lo ya descargado (`Edits`: trim_start/end,
   crop por lados, mute). Regla de coste: si NO hay recorte de bordes se copian los flujos (`-c copy`,
   instantáneo); con crop hay que recodificar (libx264 veryfast). El crop fuerza dimensiones pares
@@ -73,8 +79,12 @@ src/expoal/
   La UI es una sección plegable con barra de dos tiradores + campos de tiempo sincronizados.
 - **Auto-update**: `updater.py` consulta el último release del repo oficial (solo GitHub por HTTPS),
   compara semver, descarga el instalador, verifica `SHA256SUMS.txt` si existe y lo lanza en silent.
-  Endpoints `/api/update/check` y `/api/update/apply`. La UI muestra un banner (aviso + 1 clic);
-  `can_auto_install` es True solo en el .exe empaquetado (en web el banner enlaza a la descarga).
+  Endpoints `/api/update/check` y `/api/update/apply`. La UI muestra un banner (aviso + 1 clic).
+  Multiplataforma: en Windows baja el instalador `.exe` y lo lanza en silencioso; en Linux baja el
+  `.AppImage` y **se reemplaza a sí mismo** (`running_appimage()` lee la variable `APPIMAGE`). En
+  Linux sí se puede sobrescribir un ejecutable en uso: el proceso conserva el inodo viejo hasta
+  salir. El archivo se descarga AL LADO del AppImage para que `os.replace` sea atómico (el rename
+  solo lo es dentro del mismo sistema de archivos). `can_auto_install` es False fuera del empaquetado.
 - **Release automático**: `.github/workflows/release.yml` se dispara con un tag `v*`. Tiene 4 jobs:
   `version` (lee `__version__` y verifica que el tag coincide), `build-windows` (exe + instalador +
   zip), `build-linux` (AppImage) y `release` (junta artifacts, genera checksums y publica). La

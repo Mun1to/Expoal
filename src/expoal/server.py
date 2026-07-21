@@ -10,13 +10,14 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, dialogs, updater
+from . import __version__, config, dialogs, subtitles, updater
 from .downloader import DownloadManager, clean_error
 from .editor import Edits
 from .history import History
 
 WEB_DIR = Path(__file__).parent / "web"
-VALID_MODES = {"video", "audio"}
+VALID_MODES = {"video", "audio", "text"}
+VALID_SUB_FORMATS = {"txt", "srt"}
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 app = FastAPI(title="Expoal", version=__version__)
@@ -62,6 +63,9 @@ class DownloadRequest(BaseModel):
     folder: str | None = None
     title: str = ""
     edits: EditRequest | None = None
+    subs: bool = False           # bajar también los subtítulos (modo vídeo)
+    sub_lang: str = ""           # código de idioma
+    sub_format: str = "txt"      # "txt" (texto limpio) o "srt" (con tiempos)
 
 
 def _validate_url(url: str) -> str:
@@ -109,6 +113,8 @@ def video_info(req: InfoRequest) -> dict:
         "width": info.get("width") or 0,
         "height": info.get("height") or 0,
         "ffmpeg": config.ffmpeg_available(),
+        # Idiomas de subtítulos disponibles (propios primero, luego automáticos).
+        "subtitles": subtitles.languages(info),
     }
 
 
@@ -147,8 +153,16 @@ def start_download(req: DownloadRequest) -> dict:
         if not edits.has_any:
             edits = None
 
+    if req.sub_format not in VALID_SUB_FORMATS:
+        raise HTTPException(status_code=422, detail="Formato de texto no válido")
+    if req.mode == "text" and not req.sub_lang:
+        raise HTTPException(status_code=422, detail="Elige el idioma de los subtítulos")
+
     folder = (req.folder or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
-    return manager.enqueue(url, req.mode, req.quality, folder, title=req.title, edits=edits)
+    return manager.enqueue(
+        url, req.mode, req.quality, folder, title=req.title, edits=edits,
+        subs=req.subs, sub_lang=req.sub_lang, sub_format=req.sub_format,
+    )
 
 
 @app.post("/api/pick-folder")
