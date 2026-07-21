@@ -4,8 +4,13 @@ Identidad visual del producto. Si tocas colores o iconos, actualiza también est
 
 ## Logotipo
 
-Un **triángulo de play azul** encajado dentro de una **flecha de descarga negra**. Cuenta el
-producto de un vistazo: coges un vídeo (play) y te lo llevas a tu disco (flecha abajo).
+Un **triángulo de play** encajado dentro de una **flecha de descarga**, en azul sólido con
+contorno blanco. Cuenta el producto de un vistazo: coges un vídeo (play) y te lo llevas a tu
+disco (flecha abajo).
+
+El logo **no lleva negro**, y ahí está su gracia: el azul aguanta sobre fondos claros y el
+contorno blanco lo despega de los oscuros. Se lee igual en la app, en una pestaña blanca y en la
+barra de tareas. Por eso se usa **siempre suelto, sin ningún lienzo detrás**.
 
 | Archivo | Para qué |
 |---|---|
@@ -13,8 +18,8 @@ producto de un vistazo: coges un vídeo (play) y te lo llevas a tu disco (flecha
 | `assets/logo.png` | Maestro de trabajo (1024 px, transparente). De aquí salen todos los iconos. |
 | `assets/logo-512.png` | Logo suelto sin lienzo, para usar sobre fondos claros. |
 | `assets/expoal.ico` | Icono de Windows multi-resolución (16 a 256 px): `.exe`, instalador y carpeta. |
-| `assets/icon-256.png` | Icono con lienzo para el README y el favicon. |
-| `src/expoal/web/logo.png` · `site/assets/logo.png` | Logo suelto (transparente) para las cabeceras de la app y de la web. |
+| `assets/icon-256.png` | Icono cuadrado (transparente) para el README y el favicon. |
+| `src/expoal/web/logo.png` · `site/assets/logo.png` | Logo para las cabeceras de la app y de la web. |
 
 Los iconos **se generan, no se editan a mano**:
 
@@ -22,13 +27,9 @@ Los iconos **se generan, no se editan a mano**:
 uv run python scripts/make_brand.py
 ```
 
-Cuándo lleva lienzo y cuándo no:
-
-- **Sin lienzo (logo suelto)** dentro de la app y de la web, donde el fondo lo controlamos
-  nosotros. Es lo que mejor se ve: el play azul destaca y el negro hace de contorno.
-- **Con lienzo blanco redondeado** cuando el logo sale a un fondo que no controlamos: icono del
-  `.exe`, del instalador, de la carpeta y favicon. Ahí el lienzo es imprescindible, porque el logo
-  es negro y se perdería sobre una barra de tareas oscura.
+Todo se genera **transparente y sin lienzo**: el script solo recorta el aire sobrante y centra el
+logo en un cuadrado, dejando un respiro del 6%. Comprobado sobre fondo oscuro de la app, blanco de
+pestaña, gris de barra de tareas y claro del tema claro: se lee en los cuatro.
 
 ## Colores
 
