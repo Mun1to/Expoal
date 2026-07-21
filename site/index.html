@@ -277,7 +277,9 @@
 
 
     /* ---------- Secciones ---------- */
-    section { max-width: 1000px; margin: 0 auto; padding: 82px 24px 0; }
+    /* scroll-margin-top: al saltar desde un enlace de ancla, deja aire arriba en
+       vez de pegar el título al borde y comerse parte de la sección. */
+    section { max-width: 1000px; margin: 0 auto; padding: 82px 24px 0; scroll-margin-top: 24px; }
 
     /* ==========================================================================
        MOVIMIENTO AL SCROLLEAR — la sección entera SUBE como una tarjeta.
@@ -677,7 +679,9 @@
 
   <div class="hero-wrap">
   <nav class="fade-up" style="--i:0">
-    <a class="brand" href="#">
+    <!-- "./" y no "#": recarga la página de verdad y deja la URL limpia,
+         sin la almohadilla colgando detrás. -->
+    <a class="brand" href="./">
       <img src="assets/logo.png" alt="Expoal">
       <span>Expoal</span>
     </a>
@@ -964,7 +968,7 @@
   </section>
 
   <footer>
-    <p data-en="Expoal · Made by &lt;a href=&quot;https://github.com/Mun1to&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Munir Torres&lt;/a&gt; · MIT License">Expoal · Hecho por <a href="https://github.com/Mun1to" target="_blank" rel="noopener">Munir Torres</a> · Licencia MIT</p>
+    <p data-en="Expoal · Made by &lt;a href=&quot;https://munito.dev&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Munir Torres&lt;/a&gt; · MIT License">Expoal · Hecho por <a href="https://munito.dev" target="_blank" rel="noopener">Munir Torres</a> · Licencia MIT</p>
     <p class="legal"
        data-en="Download only content that is yours, licensed or permitted. &lt;a href=&quot;#legal&quot;&gt;Terms of use&lt;/a&gt;">
       Descarga solo contenido propio, con licencia o con permiso.
@@ -1091,6 +1095,19 @@
           if (r.top < innerHeight && r.bottom > 0) show(el);
         });
       }, 400));
+
+      // Enlaces de ancla (el "Condiciones de uso" del pie): encendemos el destino
+      // ANTES de saltar. Si no, se salta a una sección que todavía está en
+      // opacidad 0 esperando al observer, y parece que el enlace no hace nada.
+      const wake = (hash) => {
+        if (!hash || hash.length < 2) return;
+        const target = document.getElementById(hash.slice(1));
+        if (target) show(target);
+      };
+      for (const a of document.querySelectorAll('a[href^="#"]')) {
+        a.addEventListener("click", () => wake(a.getAttribute("href")));
+      }
+      wake(location.hash);          // y si se entra con la URL ya apuntando ahí
 
       // 4) Botones magnéticos (micro-interacción de puntero, receta nº9): el botón
       //    se inclina hacia el cursor con un lerp suave. Solo en dispositivos con
