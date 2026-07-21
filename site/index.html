@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0B0F1F">
   <title>Expoal - Del link a tu disco</title>
   <meta name="description" content="Pega un enlace de YouTube, TikTok o Instagram y guarda el vídeo en tu propio disco. 100% local, open source, sin webs de terceros.">
-  <link rel="icon" type="image/png" href="assets/icon-256.png">
+  <link rel="icon" type="image/png" href="assets/icon-256.png?v=2">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://mun1to.github.io/Expoal/">
   <meta property="og:title" content="Expoal - Del link a tu disco">
@@ -322,6 +322,198 @@
     .steps b { color: var(--text); font-weight: 650; }
     .steps .arrow { color: var(--accent); font-weight: 700; }
 
+    /* ---------- Demo interactiva ---------- */
+    .demo-app {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    }
+    .demo-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.18);
+    }
+    .demo-logo { width: 24px; height: 24px; object-fit: contain; }
+    .demo-bar strong { font-size: 15px; font-weight: 650; }
+    .demo-tag {
+      font-size: 9.5px; letter-spacing: 0.12em; color: var(--muted);
+      text-transform: uppercase;
+    }
+    .demo-badge {
+      margin-left: auto; font-size: 10.5px; font-weight: 650;
+      text-transform: uppercase; letter-spacing: 0.09em;
+      color: var(--accent); border: 1px solid var(--accent);
+      padding: 2px 9px; border-radius: 999px;
+    }
+    .demo-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+    .demo-card {
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .demo-url { display: flex; gap: 10px; }
+    .demo-url input {
+      flex: 1; min-width: 0;
+      padding: 11px 13px;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 12.5px;
+      color: var(--text);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      outline: none;
+    }
+    .demo-url input:focus { border-color: var(--primary); }
+    .demo-btn {
+      border: none; border-radius: 9px;
+      padding: 11px 20px;
+      font-family: var(--font); font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.2s;
+    }
+    .demo-btn.primary { background: var(--primary); color: #fff; }
+    .demo-btn.primary:hover { background: var(--primary-strong); box-shadow: 0 6px 22px rgba(0, 105, 255, 0.4); }
+    .demo-go { width: 100%; padding: 13px; font-size: 15px; }
+
+    .demo-video { display: flex; gap: 14px; margin-bottom: 16px; }
+    .demo-thumb {
+      width: 132px; height: 76px; flex-shrink: 0;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1a2f1a, #4a7c2a 45%, #7fb356);
+      position: relative; overflow: hidden;
+    }
+    .demo-thumb::after {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(circle at 62% 55%, rgba(255,255,255,0.85) 0 13%, transparent 14%),
+                  radial-gradient(circle at 50% 78%, rgba(255,255,255,0.55) 0 22%, transparent 23%);
+    }
+    .demo-meta { min-width: 0; }
+    .demo-platform {
+      display: inline-block; font-size: 9.5px; font-weight: 650;
+      letter-spacing: 0.09em; color: var(--primary-strong);
+      border: 1px solid var(--primary-strong); border-radius: 999px;
+      padding: 2px 9px; margin-bottom: 6px;
+    }
+    .demo-meta h3 { font-size: 14.5px; font-weight: 650; line-height: 1.3; }
+    .demo-meta p { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+    .demo-options { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+    .demo-opt { display: flex; flex-direction: column; gap: 6px; }
+    .demo-opt label {
+      font-size: 9.5px; font-weight: 650; letter-spacing: 0.09em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .demo-seg {
+      display: flex; border: 1px solid var(--border);
+      border-radius: 9px; overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .demo-seg button {
+      border: none; background: transparent;
+      padding: 8px 13px; font-size: 12.5px; font-family: var(--font);
+      color: var(--muted); cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .demo-seg button.active { background: var(--primary); color: #fff; font-weight: 600; }
+    .demo-opt select {
+      padding: 8px 11px; font-size: 12.5px; font-family: var(--font);
+      color: var(--text); background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border); border-radius: 9px; outline: none;
+    }
+
+    .demo-edit { border-top: 1px solid var(--border); padding-top: 13px; margin-bottom: 14px; }
+    .demo-edit-head {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 11px;
+    }
+    .demo-edit-sum { font-family: "Cascadia Mono", Consolas, monospace; font-size: 11.5px; opacity: 0.8; }
+    .demo-edit-sum.on { color: var(--accent); opacity: 1; }
+    .demo-trim { display: flex; align-items: center; gap: 12px; margin-bottom: 11px; }
+    .demo-trim-bar {
+      position: relative; flex: 1; height: 28px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border); border-radius: 8px;
+      touch-action: none;
+    }
+    .demo-trim-sel {
+      position: absolute; top: -1px; bottom: -1px;
+      background: rgba(0, 105, 255, 0.22);
+      border: 1px solid var(--primary); border-radius: 7px;
+      left: 0; right: 0;
+    }
+    .demo-handle {
+      position: absolute; top: 50%; width: 10px; height: 20px;
+      margin-left: -5px; transform: translateY(-50%);
+      background: var(--primary-strong); border-radius: 4px;
+      cursor: ew-resize; touch-action: none;
+    }
+    #demo-h1 { left: 0; }
+    #demo-h2 { left: 100%; }
+    .demo-trim-txt {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 11.5px; color: var(--muted); white-space: nowrap;
+    }
+    .demo-check {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12.5px; color: var(--muted); cursor: pointer;
+    }
+    .demo-check input { width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }
+
+    .demo-note {
+      margin-top: 12px; padding: 12px 14px;
+      background: rgba(232, 184, 75, 0.08);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      font-size: 13px; color: var(--text);
+    }
+    .demo-note a {
+      color: var(--primary-strong); text-decoration: underline;
+      text-underline-offset: 2px; white-space: nowrap;
+    }
+    .hidden { display: none !important; }
+
+    @media (max-width: 620px) {
+      .demo-video { flex-direction: column; }
+      .demo-thumb { width: 100%; height: 120px; }
+      .demo-url { flex-direction: column; }
+    }
+
+    /* ---------- Condiciones de uso ---------- */
+    .legal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    .legal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 20px;
+    }
+    .legal-card h3 { font-size: 15px; font-weight: 650; margin-bottom: 7px; }
+    .legal-card p { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+    .legal-card b { color: var(--text); font-weight: 600; }
+    .legal-foot {
+      text-align: center;
+      margin: 22px auto 0;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .legal-foot a, footer .legal a {
+      color: var(--muted);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .legal-foot a:hover, footer .legal a:hover { color: var(--text); }
+    @media (max-width: 620px) { .legal-grid { grid-template-columns: 1fr; } }
+
     /* ---------- Cierre ---------- */
     .final { text-align: center; padding-bottom: 40px; }
     .final .btn { margin-top: 8px; }
@@ -440,6 +632,101 @@
     </div>
   </section>
 
+  <section id="demo">
+    <p class="kicker" data-reveal>Pruébalo aquí mismo</p>
+    <h2 data-reveal style="--i:1">Así se siente Expoal</h2>
+    <p class="section-sub" data-reveal style="--i:2">
+      Una demostración de la app real. Trastea con ella: es la misma interfaz que te llevas.
+    </p>
+
+    <div class="demo-app" data-reveal style="--i:3">
+      <div class="demo-bar">
+        <img src="assets/logo.png" alt="" class="demo-logo">
+        <strong>Expoal</strong>
+        <span class="demo-tag">DEL LINK A TU DISCO</span>
+        <span class="demo-badge">demo</span>
+      </div>
+
+      <div class="demo-body">
+        <div class="demo-card demo-url">
+          <input type="text" id="demo-input" spellcheck="false"
+                 placeholder="Pega aquí un enlace de YouTube, TikTok o Instagram...">
+          <button type="button" class="demo-btn primary" id="demo-analyze">Analizar</button>
+        </div>
+
+        <div class="demo-card hidden" id="demo-preview">
+          <div class="demo-video">
+            <div class="demo-thumb" id="demo-thumb"></div>
+            <div class="demo-meta">
+              <span class="demo-platform" id="demo-platform">YOUTUBE</span>
+              <h3 id="demo-title"></h3>
+              <p id="demo-sub"></p>
+            </div>
+          </div>
+
+          <div class="demo-options">
+            <div class="demo-opt">
+              <label>Formato</label>
+              <div class="demo-seg" id="demo-mode">
+                <button type="button" data-mode="video" class="active">Vídeo MP4</button>
+                <button type="button" data-mode="audio">Audio MP3</button>
+                <button type="button" data-mode="text">Texto</button>
+              </div>
+            </div>
+            <div class="demo-opt" id="demo-quality-wrap">
+              <label>Calidad</label>
+              <select id="demo-quality">
+                <option>Máxima disponible</option>
+                <option selected>1080p</option>
+                <option>720p</option>
+                <option>480p</option>
+              </select>
+            </div>
+            <div class="demo-opt hidden" id="demo-lang-wrap">
+              <label>Idioma del texto</label>
+              <select id="demo-lang">
+                <option selected>Español</option>
+                <option>English</option>
+                <option>Français</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="demo-edit" id="demo-edit">
+            <div class="demo-edit-head">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.5 4l5.5 5.5M3 21l4-1 11-11a2.5 2.5 0 0 0-3.5-3.5L3.5 16.5 3 21z"/>
+              </svg>
+              <span>Editar vídeo</span>
+              <span class="demo-edit-sum" id="demo-edit-sum">sin cambios</span>
+            </div>
+            <div class="demo-trim">
+              <div class="demo-trim-bar" id="demo-trim-bar">
+                <div class="demo-trim-sel" id="demo-trim-sel"></div>
+                <div class="demo-handle" id="demo-h1"></div>
+                <div class="demo-handle" id="demo-h2"></div>
+              </div>
+              <span class="demo-trim-txt" id="demo-trim-txt">0:00 a 10:35</span>
+            </div>
+            <label class="demo-check">
+              <input type="checkbox" id="demo-mute"> Quitar el audio
+            </label>
+          </div>
+
+          <button type="button" class="demo-btn primary demo-go" id="demo-download">
+            Añadir a la cola
+          </button>
+          <p class="demo-note hidden" id="demo-note">
+            Esto es una demostración: <b>aquí no se descarga nada</b>. Expoal trabaja en tu
+            ordenador, así que el vídeo se guarda cuando lo instalas.
+            <a href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">Descargar Expoal</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="final">
     <h2 data-reveal>Empieza a guardar tus vídeos</h2>
     <p class="section-sub" data-reveal style="--i:1">Gratis y open source. Sin registros, sin cuentas.</p>
@@ -455,11 +742,55 @@
     </div>
   </section>
 
+  <section id="legal">
+    <p class="kicker" data-reveal>Antes de usarlo</p>
+    <h2 data-reveal style="--i:1">Uso responsable</h2>
+    <p class="section-sub" data-reveal style="--i:2">
+      Expoal es una herramienta. Lo que hagas con ella es cosa tuya, así que léete esto.
+    </p>
+
+    <div class="legal-grid">
+      <article class="legal-card" data-reveal style="--i:3">
+        <h3>Descarga solo lo que puedas</h3>
+        <p>
+          Usa Expoal únicamente con contenido <b>propio</b>, con <b>licencia libre</b> (Creative
+          Commons, dominio público) o para el que tengas <b>permiso expreso</b> de quien lo creó.
+        </p>
+      </article>
+      <article class="legal-card" data-reveal style="--i:4">
+        <h3>Respeta el copyright</h3>
+        <p>
+          Descargar obras protegidas sin autorización puede infringir la ley de propiedad
+          intelectual de tu país y las condiciones de uso de la plataforma de origen.
+        </p>
+      </article>
+      <article class="legal-card" data-reveal style="--i:5">
+        <h3>Sin responsabilidad del autor</h3>
+        <p>
+          Expoal se ofrece <b>tal cual, sin garantías</b>. El autor no se hace responsable del uso
+          que hagas del programa ni de los daños, reclamaciones o consecuencias legales derivadas
+          de un uso indebido. Al usarlo, aceptas asumir esa responsabilidad.
+        </p>
+      </article>
+      <article class="legal-card" data-reveal style="--i:6">
+        <h3>Sin vínculo con las plataformas</h3>
+        <p>
+          Expoal es un proyecto independiente. No está asociado ni patrocinado por YouTube, TikTok,
+          Instagram ni ninguna otra plataforma, y sus marcas pertenecen a sus dueños.
+        </p>
+      </article>
+    </div>
+    <p class="legal-foot" data-reveal style="--i:7">
+      Publicado bajo <a href="https://github.com/Mun1to/Expoal/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a>,
+      que incluye la exención de garantías y de responsabilidad.
+    </p>
+  </section>
+
   <footer>
     <p>Expoal · Hecho por <a href="https://github.com/Mun1to" target="_blank" rel="noopener">Munir Torres</a> · Licencia MIT</p>
     <p class="legal">
-      Descarga solo contenido propio, con licencia o con permiso. Descargar material puede
-      infringir las condiciones de algunas plataformas. Tú eres responsable del uso.
+      Descarga solo contenido propio, con licencia o con permiso.
+      <a href="#legal">Condiciones de uso</a>
     </p>
   </footer>
 
@@ -582,6 +913,105 @@
           el.addEventListener("mouseleave", () => { tx = 0; ty = 0; wake(); });
         });
       }
+    })();
+
+    /* ==========================================================================
+       DEMO INTERACTIVA — reproduce la interfaz real de Expoal con datos de
+       ejemplo. No descarga nada: la app trabaja en el ordenador del usuario, y
+       una web estática no puede ejecutar yt-dlp. Al pulsar descargar se dice
+       claramente y se ofrece instalarla.
+       ========================================================================== */
+    (function () {
+      const $ = (s) => document.querySelector(s);
+      const input = $("#demo-input");
+      if (!input) return;
+
+      const DEMO = {
+        title: "Big Buck Bunny 60fps 4K - Blender Foundation",
+        author: "Blender",
+        duration: 635,           // 10:35 en segundos
+      };
+      const trim = { start: 0, end: DEMO.duration };
+      let mode = "video";
+      let touched = false;       // ¿el usuario ha tocado algo del editor?
+
+      const fmt = (s) => {
+        s = Math.max(0, Math.round(s));
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      };
+
+      function renderEdit() {
+        const a = (trim.start / DEMO.duration) * 100;
+        const b = (trim.end / DEMO.duration) * 100;
+        $("#demo-trim-sel").style.left = `${a}%`;
+        $("#demo-trim-sel").style.right = `${100 - b}%`;
+        $("#demo-h1").style.left = `${a}%`;
+        $("#demo-h2").style.left = `${b}%`;
+        $("#demo-trim-txt").textContent = `${fmt(trim.start)} a ${fmt(trim.end)}`;
+
+        const parts = [];
+        if (trim.start > 0 || trim.end < DEMO.duration) parts.push(`${fmt(trim.start)}-${fmt(trim.end)}`);
+        if ($("#demo-mute").checked) parts.push("sin audio");
+        const sum = $("#demo-edit-sum");
+        sum.textContent = parts.length ? parts.join(" · ") : "sin cambios";
+        sum.classList.toggle("on", parts.length > 0);
+      }
+
+      function analyze() {
+        if (!input.value.trim()) input.value = "https://www.youtube.com/watch?v=aqz-KE-bpKQ";
+        $("#demo-title").textContent = DEMO.title;
+        $("#demo-sub").textContent = `${DEMO.author} · ${fmt(DEMO.duration)} min`;
+        $("#demo-preview").classList.remove("hidden");
+        $("#demo-note").classList.add("hidden");
+        renderEdit();
+      }
+
+      $("#demo-analyze").addEventListener("click", analyze);
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") analyze(); });
+
+      // Cambiar de formato reordena las opciones, igual que en la app real
+      for (const btn of document.querySelectorAll("#demo-mode button")) {
+        btn.addEventListener("click", () => {
+          mode = btn.dataset.mode;
+          for (const b of document.querySelectorAll("#demo-mode button")) {
+            b.classList.toggle("active", b === btn);
+          }
+          $("#demo-quality-wrap").classList.toggle("hidden", mode !== "video");
+          $("#demo-lang-wrap").classList.toggle("hidden", mode !== "text");
+          $("#demo-edit").classList.toggle("hidden", mode !== "video");
+        });
+      }
+
+      // Arrastrar los tiradores del recorte
+      const bar = $("#demo-trim-bar");
+      const timeAt = (x) => {
+        const r = bar.getBoundingClientRect();
+        return Math.min(1, Math.max(0, (x - r.left) / r.width)) * DEMO.duration;
+      };
+      const drag = (which) => (ev) => {
+        ev.preventDefault();
+        touched = true;
+        const move = (e) => {
+          const t = timeAt(e.clientX);
+          if (which === "start") trim.start = Math.max(0, Math.min(t, trim.end - 5));
+          else trim.end = Math.min(DEMO.duration, Math.max(t, trim.start + 5));
+          renderEdit();
+        };
+        const up = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", up);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+      };
+      $("#demo-h1").addEventListener("pointerdown", drag("start"));
+      $("#demo-h2").addEventListener("pointerdown", drag("end"));
+      $("#demo-mute").addEventListener("change", () => { touched = true; renderEdit(); });
+
+      $("#demo-download").addEventListener("click", () => {
+        $("#demo-note").classList.remove("hidden");
+        $("#demo-note").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
     })();
   </script>
 </body>
