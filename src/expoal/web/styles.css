@@ -54,6 +54,11 @@ html[data-theme="light"] {
 
 * { box-sizing: border-box; }
 
+/* Sin barra de scroll visible: la app es una ventana, no una web, y la barra
+   parte el borde derecho. Se sigue pudiendo scrollear con rueda y teclado. */
+html { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; }
+
 body {
   margin: 0;
   font-family: var(--font);

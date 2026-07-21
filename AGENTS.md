@@ -155,10 +155,12 @@ src/expoal/
   van en el diccionario `DICT` de `I18N`.
 - **Capturas/OG**: `scripts/capture_screenshots.py` (README/landing) y `scripts/make_og.py` (redes)
   con Playwright; requieren el server en :8710, y hay que arrancarlo DESPUÉS de subir la versión o
-  la captura saldrá con la vieja (el número lo sirve el backend). Genera cuatro,
-  `screenshot-{dark,light}-{es,en}.png`. Decisiones: el historial de ejemplo se inyecta
-  interceptando `/api/history` con `page.route` (así el script no toca el historial real de nadie y
-  sale igual en cualquier máquina), la carpeta de destino se reescribe a `C:\Users\You\...` porque
+  la captura saldrá con la vieja (el número lo sirve el backend). Genera ocho: el formulario
+  (`screenshot-{dark,light}-{es,en}.png`) y la cola trabajando
+  (`screenshot-queue-{dark,light}-{es,en}.png`, con un vídeo bajando y otro terminado). Decisiones:
+  el historial y los trabajos de ejemplo se inyectan interceptando `/api/history` y `/api/jobs` con
+  `page.route` (así el script no toca los datos reales de nadie, no descarga nada al generar y sale
+  igual en cualquier máquina), la carpeta de destino se reescribe a `C:\Users\You\...` porque
   las capturas se publican, y **no se usa `full_page`**: la página entera sale como una tira
   vertical que parece captura de web, mientras que al alto de la ventana se lee como app. Si tocas
   las capturas, cópialas también a `site/assets/` (la landing sirve desde ahí) y regenera la OG.
@@ -170,6 +172,14 @@ src/expoal/
   se veía la demo simulada y la gente no sabía si la app existía. La imagen cambia con el idioma vía
   `data-en-src` (mismo patrón que `data-en`, resuelto en `apply()`). El README, por lo mismo,
   responde de frente a "is it just a yt-dlp wrapper?" en vez de dejar la pregunta en el aire.
+- **Contenido de las capturas públicas**: SIEMPRE vídeos libres (Blender Foundation, charlas TED).
+  Nunca una película o serie comercial, aunque sea lo que uno descargue de verdad probando: la
+  propia app dice en el pie "descarga solo contenido que sea tuyo o para el que tengas permiso", y
+  un descargador cuyo escaparate enseña una peli pirateada se contradice y se gana denuncias.
+  Tampoco rutas reales con nombre de usuario ni carpetas personales.
+- **Sin barra de scroll** en la app (`html { scrollbar-width: none }` + `::-webkit-scrollbar` a 0):
+  es una ventana, no una web, y la barra parte el borde derecho. El scroll con rueda y teclado
+  sigue funcionando; la altura no cambia porque el hueco de la barra no se reserva.
 - **Títulos de vídeo = entrada externa**: en el frontend SIEMPRE `textContent`, nunca
   `innerHTML` (XSS). En el backend, `windowsfilenames: True` sanea nombres de archivo.
 - **Sin cookies/login**: contenido privado o con verificación de edad falla de forma

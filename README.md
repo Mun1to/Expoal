@@ -34,6 +34,14 @@ English or Spanish.
 <img src="assets/screenshot-light-en.png" width="740" alt="Expoal in light mode">
 </div>
 
+Once a download starts you get the queue: progress, speed and time left for the one running,
+a cancel button next to it, and a folder button on the ones already finished that opens the
+file where it landed.
+
+<div align="center">
+<img src="assets/screenshot-queue-dark-en.png" width="740" alt="Expoal's download queue: one video downloading with progress and speed, one finished, and the history below">
+</div>
+
 ## Why not just yt-dlp?
 
 Expoal is built on [yt-dlp](https://github.com/yt-dlp/yt-dlp) and makes no secret of it. yt-dlp
