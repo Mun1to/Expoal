@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import __version__, config, dialogs, subtitles, updater
-from .downloader import DownloadManager, clean_error
+from .downloader import AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error
 from .editor import Edits
 from .history import History
 
@@ -66,6 +66,7 @@ class DownloadRequest(BaseModel):
     subs: bool = False           # bajar también los subtítulos (modo vídeo)
     sub_lang: str = ""           # código de idioma
     sub_format: str = "txt"      # "txt" (texto limpio) o "srt" (con tiempos)
+    out_format: str = ""         # MP4/MKV/MOV/WEBM o MP3/M4A/WAV/FLAC/OPUS
 
 
 def _validate_url(url: str) -> str:
@@ -115,6 +116,9 @@ def video_info(req: InfoRequest) -> dict:
         "ffmpeg": config.ffmpeg_available(),
         # Idiomas de subtítulos disponibles (propios primero, luego automáticos).
         "subtitles": subtitles.languages(info),
+        # Formatos de salida que puede producir esta instalación.
+        "video_formats": sorted(VIDEO_FORMATS),
+        "audio_formats": sorted(AUDIO_FORMATS),
     }
 
 
@@ -158,10 +162,22 @@ def start_download(req: DownloadRequest) -> dict:
     if req.mode == "text" and not req.sub_lang:
         raise HTTPException(status_code=422, detail="Elige el idioma de los subtítulos")
 
+    out_format = (req.out_format or "").lower()
+    if out_format:
+        allowed = VIDEO_FORMATS if req.mode == "video" else AUDIO_FORMATS
+        if req.mode != "text" and out_format not in allowed:
+            raise HTTPException(status_code=422, detail="Formato de salida no válido")
+        if not config.ffmpeg_available():
+            raise HTTPException(
+                status_code=422,
+                detail="Para elegir el formato hace falta FFmpeg (winget install Gyan.FFmpeg)",
+            )
+
     folder = (req.folder or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
     return manager.enqueue(
         url, req.mode, req.quality, folder, title=req.title, edits=edits,
         subs=req.subs, sub_lang=req.sub_lang, sub_format=req.sub_format,
+        out_format=out_format,
     )
 
 

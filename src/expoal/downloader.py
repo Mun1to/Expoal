@@ -23,15 +23,35 @@ def clean_error(exc: BaseException) -> str:
     return msg or exc.__class__.__name__
 
 
-def _format_selector(mode: str, quality: str, has_ffmpeg: bool) -> str:
+# Formatos de salida que ofrecemos. Los de vídeo se obtienen remuxeando (cambiar el
+# envoltorio sin tocar los datos, casi instantáneo) salvo WEBM, que obliga a recodificar
+# porque necesita códecs distintos. Los de audio los produce FFmpeg al extraer.
+VIDEO_FORMATS = {"mp4", "mkv", "mov", "webm"}
+AUDIO_FORMATS = {"mp3", "m4a", "wav", "flac", "opus"}
+
+
+def _format_selector(mode: str, quality: str, has_ffmpeg: bool, out_format: str = "") -> str:
     if mode == "audio":
         return "ba/b"
     cap = f"[height<={quality}]" if quality != "best" else ""
-    if has_ffmpeg:
-        # Mejor vídeo + mejor audio fusionados; si no hay streams separados, el mejor archivo único.
-        return f"bv*{cap}+ba/b{cap}"
-    # Sin ffmpeg no se puede fusionar: solo archivos ya completos (suele limitar a 720p en YouTube).
-    return f"b{cap}/b"
+    if not has_ffmpeg:
+        # Sin ffmpeg no se puede fusionar: solo archivos ya completos
+        # (suele limitar a 720p en YouTube).
+        return f"b{cap}/b"
+
+    # El contenedor manda sobre el códec. YouTube sirve AV1 en muchas calidades, y AV1
+    # no cabe en un MOV: si no lo pedimos compatible, el remux falla. Con MKV da igual
+    # (admite de todo) y con WEBM preferimos sus códecs nativos para no recodificar.
+    if out_format == "mov":
+        return (
+            f"bv*[vcodec^=avc1]{cap}+ba[acodec^=mp4a]/"
+            f"bv*[vcodec^=avc1]{cap}+ba/b[vcodec^=avc1]{cap}/b{cap}"
+        )
+    if out_format == "webm":
+        return f"bv*[ext=webm]{cap}+ba[ext=webm]/bv*{cap}+ba/b{cap}"
+
+    # Mejor vídeo + mejor audio fusionados; si no hay streams separados, el mejor archivo único.
+    return f"bv*{cap}+ba/b{cap}"
 
 
 def _fmt_speed(speed: float | None) -> str:
@@ -91,6 +111,7 @@ class Job:
     subs: bool = False          # descargar también los subtítulos (modo vídeo)
     sub_lang: str = ""          # código de idioma de los subtítulos
     sub_format: str = "txt"     # "txt" (texto limpio) o "srt" (con tiempos)
+    out_format: str = ""        # contenedor de vídeo o códec de audio pedido
     status: str = "en_cola"  # en_cola | descargando | procesando | completado | error
     progress: float = 0.0
     speed: str = ""
@@ -127,7 +148,7 @@ class DownloadManager:
 
     def enqueue(self, url: str, mode: str, quality: str, folder: str, title: str = "",
                 edits: Edits | None = None, subs: bool = False, sub_lang: str = "",
-                sub_format: str = "txt") -> dict:
+                sub_format: str = "txt", out_format: str = "") -> dict:
         job = Job(
             id=uuid.uuid4().hex[:12],
             url=url,
@@ -139,6 +160,7 @@ class DownloadManager:
             subs=subs,
             sub_lang=sub_lang,
             sub_format=sub_format,
+            out_format=out_format,
         )
         with self._lock:
             self._jobs[job.id] = job
@@ -183,7 +205,7 @@ class DownloadManager:
                 job.status = "procesando"
 
         opts: dict = {
-            "format": _format_selector(job.mode, job.quality, has_ffmpeg),
+            "format": _format_selector(job.mode, job.quality, has_ffmpeg, job.out_format),
             "outtmpl": str(folder / "%(title)s [%(id)s].%(ext)s"),
             "noplaylist": True,
             "windowsfilenames": True,
@@ -195,12 +217,20 @@ class DownloadManager:
         if has_ffmpeg:
             opts["ffmpeg_location"] = ffmpeg_path
         if job.mode == "video" and has_ffmpeg:
-            opts["merge_output_format"] = "mp4"
+            container = job.out_format if job.out_format in VIDEO_FORMATS else "mp4"
+            opts["merge_output_format"] = container
+            if container != "mp4":
+                # Cambia el envoltorio al pedido; si los códecs no caben dentro
+                # (caso de WEBM), yt-dlp recodifica por su cuenta.
+                opts["postprocessors"] = [
+                    {"key": "FFmpegVideoRemuxer", "preferedformat": container}
+                ]
         if job.mode == "audio" and has_ffmpeg:
+            codec = job.out_format if job.out_format in AUDIO_FORMATS else "mp3"
             opts["postprocessors"] = [
                 {
                     "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
+                    "preferredcodec": codec,
                     "preferredquality": "192",
                 }
             ]

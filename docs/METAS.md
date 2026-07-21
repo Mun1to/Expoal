@@ -20,6 +20,7 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] Empaquetado como Expoal.exe (PyInstaller) anclable a la barra de tareas
 - [x] Edición al vuelo: recortar duración (barra visual + tiempos), recortar bordes por píxeles
       y quitar el audio del MP4 (`editor.py` con FFmpeg)
+- [x] Elegir formato de salida: MP4/MKV/MOV/WEBM y MP3/M4A/WAV/FLAC/OPUS
 - [ ] Cancelar una descarga en curso / limpiar trabajos de la cola
 - [ ] Soporte de contenido privado con `cookiesfrombrowser` (Instagram logueado, etc.)
 - [ ] Playlists y perfiles completos (hoy `noplaylist: True`)

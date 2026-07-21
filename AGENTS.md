@@ -77,6 +77,11 @@ src/expoal/
   anterior en cada cue). Tres modos en la UI: `video`, `audio` y `text`; en `text` se usa
   `skip_download=True` y el job devuelve el .txt/.srt como `file_path`. En modo vídeo, la casilla
   `subs` los guarda aparte. `writeautomaticsub=True` actúa de respaldo si no hay subtítulos propios.
+- **Formatos de salida**: `VIDEO_FORMATS`/`AUDIO_FORMATS` en `downloader.py`. Vídeo por remux
+  (`FFmpegVideoRemuxer`, casi instantáneo); audio por `FFmpegExtractAudio`. GOTCHA: el contenedor
+  condiciona el CÓDEC, así que `_format_selector` recibe `out_format` y pide códecs compatibles:
+  MOV exige `vcodec^=avc1` (YouTube sirve AV1 y el remux a MOV falla con "Conversion failed"),
+  y WEBM prefiere `ext=webm` para no recodificar. MKV admite cualquier cosa.
 - **Edición de vídeo**: `editor.py` post-procesa con FFmpeg lo ya descargado (`Edits`: trim_start/end,
   crop por lados, mute). Regla de coste: si NO hay recorte de bordes se copian los flujos (`-c copy`,
   instantáneo); con crop hay que recodificar (libx264 veryfast). El crop fuerza dimensiones pares

@@ -26,7 +26,7 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 ## Features
 
 - Paste a link, preview the video and download it in the best available quality
-- Choose the format: MP4 video, MP3 audio (requires FFmpeg) or the video's text
+- Choose the output format: MP4, MKV, MOV or WEBM for video; MP3, M4A, WAV, FLAC or OPUS for audio (requires FFmpeg)
 - Extract the transcript: save subtitles as clean text or as timed `.srt`, in any of the languages the video offers, either instead of the video or alongside it
 - Pick the resolution, and choose the destination folder with a native file browser
 - Edit while you download: trim the length (visual slider or exact timecodes), crop the edges by pixels, and strip the audio track

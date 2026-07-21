@@ -106,6 +106,7 @@ function renderPreview() {
   if (info.duration) parts.push(formatDuration(info.duration));
   $("#preview-sub").textContent = parts.join(" · ");
   renderQualityOptions();
+  renderOutFormats();
   renderSubtitleOptions();
   resetEdit();
   $("#preview").classList.remove("hidden");
@@ -130,6 +131,28 @@ function renderQualityOptions() {
 }
 
 // --- Subtítulos / texto del vídeo ---
+
+function renderOutFormats() {
+  // El contenedor de vídeo o el códec de audio en que se guarda el archivo.
+  const isText = state.mode === "text";
+  $("#out-format-option").classList.toggle("hidden", isText || !state.ffmpeg);
+  if (isText) return;
+  const list = state.mode === "video"
+    ? (state.info?.video_formats || ["mp4", "mkv", "mov", "webm"])
+    : (state.info?.audio_formats || ["mp3", "m4a", "wav", "flac", "opus"]);
+  const select = $("#out-format-select");
+  const previous = select.value;
+  select.innerHTML = "";
+  for (const f of list) {
+    const opt = document.createElement("option");
+    opt.value = f;
+    opt.textContent = f.toUpperCase();
+    select.appendChild(opt);
+  }
+  // Por defecto, el de siempre: MP4 para vídeo y MP3 para audio.
+  select.value = list.includes(previous) ? previous
+    : (state.mode === "video" ? "mp4" : "mp3");
+}
 
 function renderSubtitleOptions() {
   const tracks = state.info?.subtitles || [];
@@ -403,6 +426,7 @@ async function download() {
       subs: state.mode === "video" && $("#subs-check").checked,
       sub_lang: $("#sub-lang-select").value || "",
       sub_format: state.subFormat,
+      out_format: state.mode === "text" ? "" : $("#out-format-select").value,
     });
     $("#preview").classList.add("hidden");
     $("#url-input").value = "";
@@ -531,6 +555,7 @@ async function init() {
         b.classList.toggle("active", b === btn);
       }
       renderQualityOptions();
+      renderOutFormats();
       // La sección de edición y los subtítulos dependen del modo elegido.
       if (state.info) {
         renderSubtitleOptions();
