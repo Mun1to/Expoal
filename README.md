@@ -125,6 +125,11 @@ A small FastAPI server wraps yt-dlp and exposes a minimal API (`/api/info`, `/ap
 
 Download only content you own, content licensed for it, or content you have permission to save. Downloading media may violate the terms of service of some platforms. This tool is intended for personal archiving. You are responsible for how you use it.
 
+## Brand
+
+Logo, colors and tone are documented in [docs/MARCA.md](docs/MARCA.md). Icons are generated from the
+source logo with `uv run python scripts/make_brand.py`.
+
 ## License
 
 [MIT](LICENSE) © 2026 Munir Torres (Mun1to)

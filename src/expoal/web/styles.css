@@ -7,10 +7,11 @@
   --mono: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
 }
 
+/* Marca Expoal: azul eléctrico #0069FF, tomado del logo. */
 html[data-theme="dark"] {
   color-scheme: dark;
   --bg: #0B0F1F;
-  --bg-glow: radial-gradient(900px 420px at 50% -8%, rgba(91, 123, 214, 0.16), transparent 65%);
+  --bg-glow: radial-gradient(900px 420px at 50% -8%, rgba(0, 105, 255, 0.16), transparent 65%);
   --surface: #111931;
   --surface-2: #182242;
   --field: #0D1326;
@@ -18,21 +19,21 @@ html[data-theme="dark"] {
   --border-strong: #35426F;
   --text: #E9EDF8;
   --muted: #93A0C7;
-  --primary: #4E6CC8;
-  --primary-strong: #5F7DDA;
+  --primary: #0069FF;
+  --primary-strong: #3B87FF;
   --on-primary: #FFFFFF;
   --accent: #E8B84B;
   --ok: #57C88A;
   --error: #F07567;
-  --ring: 0 0 0 3px rgba(95, 125, 218, 0.25), 0 0 22px rgba(95, 125, 218, 0.25);
-  --glow-btn: 0 4px 24px rgba(95, 125, 218, 0.45);
+  --ring: 0 0 0 3px rgba(0, 105, 255, 0.28), 0 0 22px rgba(0, 105, 255, 0.25);
+  --glow-btn: 0 4px 24px rgba(0, 105, 255, 0.45);
   --glow-accent: 0 0 12px rgba(232, 184, 75, 0.45);
 }
 
 html[data-theme="light"] {
   color-scheme: light;
   --bg: #F2F4F9;
-  --bg-glow: radial-gradient(900px 420px at 50% -8%, rgba(62, 91, 169, 0.07), transparent 65%);
+  --bg-glow: radial-gradient(900px 420px at 50% -8%, rgba(0, 105, 255, 0.08), transparent 65%);
   --surface: #FFFFFF;
   --surface-2: #EDF0F8;
   --field: #FFFFFF;
@@ -40,14 +41,14 @@ html[data-theme="light"] {
   --border-strong: #B9C3DE;
   --text: #101A3D;
   --muted: #5D6787;
-  --primary: #3E5BA9;
-  --primary-strong: #32488A;
+  --primary: #0060EB;
+  --primary-strong: #0050C8;
   --on-primary: #FFFFFF;
   --accent: #D9A32E;
   --ok: #2E7D4F;
   --error: #C3392F;
-  --ring: 0 0 0 3px rgba(62, 91, 169, 0.18), 0 0 16px rgba(62, 91, 169, 0.15);
-  --glow-btn: 0 4px 18px rgba(62, 91, 169, 0.35);
+  --ring: 0 0 0 3px rgba(0, 105, 255, 0.20), 0 0 16px rgba(0, 105, 255, 0.15);
+  --glow-btn: 0 4px 18px rgba(0, 96, 235, 0.35);
   --glow-accent: 0 0 10px rgba(217, 163, 46, 0.5);
 }
 

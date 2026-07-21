@@ -66,6 +66,11 @@ src/expoal/
   `dist/Expoal-<version>-setup.exe`. La versión se inyecta con `ISCC /DMyAppVersion=x.y.z`
   (el `#ifndef` deja un default). `CloseApplications=yes` + `AppMutex=ExpoalRunningMutex`
   (creado en `__main__`) permiten que el auto-update cierre y reabra la app.
+- **Marca**: ver [docs/MARCA.md](docs/MARCA.md). Logo de Munir (play azul dentro de flecha de
+  descarga); azul de marca **#0069FF** sacado del propio logo. Los iconos NO se editan a mano: se
+  generan con `scripts/make_brand.py` desde `assets/logo.png` (lienzo blanco redondeado, porque el
+  logo es negro y se perdería sobre fondos oscuros). El `.foldericon.ico` de la carpeta es una copia
+  de `assets/expoal.ico` (lo referencia `desktop.ini`).
 - **Subtítulos / texto**: `subtitles.py`. `languages(info)` lista los idiomas (propios primero,
   automáticos después) desde `subtitles` + `automatic_captions`. `to_text()` limpia el SRT/VTT:
   quita tiempos, etiquetas y **las líneas repetidas** (los subtítulos automáticos repiten la frase
