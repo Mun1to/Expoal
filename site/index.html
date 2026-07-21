@@ -200,45 +200,31 @@
     html.motion body.settled .fade-up,
     html.motion body.settled .line > span { transition: none; }
 
-    /* ---------- La demo se endereza en 3D ligada al scroll ----------
-       Fallback universal: reveal clásico vía IntersectionObserver. */
-    html.motion .demo-app {
-      opacity: 0;
-      transform: translateY(48px);
-      transition: opacity 1s var(--ease), transform 1s var(--ease);
-    }
-    html.motion .demo-app.in { opacity: 1; transform: none; }
-    /* Mejora progresiva: si el navegador soporta scroll-driven animations, la demo
-       sube y se endereza ATADA al scroll (scrub nativo, 0 JS, va por GPU). */
-    @supports (animation-timeline: view()) {
-      html.motion .demo-app, html.motion .demo-app.in {
-        opacity: 1; transform: none; transition: none;
-        transform-origin: 50% 100%;
-        animation: demo-rise linear both;
-        animation-timeline: view();
-        animation-range: entry 0% cover 40%;
-      }
-      @keyframes demo-rise {
-        from { opacity: 0.35; transform: perspective(1200px) rotateX(14deg) translateY(80px) scale(0.94); }
-        to   { opacity: 1; transform: none; }
-      }
-    }
 
     /* ---------- Secciones ---------- */
     section { max-width: 1000px; margin: 0 auto; padding: 82px 24px 0; }
 
     /* ==========================================================================
-       RECETA Nº2 FrontLaxWeb — REVEAL + STAGGER:
-       estado oculto solo si hay JS; el stagger lo marca la variable --i por hijo
-       (delay = --i × 90ms); el IntersectionObserver añade .in al asomar.
+       MOVIMIENTO AL SCROLLEAR — la sección entera SUBE como una tarjeta.
+       El movimiento lo lleva el bloque completo ([data-rise]), no cada texto por
+       su cuenta: así se lee como una pieza que entra desde abajo en vez de como
+       un montón de trozos descoordinados. Dentro, los hijos solo se encienden en
+       cascada corta (opacidad, sin desplazarse), que es lo que da el remate.
        ========================================================================== */
+    html.motion [data-rise] {
+      opacity: 0;
+      transform: translateY(70px);
+      transition: opacity 0.75s var(--ease), transform 0.9s var(--ease);
+      will-change: transform;
+    }
+    html.motion [data-rise].in { opacity: 1; transform: none; }
+
     html.motion [data-reveal] {
       opacity: 0;
-      transform: translateY(26px);
-      transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
-      transition-delay: calc(var(--i, 0) * 90ms);
+      transition: opacity 0.55s var(--ease);
+      transition-delay: calc(var(--i, 0) * 55ms + 120ms);
     }
-    html.motion [data-reveal].in { opacity: 1; transform: none; }
+    html.motion [data-reveal].in { opacity: 1; }
 
     .kicker {
       text-align: center;
@@ -337,6 +323,14 @@
       border-radius: 9px;
       outline: none;
     }
+    /* El enlace es fijo: es una demo, no un campo de verdad. Se ve como un dato
+       ya puesto, no como algo que invite a escribir. */
+    .demo-url input[readonly] {
+      cursor: default;
+      user-select: none;
+      color: var(--muted);
+      background: rgba(0, 0, 0, 0.22);
+    }
     .demo-url input:focus { border-color: var(--primary); }
     .demo-btn {
       border: none; border-radius: 9px;
@@ -347,7 +341,44 @@
     }
     .demo-btn.primary { background: var(--primary); color: #fff; }
     .demo-btn.primary:hover { background: var(--primary-strong); box-shadow: 0 6px 22px rgba(0, 105, 255, 0.4); }
+    .demo-btn:disabled { opacity: 0.6; cursor: progress; }
+    .demo-btn:disabled:hover { background: var(--primary); box-shadow: none; }
     .demo-go { width: 100%; padding: 13px; font-size: 15px; }
+
+    /* Estado de partida: la demo espera a que pulses Analizar, igual que la app */
+    .demo-hint {
+      display: flex; align-items: center; gap: 11px;
+      padding: 22px 18px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      background: rgba(0, 105, 255, 0.03);
+    }
+    .demo-hint svg { flex-shrink: 0; color: var(--primary); }
+    .demo-hint p { font-size: 13.5px; line-height: 1.5; }
+    .demo-hint b { color: var(--text); font-weight: 650; }
+    /* El panel no aparece de golpe: se monta por partes, como cuando la app va
+       recibiendo los datos del vídeo. Cada pieza sube desde abajo, encadenadas. */
+    #demo-preview:not(.hidden) { animation: demo-pop 0.3s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+    @keyframes demo-pop {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: none; }
+    }
+    [data-step] {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.34s var(--ease), transform 0.34s var(--ease);
+    }
+    [data-step].in { opacity: 1; transform: none; }
+
+    /* Puntitos de "analizando", los mismos tres tiempos que tarda la app real */
+    .demo-dots::after {
+      content: "";
+      animation: demo-dots 0.9s steps(4, end) infinite;
+    }
+    @keyframes demo-dots {
+      0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; }
+    }
 
     .demo-video { display: flex; gap: 14px; margin-bottom: 16px; }
     .demo-thumb {
@@ -601,7 +632,7 @@
 
   </header>
 
-  <section id="demo" data-parallax="-0.05">
+  <section id="demo" data-rise>
     <p class="kicker" data-reveal>Pruébalo aquí mismo</p>
     <h2 data-reveal style="--i:1">Así se siente Expoal</h2>
     <p class="section-sub" data-reveal style="--i:2">
@@ -618,13 +649,22 @@
 
       <div class="demo-body">
         <div class="demo-card demo-url">
-          <input type="text" id="demo-input" spellcheck="false"
-                 placeholder="Pega aquí un enlace de YouTube, TikTok o Instagram...">
+          <input type="text" id="demo-input" spellcheck="false" readonly tabindex="-1"
+                 aria-label="Enlace de ejemplo"
+                 value="https://www.youtube.com/watch?v=aqz-KE-bpKQ">
           <button type="button" class="demo-btn primary" id="demo-analyze">Analizar</button>
         </div>
 
+        <div class="demo-hint" id="demo-hint">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+          </svg>
+          <p>Enlace de ejemplo listo. Pulsa <b>Analizar</b> y verás lo que hace la app.</p>
+        </div>
+
         <div class="demo-card hidden" id="demo-preview">
-          <div class="demo-video">
+          <div class="demo-video" data-step>
             <img class="demo-thumb" id="demo-thumb" src="assets/demo-thumb.jpg" alt="">
             <div class="demo-meta">
               <span class="demo-platform" id="demo-platform">YOUTUBE</span>
@@ -633,7 +673,7 @@
             </div>
           </div>
 
-          <div class="demo-options">
+          <div class="demo-options" data-step>
             <div class="demo-opt">
               <label>Formato</label>
               <div class="demo-seg" id="demo-mode">
@@ -670,7 +710,7 @@
             </div>
           </div>
 
-          <div class="demo-edit" id="demo-edit">
+          <div class="demo-edit" id="demo-edit" data-step>
             <div class="demo-edit-head">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -712,7 +752,7 @@
             </label>
           </div>
 
-          <button type="button" class="demo-btn primary demo-go" id="demo-download">
+          <button type="button" class="demo-btn primary demo-go" id="demo-download" data-step>
             Añadir a la cola
           </button>
           <p class="demo-note hidden" id="demo-note">
@@ -725,7 +765,7 @@
     </div>
   </section>
 
-  <section>
+  <section data-rise>
     <p class="kicker" data-reveal>Sin anuncios ni pasos de más</p>
     <h2 data-reveal style="--i:1">Todo lo que necesitas, nada que no</h2>
     <p class="section-sub" data-reveal style="--i:2">Una herramienta directa que corre entera en tu PC.</p>
@@ -753,7 +793,7 @@
     </div>
   </section>
 
-  <section>
+  <section data-rise>
     <p class="kicker" data-reveal>Así de corto</p>
     <div class="steps">
       <b data-reveal style="--i:1">Pega el enlace</b>
@@ -764,7 +804,7 @@
     </div>
   </section>
 
-  <section class="final">
+  <section class="final" data-rise>
     <h2 data-reveal>Empieza a guardar tus vídeos</h2>
     <p class="section-sub" data-reveal style="--i:1">Gratis y open source. Sin registros, sin cuentas.</p>
     <div class="cta" data-reveal style="--i:2">
@@ -779,7 +819,7 @@
     </div>
   </section>
 
-  <section id="legal">
+  <section id="legal" data-rise>
     <p class="kicker" data-reveal>Antes de usarlo</p>
     <h2 data-reveal style="--i:1">Uso responsable</h2>
     <p class="section-sub" data-reveal style="--i:2">
@@ -908,20 +948,31 @@
       // 3) Receta nº2 — reveal + stagger: el observer añade .in al asomar un 15%;
       //    los tiempos de la cascada los pone el CSS con --i. Una vez visto, se
       //    des-observa (anima una sola vez, memoria libre).
+      // Al asomar un bloque [data-rise] se enciende ÉL y, de una vez, todo lo que
+      // lleva dentro. Si cada hijo se observara por su cuenta, la tarjeta subiría
+      // con sus textos entrando a destiempo y se perdería la sensación de pieza única.
+      const show = (el) => {
+        el.classList.add("in");
+        el.querySelectorAll("[data-reveal]").forEach((kid) => kid.classList.add("in"));
+      };
       const io = new IntersectionObserver((entries) => {
         for (const e of entries) {
-          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+          if (e.isIntersecting) { show(e.target); io.unobserve(e.target); }
         }
-      }, { threshold: 0.15, rootMargin: "0px 0px -8% 0px" });
-      document.querySelectorAll("[data-reveal], .shot").forEach((el) => io.observe(el));
+      }, { threshold: 0.05, rootMargin: "0px 0px -10% 0px" });
+      document.querySelectorAll("[data-rise], .shot").forEach((el) => io.observe(el));
+      // Los [data-reveal] que viven fuera de un bloque que sube se observan solos
+      document.querySelectorAll("[data-reveal]").forEach((el) => {
+        if (!el.closest("[data-rise]")) io.observe(el);
+      });
 
       // Red de seguridad: si el navegador tarda en entregar las observaciones
       // (pestaña en segundo plano, webviews incrustados), revela lo que ya está
       // a la vista tras cargar. Nunca dejes contenido invisible por un observer mudo.
       addEventListener("load", () => setTimeout(() => {
-        document.querySelectorAll("[data-reveal]:not(.in), .shot:not(.in)").forEach((el) => {
+        document.querySelectorAll("[data-rise]:not(.in), [data-reveal]:not(.in), .shot:not(.in)").forEach((el) => {
           const r = el.getBoundingClientRect();
-          if (r.top < innerHeight && r.bottom > 0) el.classList.add("in");
+          if (r.top < innerHeight && r.bottom > 0) show(el);
         });
       }, 400));
 
@@ -1029,17 +1080,41 @@
         sum.classList.toggle("on", parts.length > 0);
       }
 
+      const btn = $("#demo-analyze");
+      const steps = [...document.querySelectorAll("#demo-preview [data-step]")];
+      let working = false;
+
       function analyze() {
-        if (!input.value.trim()) input.value = "https://www.youtube.com/watch?v=aqz-KE-bpKQ";
-        $("#demo-title").textContent = DEMO.title;
-        $("#demo-sub").textContent = `${DEMO.author} · ${fmt(DEMO.duration)} min`;
-        $("#demo-preview").classList.remove("hidden");
-        $("#demo-note").classList.add("hidden");
-        renderEdit();
+        if (working) return;
+        working = true;
+
+        // Fase 1: el botón trabaja. Corto a propósito: la gracia es ver la app
+        // montarse, no esperar. En la app real esto es la consulta del vídeo.
+        btn.disabled = true;
+        btn.textContent = "Analizando";
+        btn.classList.add("demo-dots");
+        steps.forEach((el) => el.classList.remove("in"));
+
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = "Analizar";
+          btn.classList.remove("demo-dots");
+
+          // Fase 2: llegan los datos y el panel se abre
+          $("#demo-title").textContent = DEMO.title;
+          $("#demo-sub").textContent = `${DEMO.author} · ${fmt(DEMO.duration)} min`;
+          $("#demo-hint").classList.add("hidden");
+          $("#demo-preview").classList.remove("hidden");
+          $("#demo-note").classList.add("hidden");
+          renderEdit();
+
+          // Fase 3: las piezas entran encadenadas, de arriba abajo
+          steps.forEach((el, i) => setTimeout(() => el.classList.add("in"), 90 + i * 110));
+          setTimeout(() => { working = false; }, 90 + steps.length * 110);
+        }, 480);
       }
 
-      $("#demo-analyze").addEventListener("click", analyze);
-      input.addEventListener("keydown", (e) => { if (e.key === "Enter") analyze(); });
+      btn.addEventListener("click", analyze);
 
       // Cambiar de formato reordena las opciones, igual que en la app real
       for (const btn of document.querySelectorAll("#demo-mode button")) {
@@ -1107,9 +1182,10 @@
         $("#demo-note").scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
 
-      // Arranca ya analizada: así se ve la app completa de un vistazo en vez de
-      // un formulario vacío. El botón Analizar sigue funcionando igual.
-      analyze();
+      // Arranca SIN analizar, a propósito: la gracia de la demo es que el visitante
+      // la use, no que se la encuentre resuelta. El enlace de ejemplo ya viene puesto
+      // en el campo para que baste con pulsar Analizar.
+      renderExt();
     })();
   </script>
 </body>
