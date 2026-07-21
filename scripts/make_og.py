@@ -10,7 +10,8 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).parent.parent
-SHOT = (ROOT / "assets" / "screenshot-dark.png").resolve().as_uri()
+# En español, igual que el texto de la propia OG
+SHOT = (ROOT / "assets" / "screenshot-dark-es.png").resolve().as_uri()
 ICON = (ROOT / "assets" / "logo-512.png").resolve().as_uri()
 
 HTML = f"""<!DOCTYPE html>

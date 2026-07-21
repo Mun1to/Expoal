@@ -19,9 +19,34 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 [**Website**](https://mun1to.github.io/Expoal/) · [**All downloads**](https://github.com/Mun1to/Expoal/releases/latest)
 
-<img src="assets/screenshot-dark.png" width="820" alt="Expoal screenshot">
+<img src="assets/screenshot-dark-en.png" width="820" alt="Expoal in dark mode: a link pasted, the video ready to download, and the history below">
 
 </div>
+
+## What it looks like
+
+That is the whole app: paste a link, Expoal reads the video and shows you the formats and
+resolutions it can pull, you pick a destination folder and it lands on your disk. Below, a
+history of everything you have saved. There is a light theme too, and the interface is in
+English or Spanish.
+
+<div align="center">
+<img src="assets/screenshot-light-en.png" width="740" alt="Expoal in light mode">
+</div>
+
+## Why not just yt-dlp?
+
+Expoal is built on [yt-dlp](https://github.com/yt-dlp/yt-dlp) and makes no secret of it. yt-dlp
+is the engine; Expoal is everything you would otherwise have to remember, script or look up:
+
+- A window instead of a command line, so you can hand it to someone who does not use a terminal
+- Format and quality pickers built from what the video actually offers, instead of format strings
+- A queue with live progress, speed and ETA, and a history that survives restarts
+- Trimming, edge cropping and audio stripping without touching FFmpeg flags
+- An installer, a desktop shortcut and one-click self-updates on Windows and Linux
+
+If you are happy typing `yt-dlp -f bestvideo+bestaudio <url>`, you do not need Expoal. It exists
+for the times you want a window, and for the people who would never open a terminal at all.
 
 ## Features
 

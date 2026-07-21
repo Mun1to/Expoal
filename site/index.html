@@ -339,6 +339,33 @@
     .point h3 { font-size: 15.5px; margin-bottom: 5px; font-weight: 650; }
     .point p { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
 
+    /* La captura de la app de verdad. Va enmarcada como una ventana para que se
+       lea como producto real y no se confunda con la demo recreada de arriba. */
+    .shot {
+      max-width: 880px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 34px 80px rgba(0, 0, 0, 0.5);
+    }
+    .shot-bar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 14px;
+      background: rgba(17, 25, 49, 0.9);
+      border-bottom: 1px solid var(--border);
+    }
+    .shot-bar i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-strong);
+    }
+    .shot img { display: block; width: 100%; height: auto; }
+    .shot-foot { text-align: center; color: var(--muted); font-size: 13px; margin-top: 16px; }
+
     .steps {
       display: flex;
       align-items: center;
@@ -895,6 +922,22 @@
   </section>
 
   <section data-rise>
+    <p class="kicker" data-reveal data-en="No mockups">Nada de maquetas</p>
+    <h2 data-reveal style="--i:1" data-en="The app, exactly as it is">La app, tal cual es</h2>
+    <p class="section-sub" data-reveal style="--i:2"
+       data-en="A real screenshot of Expoal running. What you see up there is a recreation; this is the actual thing.">
+      Una captura de verdad de Expoal funcionando. Lo de ahí arriba es una recreación; esto es lo real.</p>
+    <div class="shot" data-reveal style="--i:3">
+      <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+      <img src="assets/screenshot-dark-es.png" data-en-src="assets/screenshot-dark-en.png"
+           width="2160" height="1620" loading="lazy" decoding="async"
+           alt="Expoal con un enlace pegado, el vídeo listo para descargar y el historial debajo">
+    </div>
+    <p class="shot-foot" data-reveal style="--i:4"
+       data-en="Dark and light theme, English and Spanish.">Tema oscuro y claro, en español e inglés.</p>
+  </section>
+
+  <section data-rise>
     <p class="kicker" data-reveal data-en="That short">Así de corto</p>
     <div class="steps">
       <b data-reveal style="--i:1" data-en="Paste the link">Pega el enlace</b>
@@ -1166,6 +1209,9 @@
       const nodes = [...document.querySelectorAll("[data-en]")];
       // El español de partida se toma del propio HTML, no se duplica a mano
       nodes.forEach((n) => { n.dataset.es = n.innerHTML.trim(); });
+      // Imágenes que tienen versión por idioma (la captura de la app)
+      const imgs = [...document.querySelectorAll("[data-en-src]")];
+      imgs.forEach((n) => { n.dataset.esSrc = n.getAttribute("src"); });
       const listeners = [];
 
       function apply() {
@@ -1174,6 +1220,9 @@
           // innerHTML aquí es seguro: la cadena está escrita en este archivo
           // (lleva <b> y <a>), nunca viene de fuera.
           n.innerHTML = lang === "en" ? n.dataset.en : n.dataset.es;
+        }
+        for (const n of imgs) {
+          n.src = lang === "en" ? n.dataset.enSrc : n.dataset.esSrc;
         }
         document.title = DICT[lang].title;
         const md = document.querySelector('meta[name="description"]');

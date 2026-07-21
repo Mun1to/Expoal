@@ -129,9 +129,22 @@ src/expoal/
   antes de pintar (`?lang=` > localStorage > idioma del navegador). Los textos que genera el JS
   van en el diccionario `DICT` de `I18N`.
 - **Capturas/OG**: `scripts/capture_screenshots.py` (README/landing) y `scripts/make_og.py` (redes)
-  con Playwright; requieren server en :8710 e historial de ejemplo (Blender) escrito temporalmente
-  en `%LOCALAPPDATA%\Expoal\history.json` y restaurado después. `scripts/capture_header.py` es
-  solo para revisar la alineación del logo (su salida `assets/header-check.png` no se versiona).
+  con Playwright; requieren el server en :8710, y hay que arrancarlo DESPUÉS de subir la versión o
+  la captura saldrá con la vieja (el número lo sirve el backend). Genera cuatro,
+  `screenshot-{dark,light}-{es,en}.png`. Decisiones: el historial de ejemplo se inyecta
+  interceptando `/api/history` con `page.route` (así el script no toca el historial real de nadie y
+  sale igual en cualquier máquina), la carpeta de destino se reescribe a `C:\Users\You\...` porque
+  las capturas se publican, y **no se usa `full_page`**: la página entera sale como una tira
+  vertical que parece captura de web, mientras que al alto de la ventana se lee como app. Si tocas
+  las capturas, cópialas también a `site/assets/` (la landing sirve desde ahí) y regenera la OG.
+  `scripts/capture_header.py` es solo para revisar la alineación del logo (su salida
+  `assets/header-check.png` no se versiona).
+- **Prueba visible del producto**: la landing tiene, después de los puntos fuertes, una sección con
+  la captura REAL enmarcada como ventana (`.shot`) que dice explícitamente que la demo de arriba es
+  una recreación. Nació de feedback externo ("add pictures how the app actually looks"): antes solo
+  se veía la demo simulada y la gente no sabía si la app existía. La imagen cambia con el idioma vía
+  `data-en-src` (mismo patrón que `data-en`, resuelto en `apply()`). El README, por lo mismo,
+  responde de frente a "is it just a yt-dlp wrapper?" en vez de dejar la pregunta en el aire.
 - **Títulos de vídeo = entrada externa**: en el frontend SIEMPRE `textContent`, nunca
   `innerHTML` (XSS). En el backend, `windowsfilenames: True` sanea nombres de archivo.
 - **Sin cookies/login**: contenido privado o con verificación de edad falla de forma
