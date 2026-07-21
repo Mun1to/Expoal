@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Expoal - Del link a tu disco</title>
+  <title>Expoal</title>
   <link rel="icon" type="image/png" href="icon.png?v=2">
   <script>
     // Fija el tema antes de cargar el CSS para evitar el parpadeo inicial.
     document.documentElement.dataset.theme =
       localStorage.getItem("expoal-theme") ||
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    // Y el idioma, por el mismo motivo: que nadie vea el texto cambiar al cargar.
+    document.documentElement.lang =
+      localStorage.getItem("expoal-lang") ||
+      ((navigator.language || "es").toLowerCase().indexOf("es") === 0 ? "es" : "en");
     // Sigue al sistema EN VIVO mientras el usuario no haya fijado un tema con el
     // botón (en cuanto hay elección guardada, esa manda y esto deja de aplicar).
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
@@ -24,11 +28,12 @@
     <div class="brand">
       <img src="logo.png" class="brand-icon" alt="">
       <h1>Expoal</h1>
-      <span class="tagline">Del link a tu disco</span>
     </div>
     <div class="top-actions">
       <span class="version" id="version"></span>
-      <button type="button" id="theme-toggle" class="icon-btn" title="Cambiar tema" aria-label="Cambiar tema">
+      <button type="button" class="lang" id="lang"></button>
+      <button type="button" id="theme-toggle" class="icon-btn"
+              data-en-title="Switch theme" title="Cambiar tema" aria-label="Cambiar tema">
         <svg id="icon-sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="2" stroke-linecap="round">
           <circle cx="12" cy="12" r="4"/>
@@ -47,18 +52,20 @@
       <div class="update-main">
         <span class="update-dot"></span>
         <div>
-          <strong id="update-title">Hay una versión nueva</strong>
+          <strong id="update-title" data-en="There is a new version">Hay una versión nueva</strong>
           <span id="update-version" class="update-version"></span>
         </div>
       </div>
       <div class="update-actions">
-        <a id="update-notes" href="#" target="_blank" rel="noopener" class="btn ghost small">Ver novedades</a>
-        <button type="button" id="update-btn" class="btn primary small">Actualizar</button>
+        <a id="update-notes" href="#" target="_blank" rel="noopener" class="btn ghost small"
+           data-en="See what's new">Ver novedades</a>
+        <button type="button" id="update-btn" class="btn primary small" data-en="Update">Actualizar</button>
       </div>
       <p id="update-status" class="update-status hidden"></p>
     </div>
 
-    <div id="ffmpeg-banner" class="banner hidden">
+    <div id="ffmpeg-banner" class="banner hidden"
+         data-en="Without FFmpeg there is no MP3 and no merged top qualities. Install it with &lt;code&gt;winget install Gyan.FFmpeg&lt;/code&gt; and restart Expoal.">
       Sin FFmpeg no hay MP3 ni calidades máximas fusionadas. Instálalo con
       <code>winget install Gyan.FFmpeg</code> y reinicia Expoal.
     </div>
@@ -66,8 +73,9 @@
     <section class="card">
       <form id="url-form" class="url-row">
         <input type="url" id="url-input" placeholder="Pega aquí un enlace de YouTube, TikTok o Instagram..."
+               data-en-placeholder="Paste a YouTube, TikTok or Instagram link here..."
                autocomplete="off" spellcheck="false" required>
-        <button type="submit" id="analyze-btn" class="btn primary">Analizar</button>
+        <button type="submit" id="analyze-btn" class="btn primary" data-en="Analyze">Analizar</button>
       </form>
       <p id="url-error" class="error hidden"></p>
     </section>
@@ -83,37 +91,37 @@
       </div>
       <div class="options">
         <div class="option">
-          <label>Formato</label>
+          <label data-en="Format">Formato</label>
           <div class="segmented" id="mode-group">
-            <button type="button" data-mode="video" class="active">Vídeo MP4</button>
-            <button type="button" data-mode="audio" id="audio-btn">Audio MP3</button>
-            <button type="button" data-mode="text" id="text-btn">Texto</button>
+            <button type="button" data-mode="video" class="active" data-en="Video MP4">Vídeo MP4</button>
+            <button type="button" data-mode="audio" id="audio-btn" data-en="Audio MP3">Audio MP3</button>
+            <button type="button" data-mode="text" id="text-btn" data-en="Text">Texto</button>
           </div>
         </div>
         <div class="option" id="quality-option">
-          <label for="quality-select">Calidad</label>
+          <label for="quality-select" data-en="Quality">Calidad</label>
           <select id="quality-select"></select>
         </div>
         <div class="option" id="out-format-option">
-          <label for="out-format-select">Formato de salida</label>
+          <label for="out-format-select" data-en="Output format">Formato de salida</label>
           <select id="out-format-select"></select>
         </div>
         <div class="option hidden" id="sub-lang-option">
-          <label for="sub-lang-select">Idioma del texto</label>
+          <label for="sub-lang-select" data-en="Text language">Idioma del texto</label>
           <select id="sub-lang-select"></select>
         </div>
         <div class="option hidden" id="sub-format-option">
-          <label>Formato del texto</label>
+          <label data-en="Text format">Formato del texto</label>
           <div class="segmented" id="sub-format-group">
-            <button type="button" data-subfmt="txt" class="active">Solo texto</button>
-            <button type="button" data-subfmt="srt">Con tiempos</button>
+            <button type="button" data-subfmt="txt" class="active" data-en="Text only">Solo texto</button>
+            <button type="button" data-subfmt="srt" data-en="With timings">Con tiempos</button>
           </div>
         </div>
         <div class="option grow">
-          <label for="folder-input">Carpeta de destino</label>
+          <label for="folder-input" data-en="Destination folder">Carpeta de destino</label>
           <div class="folder-row">
             <input type="text" id="folder-input" spellcheck="false">
-            <button type="button" id="folder-btn" class="btn ghost">Examinar...</button>
+            <button type="button" id="folder-btn" class="btn ghost" data-en="Browse...">Examinar...</button>
           </div>
         </div>
       </div>
@@ -123,7 +131,7 @@
                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M14.5 4l5.5 5.5M3 21l4-1 11-11a2.5 2.5 0 0 0-3.5-3.5L3.5 16.5 3 21z"/>
           </svg>
-          <span>Editar vídeo</span>
+          <span data-en="Edit video">Editar vídeo</span>
           <span class="edit-summary" id="edit-summary">sin cambios</span>
           <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -133,26 +141,26 @@
 
         <div class="edit-body hidden" id="edit-body">
           <div class="edit-block">
-            <label>Duración</label>
+            <label data-en="Duration">Duración</label>
             <div class="trim-bar" id="trim-bar">
               <div class="trim-sel" id="trim-sel"></div>
               <div class="trim-handle" id="trim-h-start" role="slider" tabindex="0"
-                   aria-label="Inicio del recorte"></div>
+                   data-en-aria="Start of the trim" aria-label="Inicio del recorte"></div>
               <div class="trim-handle" id="trim-h-end" role="slider" tabindex="0"
-                   aria-label="Final del recorte"></div>
+                   data-en-aria="End of the trim" aria-label="Final del recorte"></div>
             </div>
             <div class="trim-fields">
-              <span>Desde</span>
+              <span data-en="From">Desde</span>
               <input type="text" id="trim-start" inputmode="numeric" placeholder="0:00" spellcheck="false">
-              <span>hasta</span>
+              <span data-en="to">hasta</span>
               <input type="text" id="trim-end" inputmode="numeric" placeholder="0:00" spellcheck="false">
               <span class="hint" id="trim-hint"></span>
-              <button type="button" class="btn ghost tiny" id="trim-reset">Todo</button>
+              <button type="button" class="btn ghost tiny" id="trim-reset" data-en="All">Todo</button>
             </div>
           </div>
 
           <div class="edit-block">
-            <label>Recortar bordes <span class="hint" id="crop-hint"></span></label>
+            <label><span data-en="Crop edges">Recortar bordes</span> <span class="hint" id="crop-hint"></span></label>
             <div class="crop-layout">
               <figure class="crop-preview" id="crop-preview">
                 <img id="crop-preview-img" alt="" referrerpolicy="no-referrer">
@@ -164,19 +172,19 @@
               </figure>
               <div class="crop-grid">
                 <div class="crop-field">
-                  <span>Arriba</span>
+                  <span data-en="Top">Arriba</span>
                   <input type="number" id="crop-top" min="0" step="2" value="0">
                 </div>
                 <div class="crop-field">
-                  <span>Abajo</span>
+                  <span data-en="Bottom">Abajo</span>
                   <input type="number" id="crop-bottom" min="0" step="2" value="0">
                 </div>
                 <div class="crop-field">
-                  <span>Izquierda</span>
+                  <span data-en="Left">Izquierda</span>
                   <input type="number" id="crop-left" min="0" step="2" value="0">
                 </div>
                 <div class="crop-field">
-                  <span>Derecha</span>
+                  <span data-en="Right">Derecha</span>
                   <input type="number" id="crop-right" min="0" step="2" value="0">
                 </div>
                 <p class="crop-result" id="crop-result"></p>
@@ -186,36 +194,36 @@
 
           <label class="check">
             <input type="checkbox" id="mute-check">
-            <span>Quitar el audio (vídeo mudo)</span>
+            <span data-en="Remove the audio (silent video)">Quitar el audio (vídeo mudo)</span>
           </label>
 
           <label class="check" id="subs-check-row">
             <input type="checkbox" id="subs-check">
-            <span>Guardar también el texto del vídeo (subtítulos aparte)</span>
+            <span data-en="Also save the video text (subtitles as a separate file)">Guardar también el texto del vídeo (subtítulos aparte)</span>
           </label>
         </div>
       </section>
 
-      <button type="button" id="download-btn" class="btn primary big">Añadir a la cola</button>
+      <button type="button" id="download-btn" class="btn primary big" data-en="Add to queue">Añadir a la cola</button>
       <p id="download-error" class="error hidden"></p>
     </section>
 
     <section class="list-section hidden" id="queue-section">
-      <h3>Cola de descargas</h3>
+      <h3 data-en="Download queue">Cola de descargas</h3>
       <div id="queue-list"></div>
     </section>
 
     <section class="list-section hidden" id="history-section">
       <div class="section-head">
-        <h3>Historial</h3>
-        <button type="button" id="clear-history" class="btn ghost small">Vaciar</button>
+        <h3 data-en="History">Historial</h3>
+        <button type="button" id="clear-history" class="btn ghost small" data-en="Clear">Vaciar</button>
       </div>
       <div id="history-list"></div>
     </section>
   </main>
 
   <footer>
-    <p>100% local: tus enlaces y tus archivos no salen de tu ordenador.
+    <p data-en="100% local: your links and your files never leave your computer. Download only content that is yours or that you have permission for.">100% local: tus enlaces y tus archivos no salen de tu ordenador.
        Descarga solo contenido propio o con permiso.</p>
   </footer>
 

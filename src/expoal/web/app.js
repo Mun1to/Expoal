@@ -2,6 +2,115 @@
 
 const $ = (sel) => document.querySelector(sel);
 
+/* ============================================================================
+   IDIOMA (es / en)
+   El español vive en el HTML y su traducción viaja al lado, en data-en (o
+   data-en-placeholder / data-en-title / data-en-aria para los atributos): así
+   texto y traducción se editan juntos y no hay forma de que se desincronicen.
+   Los textos que escribe este archivo van en DICT. El idioma inicial lo fija
+   el <script> del <head> antes de pintar, para que no se vea cambiar.
+   ============================================================================ */
+const I18N = (function () {
+  const DICT = {
+    es: {
+      analyze: "Analizar", analyzing: "Analizando...",
+      video: "Vídeo", best: "Máxima disponible", nochange: "sin cambios",
+      neterror: "Error de red",
+      nosubs: "Este vídeo no tiene subtítulos disponibles",
+      cropbad: "El recorte deja el vídeo sin imagen",
+      auto: (name) => `${name} (automático)`,
+      videosize: (w, h) => `(vídeo de ${w}x${h} px)`,
+      needsffmpeg: "Requiere FFmpeg",
+      download: "Descargar",
+      updating: "Descargando la actualización... Expoal se reiniciará solo.",
+      installing: "Instalando... la aplicación se cerrará en un momento.",
+      edges: "bordes", noaudio: "sin audio",
+      status: {
+        en_cola: "En cola", descargando: "Descargando...", procesando: "Procesando...",
+        editando: "Editando...", completado: "Completado", error: "Error",
+      },
+      badges: { audio: "MP3", text: "TEXTO" },
+      mins: (m, s) => `${m}:${s} min`,
+      hours: (h, m) => `${h}h ${m}m`,
+    },
+    en: {
+      analyze: "Analyze", analyzing: "Analyzing...",
+      video: "Video", best: "Best available", nochange: "no changes",
+      neterror: "Network error",
+      nosubs: "This video has no subtitles available",
+      cropbad: "The crop leaves the video with no image",
+      auto: (name) => `${name} (automatic)`,
+      videosize: (w, h) => `(video, ${w}x${h} px)`,
+      needsffmpeg: "Requires FFmpeg",
+      download: "Download",
+      updating: "Downloading the update... Expoal will restart by itself.",
+      installing: "Installing... the app will close in a moment.",
+      edges: "edges", noaudio: "no audio",
+      status: {
+        en_cola: "Queued", descargando: "Downloading...", procesando: "Processing...",
+        editando: "Editing...", completado: "Done", error: "Error",
+      },
+      badges: { audio: "MP3", text: "TEXT" },
+      mins: (m, s) => `${m}:${s} min`,
+      hours: (h, m) => `${h}h ${m}m`,
+    },
+  };
+
+  let lang = document.documentElement.lang === "en" ? "en" : "es";
+  const listeners = [];
+
+  function apply() {
+    document.documentElement.lang = lang;
+    for (const el of document.querySelectorAll("[data-en]")) {
+      if (el.dataset.esText === undefined) el.dataset.esText = el.innerHTML.trim();
+      // innerHTML seguro: la cadena está escrita en index.html (lleva <code>),
+      // nunca procede de un vídeo ni de ninguna entrada externa.
+      el.innerHTML = lang === "en" ? el.dataset.en : el.dataset.esText;
+    }
+    for (const el of document.querySelectorAll("[data-en-placeholder]")) {
+      if (el.dataset.esPlaceholder === undefined) el.dataset.esPlaceholder = el.placeholder;
+      el.placeholder = lang === "en" ? el.dataset.enPlaceholder : el.dataset.esPlaceholder;
+    }
+    for (const el of document.querySelectorAll("[data-en-title]")) {
+      if (el.dataset.esTitle === undefined) el.dataset.esTitle = el.title;
+      el.title = lang === "en" ? el.dataset.enTitle : el.dataset.esTitle;
+      el.setAttribute("aria-label", el.title);
+    }
+    for (const el of document.querySelectorAll("[data-en-aria]")) {
+      const es = el.dataset.esAria !== undefined
+        ? el.dataset.esAria
+        : (el.dataset.esAria = el.getAttribute("aria-label"));
+      el.setAttribute("aria-label", lang === "en" ? el.dataset.enAria : es);
+    }
+    // El botón anuncia el idioma al que llevas, no el que ya tienes
+    const btn = $("#lang");
+    if (btn) {
+      btn.textContent = lang === "es" ? "English" : "Español";
+      btn.title = lang === "es" ? "Switch to English" : "Cambiar a español";
+      btn.setAttribute("aria-label", btn.title);
+    }
+    for (const fn of listeners) fn(lang);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = $("#lang");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        lang = lang === "es" ? "en" : "es";
+        try { localStorage.setItem("expoal-lang", lang); } catch (e) { /* modo privado */ }
+        apply();
+      });
+    }
+    apply();
+  });
+
+  return {
+    t: (k) => DICT[lang][k],
+    lang: () => lang,
+    onChange: (fn) => listeners.push(fn),
+  };
+})();
+
 const state = {
   info: null,
   mode: "video",
@@ -14,7 +123,7 @@ const state = {
 async function api(path, options) {
   const res = await fetch(path, options);
   if (!res.ok) {
-    let detail = "Error de red";
+    let detail = I18N.t("neterror");
     try {
       const data = await res.json();
       if (data && data.detail) detail = String(data.detail);
@@ -45,18 +154,9 @@ function formatDuration(seconds) {
   if (!seconds) return "";
   const s = Math.round(seconds);
   const m = Math.floor(s / 60);
-  if (m >= 60) return `${Math.floor(m / 60)}h ${m % 60}m`;
-  return `${m}:${String(s % 60).padStart(2, "0")} min`;
+  if (m >= 60) return I18N.t("hours")(Math.floor(m / 60), m % 60);
+  return I18N.t("mins")(m, String(s % 60).padStart(2, "0"));
 }
-
-const STATUS_LABELS = {
-  en_cola: "En cola",
-  descargando: "Descargando...",
-  procesando: "Procesando...",
-  editando: "Editando...",
-  completado: "Completado",
-  error: "Error",
-};
 
 // --- Edición: tiempos ---
 
@@ -83,7 +183,7 @@ async function analyze(event) {
   const errorEl = $("#url-error");
   hideError(errorEl);
   btn.disabled = true;
-  btn.textContent = "Analizando...";
+  btn.textContent = I18N.t("analyzing");
   try {
     state.info = await post("/api/info", { url: $("#url-input").value });
     renderPreview();
@@ -92,14 +192,14 @@ async function analyze(event) {
     showError(errorEl, err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Analizar";
+    btn.textContent = I18N.t("analyze");
   }
 }
 
 function renderPreview() {
   const info = state.info;
   $("#preview-thumb").src = info.thumbnail || "";
-  $("#preview-platform").textContent = info.platform || "Vídeo";
+  $("#preview-platform").textContent = info.platform || I18N.t("video");
   $("#preview-title").textContent = info.title || info.url;
   const parts = [];
   if (info.uploader) parts.push(info.uploader);
@@ -118,7 +218,7 @@ function renderQualityOptions() {
   select.disabled = state.mode !== "video";
   const best = document.createElement("option");
   best.value = "best";
-  best.textContent = "Máxima disponible";
+  best.textContent = I18N.t("best");
   select.appendChild(best);
   if (state.mode === "video" && state.info) {
     for (const height of state.info.heights) {
@@ -162,7 +262,7 @@ function renderSubtitleOptions() {
     for (const t of tracks) {
       const opt = document.createElement("option");
       opt.value = t.code;
-      opt.textContent = t.automatic ? `${t.name} (automático)` : t.name;
+      opt.textContent = t.automatic ? I18N.t("auto")(t.name) : t.name;
       select.appendChild(opt);
     }
     select.dataset.url = state.info?.url || "";
@@ -184,7 +284,7 @@ function renderSubtitleOptions() {
   const noSubs = isText && !hasSubs;
   $("#download-btn").disabled = noSubs;
   if (noSubs) {
-    showError($("#download-error"), "Este vídeo no tiene subtítulos disponibles");
+    showError($("#download-error"), I18N.t("nosubs"));
   } else {
     hideError($("#download-error"));
   }
@@ -277,7 +377,7 @@ function renderEdit() {
     const bad = w <= 0 || h <= 0;
     result.classList.toggle("err", bad);
     result.textContent = bad
-      ? "El recorte deja el vídeo sin imagen"
+      ? I18N.t("cropbad")
       : `${info.width}x${info.height} queda en ${w}x${h}`;
     renderCropPreview(crop, info, bad);
   } else {
@@ -289,10 +389,10 @@ function renderEdit() {
   if (duration > 0 && (start > 0 || end < duration)) {
     parts.push(`${formatTime(start)}-${formatTime(end)}`);
   }
-  if (crop.top || crop.bottom || crop.left || crop.right) parts.push("bordes");
-  if ($("#mute-check").checked) parts.push("sin audio");
+  if (crop.top || crop.bottom || crop.left || crop.right) parts.push(I18N.t("edges"));
+  if ($("#mute-check").checked) parts.push(I18N.t("noaudio"));
   const summary = $("#edit-summary");
-  summary.textContent = parts.length ? parts.join(" · ") : "sin cambios";
+  summary.textContent = parts.length ? parts.join(" · ") : I18N.t("nochange");
   $("#edit-toggle").classList.toggle("dirty", parts.length > 0);
 }
 
@@ -383,7 +483,7 @@ function resetEdit() {
   $("#mute-check").checked = false;
   const info = state.info || {};
   $("#crop-hint").textContent = info.width
-    ? `(vídeo de ${info.width}x${info.height} px)`
+    ? I18N.t("videosize")(info.width, info.height)
     : "";
   // La vista previa toma la proporción real del vídeo (no la de la miniatura, que
   // en YouTube siempre viene en 16:9 aunque el vídeo sea vertical).
@@ -454,7 +554,7 @@ function renderJob(job) {
   status.className = "job-status";
   if (job.status === "completado") status.classList.add("ok");
   if (job.status === "error") status.classList.add("err");
-  let statusText = STATUS_LABELS[job.status] || job.status;
+  let statusText = I18N.t("status")[job.status] || job.status;
   if (job.status === "descargando") {
     statusText = `${job.progress}%`;
     if (job.speed) statusText += ` · ${job.speed}`;
@@ -498,8 +598,7 @@ function renderHistoryItem(entry) {
   head.className = "history-head";
   const badge = document.createElement("span");
   badge.className = "badge";
-  const MODE_BADGES = { audio: "MP3", text: "TEXTO" };
-  badge.textContent = MODE_BADGES[entry.mode] || entry.platform || "Vídeo";
+  badge.textContent = I18N.t("badges")[entry.mode] || entry.platform || I18N.t("video");
   const title = document.createElement("span");
   title.className = "history-title";
   title.textContent = entry.title || entry.url;
@@ -599,7 +698,7 @@ async function init() {
       $("#ffmpeg-banner").classList.remove("hidden");
       const audioBtn = $("#audio-btn");
       audioBtn.disabled = true;
-      audioBtn.title = "Requiere FFmpeg";
+      audioBtn.title = I18N.t("needsffmpeg");
     }
   } catch (_) { /* se reintenta al refrescar */ }
 
@@ -613,6 +712,21 @@ async function init() {
   }
 
   setupEdit();
+
+  // Los textos que escribe este archivo no llevan data-en, así que al cambiar
+  // de idioma hay que repintar lo que ya esté en pantalla. La cola y el
+  // historial se arreglan solos en el siguiente refresh().
+  I18N.onChange(() => {
+    if (!state.info) return;
+    // renderSubtitleOptions solo repuebla el select si cambia el vídeo; al
+    // cambiar de idioma el vídeo es el mismo, así que hay que invalidarlo a
+    // mano o el "(automático)" se quedaría en el idioma anterior.
+    $("#sub-lang-select").dataset.url = "";
+    renderPreview();
+    renderSubtitleOptions();
+    renderEdit();
+  });
+
   checkForUpdate();
   refresh();
   setInterval(refresh, 1500);
@@ -640,10 +754,10 @@ async function checkForUpdate() {
     btn.addEventListener("click", async () => {
       btn.disabled = true;
       status.classList.remove("hidden", "err");
-      status.textContent = "Descargando la actualización... Expoal se reiniciará solo.";
+      status.textContent = I18N.t("updating");
       try {
         await api("/api/update/apply", { method: "POST" });
-        status.textContent = "Instalando... la aplicación se cerrará en un momento.";
+        status.textContent = I18N.t("installing");
       } catch (err) {
         status.classList.add("err");
         status.textContent = err.message;
@@ -652,7 +766,7 @@ async function checkForUpdate() {
     });
   } else {
     // En modo web/navegador no hay instalador: el botón lleva a la descarga.
-    btn.textContent = "Descargar";
+    btn.textContent = I18N.t("download");
     btn.addEventListener("click", () => {
       window.open(info.notes_url || "https://github.com/Mun1to/Expoal/releases/latest", "_blank");
     });

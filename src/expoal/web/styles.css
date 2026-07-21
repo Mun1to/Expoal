@@ -82,33 +82,41 @@ body {
 /* Logo suelto (sin lienzo): el fondo de la cabecera ya es nuestro. */
 .brand-icon { width: 40px; height: 40px; object-fit: contain; }
 .brand h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.4px; line-height: 1; }
-.tagline {
-  color: var(--muted);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  margin-left: 4px;
-  line-height: 1;
-  position: relative;
-  top: -2px;
-}
-
 .top-actions { display: flex; align-items: center; gap: 12px; }
 .version { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+
+/* Botones del header al estilo de la web de Alex: sin recuadro fijo, y al pasar
+   el ratón aparece una píldora suave debajo. Limpio en reposo, y al pulsar se
+   ve bien dónde estás dando. El fondo sale de --surface-2, que ya está definido
+   en los dos temas, así que funciona igual en claro y en oscuro. */
+.lang {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.18s, color 0.18s;
+}
+.lang:hover { background: var(--surface-2); color: var(--text); }
 
 .icon-btn {
   display: grid;
   place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border-radius: 999px;
+  border: none;
+  background: none;
   color: var(--muted);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  transition: background-color 0.18s, color 0.18s;
 }
-.icon-btn:hover { border-color: var(--border-strong); color: var(--text); box-shadow: var(--ring); }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
 html[data-theme="dark"] #icon-moon { display: none; }
 html[data-theme="light"] #icon-sun { display: none; }
 

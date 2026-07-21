@@ -50,7 +50,15 @@ src/expoal/
   Además hay un middleware `local_origin_guard` que bloquea POST con Origin externo
   (anti-CSRF contra el servidor local).
 - **Cola secuencial** (un worker): suficiente para el MVP; concurrencia es meta futura.
-- **UI en español** por ahora; i18n a inglés es meta futura (ver docs/METAS.md).
+- **UI bilingüe es/en** (app y landing, mismo patrón): el español vive en el HTML y su
+  traducción al lado, en `data-en` (y `data-en-placeholder` / `data-en-title` / `data-en-aria`
+  para atributos), así texto y traducción se editan juntos. Los textos que escribe el JS van en
+  el diccionario `DICT` del módulo `I18N` (arriba de `app.js`). El idioma se fija en el `<script>`
+  del `<head>` ANTES de pintar (localStorage > idioma del navegador) para que no se vea cambiar,
+  y se recuerda en `expoal-lang`. GOTCHA: `renderSubtitleOptions()` solo repuebla el select si
+  cambia el vídeo, así que al cambiar de idioma hay que invalidar `#sub-lang-select.dataset.url`
+  a mano o el "(automático)" se queda en el idioma anterior. Al traducir algo nuevo que pinte el
+  JS, acuérdate de repintarlo en el `I18N.onChange` de `init()`.
 - **Tema claro/oscuro** vía `html[data-theme]` + variables CSS; el JS fuerza un reflow al
   cambiar (ver FEEDBACK.md). El tema inicial se fija en un `<script>` inline en el `<head>`
   para evitar el parpadeo (FOUC).
@@ -107,6 +115,19 @@ src/expoal/
   no empaqueta fiable entre distros (por eso `launcher.py` solo añade `--desktop` en win32).
   El auto-update solo aplica a Windows (`can_auto_install` exige `sys.platform == "win32"`), porque
   el asset es un instalador `.exe`; en Linux el banner enlaza a la descarga.
+- **Landing (`site/index.html`, un solo archivo)**: el hero ocupa la pantalla entera
+  (`.hero-wrap` con `position: sticky`) y **el resto de la página es una lámina** (`main.sheet`,
+  fondo SÓLIDO y borde redondeado arriba) que **sube y lo tapa** al scrollear. Pedido así por
+  Munir tres veces: si `.sheet` se vuelve transparente o el hero deja de ser sticky, el efecto
+  desaparece. Al scrollear, cada `<section data-rise>` sube ENTERA como una tarjeta y sus hijos
+  `[data-reveal]` solo se encienden en cascada de opacidad; el observer marca la sección y sus
+  hijos de una vez para que no entren a destiempo. GOTCHA: `body` usa `overflow-x: clip` y no
+  `hidden`, porque `hidden` convierte el body en contenedor de scroll y rompe el sticky.
+  La **demo** arranca cerrada con un enlace de ejemplo `readonly` (no se edita a propósito): al
+  pulsar Analizar se monta por pasos (`[data-step]`). **Idioma es/en**: el español está en el HTML
+  y la traducción en `data-en` del mismo elemento; el `<script>` del `<head>` fija `html.lang`
+  antes de pintar (`?lang=` > localStorage > idioma del navegador). Los textos que genera el JS
+  van en el diccionario `DICT` de `I18N`.
 - **Capturas/OG**: `scripts/capture_screenshots.py` (README/landing) y `scripts/make_og.py` (redes)
   con Playwright; requieren server en :8710 e historial de ejemplo (Blender) escrito temporalmente
   en `%LOCALAPPDATA%\Expoal\history.json` y restaurado después. `scripts/capture_header.py` es

@@ -31,6 +31,14 @@
       d.classList.add("js");
       var off = /[?&]motion=off/.test(location.search);
       if (!off) d.classList.add("motion");
+
+      // Idioma decidido ANTES de pintar, para que nadie vea el texto cambiar:
+      // manda ?lang=, luego lo que eligió el visitante, y si no, su navegador.
+      var q = /[?&]lang=(es|en)/.exec(location.search);
+      var saved = null;
+      try { saved = localStorage.getItem("expoal-lang"); } catch (e) {}
+      var nav = (navigator.language || "es").toLowerCase();
+      d.lang = (q && q[1]) || saved || (nav.indexOf("es") === 0 ? "es" : "en");
     })();
   </script>
   <style>
@@ -58,7 +66,9 @@
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
-      overflow-x: hidden;
+      /* clip y no hidden: `hidden` convierte el body en contenedor de scroll y
+         eso rompe el position:sticky del hero. */
+      overflow-x: clip;
       -webkit-font-smoothing: antialiased;
     }
     a { color: inherit; text-decoration: none; }
@@ -117,21 +127,86 @@
     .brand { display: flex; align-items: center; gap: 11px; }
     .brand img { width: 38px; height: 38px; object-fit: contain; }
     .brand span { font-size: 18px; font-weight: 650; letter-spacing: -0.3px; }
-    nav a.gh { color: var(--muted); font-size: 14.5px; transition: color 0.15s; }
-    nav a.gh:hover { color: var(--text); }
+    .nav-right { display: flex; align-items: center; gap: 4px; }
 
-    /* ---------- Hero ---------- */
+    /* Botones del header al estilo de la web de Alex: sin recuadro fijo, y al
+       pasar el ratón aparece una píldora suave bajo el texto. Se siente mucho
+       mejor al pulsar porque la zona clicable se ve, pero no ensucia en reposo. */
+    nav a.gh, .lang {
+      background: none;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-family: var(--font);
+      font-size: 14.5px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background-color 0.18s var(--ease), color 0.18s var(--ease);
+    }
+    nav a.gh:hover, .lang:hover { background: rgba(233, 237, 248, 0.1); color: var(--text); }
+    nav a.gh:active, .lang:active { background: rgba(233, 237, 248, 0.16); }
+
+    /* ==========================================================================
+       HERO A PANTALLA COMPLETA + LÁMINA QUE LO TAPA
+       Al entrar solo se ve el hero: ocupa la pantalla entera y nada asoma por
+       abajo salvo la flecha que invita a bajar. El hero se queda PEGADO (sticky)
+       y el resto de la página es una lámina que sube por encima y lo cubre.
+       Por eso .sheet lleva fondo sólido: si fuese transparente, el hero se vería
+       a través y el efecto de tapar desaparecería.
+       ========================================================================== */
+    .hero-wrap {
+      position: sticky;
+      top: 0;
+      height: 100svh;          /* svh: en móvil descuenta la barra del navegador */
+      z-index: 0;
+    }
     .hero {
-      /* Menos de una pantalla completa y con el bloque algo por encima del centro:
-         así se ve que la página continúa y se invita a bajar. */
-      min-height: 86vh;
+      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
       padding: 96px 24px 40px;
+      will-change: transform, opacity;
     }
+    .sheet {
+      position: relative;
+      z-index: 1;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      border-radius: 30px 30px 0 0;
+      box-shadow: 0 -34px 80px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Flecha de "sigue bajando": lo único que asoma en la primera pantalla */
+    .scroll-cue {
+      position: absolute;
+      left: 50%;
+      bottom: 30px;
+      translate: -50% 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 11.5px;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      transition: opacity 0.4s ease;
+    }
+    .scroll-cue svg { animation: cue 1.9s ease-in-out infinite; }
+    @keyframes cue {
+      0%, 100% { transform: translateY(0); opacity: 0.55; }
+      50% { transform: translateY(7px); opacity: 1; }
+    }
+    /* Entrada propia en vez de .fade-up: comparten especificidad y la regla de
+       fade-up ganaba, dejando la flecha visible para siempre al scrollear. */
+    html.motion .scroll-cue { opacity: 0; transition: opacity 0.6s var(--ease) 1100ms; }
+    html.motion body.ready .scroll-cue { opacity: 1; }
+    html.motion body.scrolled .scroll-cue,
+    body.scrolled .scroll-cue { opacity: 0; pointer-events: none; transition-delay: 0s; }
     h1 {
       font-size: clamp(44px, 8vw, 84px);
       font-weight: 760;
@@ -276,7 +351,9 @@
     .steps .arrow { color: var(--accent); font-weight: 700; }
 
     /* ---------- Demo interactiva ---------- */
-    #demo { padding-top: 40px; }
+    /* Primera sección de la lámina: hueco extra para que el borde redondeado
+       respire y se lea como una hoja que entra por encima del hero. */
+    #demo { padding-top: 76px; }
     .demo-app {
       max-width: 760px;
       margin: 0 auto;
@@ -598,44 +675,62 @@
     <div class="orb orb-c" data-speed="0.14" data-mouse="20"></div>
   </div>
 
+  <div class="hero-wrap">
   <nav class="fade-up" style="--i:0">
     <a class="brand" href="#">
       <img src="assets/logo.png" alt="Expoal">
       <span>Expoal</span>
     </a>
-    <a class="gh" href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">GitHub</a>
+    <div class="nav-right">
+      <button type="button" class="lang" id="lang"></button>
+      <a class="gh" href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">GitHub</a>
+    </div>
   </nav>
 
   <header class="hero">
-    <h1 data-parallax="-0.12">
-      <span class="line"><span style="--i:0">Del link a tu disco.</span></span>
-      <span class="line"><span class="accent" style="--i:1">Sin intermediarios.</span></span>
+    <h1>
+      <span class="line"><span style="--i:0" data-en="From link to disk.">Del link a tu disco.</span></span>
+      <span class="line"><span class="accent" style="--i:1" data-en="No middlemen.">Sin intermediarios.</span></span>
     </h1>
-    <p class="sub fade-up" data-parallax="-0.08" style="--i:1">
+    <p class="sub fade-up" style="--i:1"
+       data-en="Paste a YouTube, TikTok or Instagram link and Expoal saves the video on your own computer. &lt;b&gt;100% open source, local and free.&lt;/b&gt;">
       Pega un enlace de YouTube, TikTok o Instagram y Expoal guarda el vídeo
       en tu propio ordenador. <b>100% open source, local y gratis.</b>
     </p>
-    <div class="cta fade-up" data-parallax="-0.04" style="--i:2">
+    <div class="cta fade-up" style="--i:2">
       <a class="btn primary" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
-        Descargar para Windows
+        <span data-en="Download for Windows">Descargar para Windows</span>
       </a>
       <a class="btn ghost" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
-        Descargar para Linux
+        <span data-en="Download for Linux">Descargar para Linux</span>
       </a>
     </div>
-    <p class="os-note fade-up" style="--i:3">
+    <p class="os-note fade-up" style="--i:3"
+       data-en="Windows 10/11 · AppImage for Linux · updates itself · &lt;a class=&quot;inline-link&quot; href=&quot;https://github.com/Mun1to/Expoal&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;view the code&lt;/a&gt;">
       Windows 10/11 · AppImage para Linux · se actualiza solo ·
       <a class="inline-link" href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">ver el código</a>
     </p>
 
+    <div class="scroll-cue" aria-hidden="true">
+      <span data-en="Scroll">Baja</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14m0 0l-6-6m6 6l6-6"/>
+      </svg>
+    </div>
   </header>
+  </div>
+
+  <!-- La lámina: todo esto sube y tapa el hero al scrollear -->
+  <main class="sheet">
 
   <section id="demo" data-rise>
-    <p class="kicker" data-reveal>Pruébalo aquí mismo</p>
-    <h2 data-reveal style="--i:1">Así se siente Expoal</h2>
-    <p class="section-sub" data-reveal style="--i:2">
+    <p class="kicker" data-reveal data-en="Try it right here">Pruébalo aquí mismo</p>
+    <h2 data-reveal style="--i:1" data-en="This is what Expoal feels like">Así se siente Expoal</h2>
+    <p class="section-sub" data-reveal style="--i:2"
+       data-en="A demo of the real app. Play with it: it is the very same interface you get.">
       Una demostración de la app real. Trastea con ella: es la misma interfaz que te llevas.
     </p>
 
@@ -643,7 +738,6 @@
       <div class="demo-bar">
         <img src="assets/logo.png" alt="" class="demo-logo">
         <strong>Expoal</strong>
-        <span class="demo-tag">DEL LINK A TU DISCO</span>
         <span class="demo-badge">demo</span>
       </div>
 
@@ -652,7 +746,7 @@
           <input type="text" id="demo-input" spellcheck="false" readonly tabindex="-1"
                  aria-label="Enlace de ejemplo"
                  value="https://www.youtube.com/watch?v=aqz-KE-bpKQ">
-          <button type="button" class="demo-btn primary" id="demo-analyze">Analizar</button>
+          <button type="button" class="demo-btn primary" id="demo-analyze" data-en="Analyze">Analizar</button>
         </div>
 
         <div class="demo-hint" id="demo-hint">
@@ -660,7 +754,7 @@
                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
           </svg>
-          <p>Enlace de ejemplo listo. Pulsa <b>Analizar</b> y verás lo que hace la app.</p>
+          <p data-en="Example link ready. Press &lt;b&gt;Analyze&lt;/b&gt; and see what the app does.">Enlace de ejemplo listo. Pulsa <b>Analizar</b> y verás lo que hace la app.</p>
         </div>
 
         <div class="demo-card hidden" id="demo-preview">
@@ -675,24 +769,24 @@
 
           <div class="demo-options" data-step>
             <div class="demo-opt">
-              <label>Formato</label>
+              <label data-en="Format">Formato</label>
               <div class="demo-seg" id="demo-mode">
-                <button type="button" data-mode="video" class="active">Vídeo MP4</button>
-                <button type="button" data-mode="audio">Audio MP3</button>
-                <button type="button" data-mode="text">Texto</button>
+                <button type="button" data-mode="video" class="active" data-en="Video MP4">Vídeo MP4</button>
+                <button type="button" data-mode="audio" data-en="Audio MP3">Audio MP3</button>
+                <button type="button" data-mode="text" data-en="Text">Texto</button>
               </div>
             </div>
             <div class="demo-opt" id="demo-quality-wrap">
-              <label>Calidad</label>
+              <label data-en="Quality">Calidad</label>
               <select id="demo-quality">
-                <option>Máxima disponible</option>
+                <option data-en="Best available">Máxima disponible</option>
                 <option selected>1080p</option>
                 <option>720p</option>
                 <option>480p</option>
               </select>
             </div>
             <div class="demo-opt" id="demo-ext-wrap">
-              <label>Formato de salida</label>
+              <label data-en="Output format">Formato de salida</label>
               <select id="demo-ext">
                 <option selected>MP4</option>
                 <option>MKV</option>
@@ -701,11 +795,11 @@
               </select>
             </div>
             <div class="demo-opt hidden" id="demo-lang-wrap">
-              <label>Idioma del texto</label>
+              <label data-en="Text language">Idioma del texto</label>
               <select id="demo-lang">
-                <option selected>Español</option>
-                <option>English</option>
-                <option>Français</option>
+                <option selected data-en="Spanish">Español</option>
+                <option data-en="English">English</option>
+                <option data-en="French">Français</option>
               </select>
             </div>
           </div>
@@ -716,7 +810,7 @@
                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M14.5 4l5.5 5.5M3 21l4-1 11-11a2.5 2.5 0 0 0-3.5-3.5L3.5 16.5 3 21z"/>
               </svg>
-              <span>Editar vídeo</span>
+              <span data-en="Edit video">Editar vídeo</span>
               <span class="demo-edit-sum" id="demo-edit-sum">sin cambios</span>
             </div>
             <div class="demo-trim">
@@ -728,7 +822,7 @@
               <span class="demo-trim-txt" id="demo-trim-txt">0:00 a 10:35</span>
             </div>
             <div class="demo-crop">
-              <span class="demo-crop-label">Recortar bordes</span>
+              <span class="demo-crop-label" data-en="Crop edges">Recortar bordes</span>
               <div class="demo-crop-row">
                 <figure class="demo-crop-prev" id="demo-crop-prev">
                   <img src="assets/demo-thumb.jpg" alt="">
@@ -739,23 +833,25 @@
                   <div class="demo-frame" id="demo-frame"></div>
                 </figure>
                 <div class="demo-crop-fields">
-                  <label>Arriba<input type="number" id="crop-t" min="0" step="10" value="0"></label>
-                  <label>Abajo<input type="number" id="crop-b" min="0" step="10" value="0"></label>
-                  <label>Izquierda<input type="number" id="crop-l" min="0" step="10" value="0"></label>
-                  <label>Derecha<input type="number" id="crop-r" min="0" step="10" value="0"></label>
+                  <label><span data-en="Top">Arriba</span><input type="number" id="crop-t" min="0" step="10" value="0"></label>
+                  <label><span data-en="Bottom">Abajo</span><input type="number" id="crop-b" min="0" step="10" value="0"></label>
+                  <label><span data-en="Left">Izquierda</span><input type="number" id="crop-l" min="0" step="10" value="0"></label>
+                  <label><span data-en="Right">Derecha</span><input type="number" id="crop-r" min="0" step="10" value="0"></label>
                 </div>
               </div>
               <p class="demo-crop-out" id="demo-crop-out">3840x2160 queda en 3840x2160</p>
             </div>
             <label class="demo-check">
-              <input type="checkbox" id="demo-mute"> Quitar el audio
+              <input type="checkbox" id="demo-mute"> <span data-en="Remove the audio">Quitar el audio</span>
             </label>
           </div>
 
-          <button type="button" class="demo-btn primary demo-go" id="demo-download" data-step>
+          <button type="button" class="demo-btn primary demo-go" id="demo-download" data-step
+                  data-en="Add to queue">
             Añadir a la cola
           </button>
-          <p class="demo-note hidden" id="demo-note">
+          <p class="demo-note hidden" id="demo-note"
+             data-en="This is a demo: &lt;b&gt;nothing gets downloaded here&lt;/b&gt;. Expoal runs on your computer, so the video is saved once you install it. &lt;a href=&quot;https://github.com/Mun1to/Expoal/releases/latest&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Download Expoal&lt;/a&gt;">
             Esto es una demostración: <b>aquí no se descarga nada</b>. Expoal trabaja en tu
             ordenador, así que el vídeo se guarda cuando lo instalas.
             <a href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">Descargar Expoal</a>
@@ -766,110 +862,116 @@
   </section>
 
   <section data-rise>
-    <p class="kicker" data-reveal>Sin anuncios ni pasos de más</p>
-    <h2 data-reveal style="--i:1">Todo lo que necesitas, nada que no</h2>
-    <p class="section-sub" data-reveal style="--i:2">Una herramienta directa que corre entera en tu PC.</p>
+    <p class="kicker" data-reveal data-en="No ads, no extra steps">Sin anuncios ni pasos de más</p>
+    <h2 data-reveal style="--i:1" data-en="Everything you need, nothing you don't">Todo lo que necesitas, nada que no</h2>
+    <p class="section-sub" data-reveal style="--i:2"
+       data-en="A no-nonsense tool that runs entirely on your PC.">Una herramienta directa que corre entera en tu PC.</p>
     <div class="points">
       <div class="point" data-reveal style="--i:0">
         <div class="ic">🔒</div>
-        <h3>100% privado</h3>
-        <p>Tus enlaces y archivos nunca salen de tu ordenador.</p>
+        <h3 data-en="100% private">100% privado</h3>
+        <p data-en="Your links and files never leave your computer.">Tus enlaces y archivos nunca salen de tu ordenador.</p>
       </div>
       <div class="point" data-reveal style="--i:1">
         <div class="ic">🎬</div>
-        <h3>MP4 o MP3</h3>
-        <p>Elige formato y calidad, hasta la máxima disponible.</p>
+        <h3 data-en="MP4 or MP3">MP4 o MP3</h3>
+        <p data-en="Pick format and quality, up to the best available.">Elige formato y calidad, hasta la máxima disponible.</p>
       </div>
       <div class="point" data-reveal style="--i:2">
         <div class="ic">📥</div>
-        <h3>Cola e historial</h3>
-        <p>Varias descargas con progreso en vivo y registro de todo.</p>
+        <h3 data-en="Queue and history">Cola e historial</h3>
+        <p data-en="Several downloads with live progress and a record of everything.">Varias descargas con progreso en vivo y registro de todo.</p>
       </div>
       <div class="point" data-reveal style="--i:3">
         <div class="ic">🔄</div>
-        <h3>Se actualiza solo</h3>
-        <p>Un aviso, un clic, y siempre tienes la última versión.</p>
+        <h3 data-en="Updates itself">Se actualiza solo</h3>
+        <p data-en="One notice, one click, and you always have the latest version.">Un aviso, un clic, y siempre tienes la última versión.</p>
       </div>
     </div>
   </section>
 
   <section data-rise>
-    <p class="kicker" data-reveal>Así de corto</p>
+    <p class="kicker" data-reveal data-en="That short">Así de corto</p>
     <div class="steps">
-      <b data-reveal style="--i:1">Pega el enlace</b>
+      <b data-reveal style="--i:1" data-en="Paste the link">Pega el enlace</b>
       <svg data-reveal style="--i:2" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
-      <b data-reveal style="--i:3">Elige formato</b>
+      <b data-reveal style="--i:3" data-en="Pick a format">Elige formato</b>
       <svg data-reveal style="--i:4" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
-      <b data-reveal style="--i:5">A tu disco</b>
+      <b data-reveal style="--i:5" data-en="Onto your disk">A tu disco</b>
     </div>
   </section>
 
   <section class="final" data-rise>
-    <h2 data-reveal>Empieza a guardar tus vídeos</h2>
-    <p class="section-sub" data-reveal style="--i:1">Gratis y open source. Sin registros, sin cuentas.</p>
+    <h2 data-reveal data-en="Start saving your videos">Empieza a guardar tus vídeos</h2>
+    <p class="section-sub" data-reveal style="--i:1"
+       data-en="Free and open source. No sign-ups, no accounts.">Gratis y open source. Sin registros, sin cuentas.</p>
     <div class="cta" data-reveal style="--i:2">
       <a class="btn primary" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
-        Descargar para Windows
+        <span data-en="Download for Windows">Descargar para Windows</span>
       </a>
       <a class="btn ghost" data-magnetic href="https://github.com/Mun1to/Expoal/releases/latest" target="_blank" rel="noopener">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
-        Descargar para Linux
+        <span data-en="Download for Linux">Descargar para Linux</span>
       </a>
     </div>
   </section>
 
   <section id="legal" data-rise>
-    <p class="kicker" data-reveal>Antes de usarlo</p>
-    <h2 data-reveal style="--i:1">Uso responsable</h2>
-    <p class="section-sub" data-reveal style="--i:2">
+    <p class="kicker" data-reveal data-en="Before you use it">Antes de usarlo</p>
+    <h2 data-reveal style="--i:1" data-en="Responsible use">Uso responsable</h2>
+    <p class="section-sub" data-reveal style="--i:2"
+       data-en="Expoal is a tool. What you do with it is on you, so give this a read.">
       Expoal es una herramienta. Lo que hagas con ella es cosa tuya, así que léete esto.
     </p>
 
     <div class="legal-grid">
       <article class="legal-card" data-reveal style="--i:3">
-        <h3>Descarga solo lo que puedas</h3>
-        <p>
+        <h3 data-en="Only download what you may">Descarga solo lo que puedas</h3>
+        <p data-en="Use Expoal only with content that is &lt;b&gt;your own&lt;/b&gt;, &lt;b&gt;freely licensed&lt;/b&gt; (Creative Commons, public domain) or that you have &lt;b&gt;express permission&lt;/b&gt; to use from whoever made it.">
           Usa Expoal únicamente con contenido <b>propio</b>, con <b>licencia libre</b> (Creative
           Commons, dominio público) o para el que tengas <b>permiso expreso</b> de quien lo creó.
         </p>
       </article>
       <article class="legal-card" data-reveal style="--i:4">
-        <h3>Respeta el copyright</h3>
-        <p>
+        <h3 data-en="Respect copyright">Respeta el copyright</h3>
+        <p data-en="Downloading protected works without authorisation may breach your country's copyright law and the terms of the platform it came from.">
           Descargar obras protegidas sin autorización puede infringir la ley de propiedad
           intelectual de tu país y las condiciones de uso de la plataforma de origen.
         </p>
       </article>
       <article class="legal-card" data-reveal style="--i:5">
-        <h3>Sin responsabilidad del autor</h3>
-        <p>
+        <h3 data-en="No liability on the author">Sin responsabilidad del autor</h3>
+        <p data-en="Expoal is provided &lt;b&gt;as is, with no warranty&lt;/b&gt;. The author is not liable for how you use the program, nor for any damage, claim or legal consequence arising from misuse. By using it, you accept that responsibility.">
           Expoal se ofrece <b>tal cual, sin garantías</b>. El autor no se hace responsable del uso
           que hagas del programa ni de los daños, reclamaciones o consecuencias legales derivadas
           de un uso indebido. Al usarlo, aceptas asumir esa responsabilidad.
         </p>
       </article>
       <article class="legal-card" data-reveal style="--i:6">
-        <h3>Sin vínculo con las plataformas</h3>
-        <p>
+        <h3 data-en="Not affiliated with the platforms">Sin vínculo con las plataformas</h3>
+        <p data-en="Expoal is an independent project. It is not associated with or sponsored by YouTube, TikTok, Instagram or any other platform, and their trademarks belong to their owners.">
           Expoal es un proyecto independiente. No está asociado ni patrocinado por YouTube, TikTok,
           Instagram ni ninguna otra plataforma, y sus marcas pertenecen a sus dueños.
         </p>
       </article>
     </div>
-    <p class="legal-foot" data-reveal style="--i:7">
+    <p class="legal-foot" data-reveal style="--i:7"
+       data-en="Released under the &lt;a href=&quot;https://github.com/Mun1to/Expoal/blob/main/LICENSE&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;MIT licence&lt;/a&gt;, which includes the warranty and liability disclaimer.">
       Publicado bajo <a href="https://github.com/Mun1to/Expoal/blob/main/LICENSE" target="_blank" rel="noopener">licencia MIT</a>,
       que incluye la exención de garantías y de responsabilidad.
     </p>
   </section>
 
   <footer>
-    <p>Expoal · Hecho por <a href="https://github.com/Mun1to" target="_blank" rel="noopener">Munir Torres</a> · Licencia MIT</p>
-    <p class="legal">
+    <p data-en="Expoal · Made by &lt;a href=&quot;https://github.com/Mun1to&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;Munir Torres&lt;/a&gt; · MIT License">Expoal · Hecho por <a href="https://github.com/Mun1to" target="_blank" rel="noopener">Munir Torres</a> · Licencia MIT</p>
+    <p class="legal"
+       data-en="Download only content that is yours, licensed or permitted. &lt;a href=&quot;#legal&quot;&gt;Terms of use&lt;/a&gt;">
       Descarga solo contenido propio, con licencia o con permiso.
       <a href="#legal">Condiciones de uso</a>
     </p>
   </footer>
+  </main>
 
   <script>
     (function () {
@@ -891,7 +993,13 @@
       //    b) Capas del hero [data-parallax]: titular/subtítulo/botones se separan a
       //       distinta velocidad al bajar (parallax relativo a su posición original).
       //       Espera a que termine la animación de entrada para tomar el control.
+      // La flecha de "baja" solo tiene sentido antes de bajar
+      const cue = () => document.body.classList.toggle("scrolled", window.scrollY > 40);
+      addEventListener("scroll", cue, { passive: true });
+      cue();
+
       if (!reduced) {
+        const hero = document.querySelector(".hero");
         const layers = [...document.querySelectorAll("[data-speed]")].map((el) => ({
           el, speed: parseFloat(el.dataset.speed), depth: parseFloat(el.dataset.mouse || 0)
         }));
@@ -930,6 +1038,14 @@
                 it.el.style.transform = "translate3d(0," +
                   ((mid - it.center) * it.speed).toFixed(1) + "px,0)";
               }
+            }
+            // El hero se queda pegado DETRÁS mientras la lámina sube y lo tapa.
+            // Se atenúa y se aleja un poco: así la atención pasa a lo que entra
+            // encima en vez de competir con un hero a plena intensidad.
+            if (hero) {
+              const p = Math.min(1, y / innerHeight);
+              hero.style.opacity = (1 - p * 0.72).toFixed(3);
+              hero.style.transform = "scale(" + (1 - p * 0.055).toFixed(4) + ")";
             }
             lastY = y;
           }
@@ -1004,6 +1120,73 @@
     })();
 
     /* ==========================================================================
+       IDIOMA (es / en) — el español vive en el HTML y la traducción viaja al
+       lado, en data-en. Así el texto y su traducción se editan juntos y no hay
+       forma de que se desincronicen. El idioma inicial ya lo fijó el script del
+       <head> antes de pintar, para que nadie vea el texto cambiar de golpe.
+       ========================================================================== */
+    const I18N = (function () {
+      const DICT = {
+        es: {
+          nochange: "sin cambios", edges: "bordes", noaudio: "sin audio",
+          analyze: "Analizar", analyzing: "Analizando",
+          becomes: (a, b) => `${a} queda en ${b}`,
+          cropbad: "El recorte deja el vídeo sin imagen",
+          title: "Expoal - Del link a tu disco",
+          desc: "Pega un enlace de YouTube, TikTok o Instagram y guarda el vídeo en tu propio disco. 100% local, open source, sin webs de terceros.",
+        },
+        en: {
+          nochange: "no changes", edges: "edges", noaudio: "no audio",
+          analyze: "Analyze", analyzing: "Analyzing",
+          becomes: (a, b) => `${a} becomes ${b}`,
+          cropbad: "The crop leaves the video with no image",
+          title: "Expoal - From link to disk",
+          desc: "Paste a YouTube, TikTok or Instagram link and save the video straight to your own disk. 100% local, open source, no third-party sites.",
+        },
+      };
+
+      let lang = document.documentElement.lang === "en" ? "en" : "es";
+      const nodes = [...document.querySelectorAll("[data-en]")];
+      // El español de partida se toma del propio HTML, no se duplica a mano
+      nodes.forEach((n) => { n.dataset.es = n.innerHTML.trim(); });
+      const listeners = [];
+
+      function apply() {
+        document.documentElement.lang = lang;
+        for (const n of nodes) {
+          // innerHTML aquí es seguro: la cadena está escrita en este archivo
+          // (lleva <b> y <a>), nunca viene de fuera.
+          n.innerHTML = lang === "en" ? n.dataset.en : n.dataset.es;
+        }
+        document.title = DICT[lang].title;
+        const md = document.querySelector('meta[name="description"]');
+        if (md) md.content = DICT[lang].desc;
+        // El botón anuncia el idioma al que llevas, no el que ya tienes
+        const btn = document.querySelector("#lang");
+        if (btn) {
+          btn.textContent = lang === "es" ? "English" : "Español";
+          btn.setAttribute("aria-label", lang === "es" ? "Switch to English" : "Cambiar a español");
+        }
+        for (const fn of listeners) fn(lang);
+      }
+
+      const langBtn = document.querySelector("#lang");
+      if (langBtn) {
+        langBtn.addEventListener("click", () => {
+          lang = lang === "es" ? "en" : "es";
+          try { localStorage.setItem("expoal-lang", lang); } catch (e) {}
+          apply();
+        });
+      }
+
+      apply();
+      return {
+        t: (k) => DICT[lang][k],
+        onChange: (fn) => listeners.push(fn),
+      };
+    })();
+
+    /* ==========================================================================
        DEMO INTERACTIVA — reproduce la interfaz real de Expoal con datos de
        ejemplo. No descarga nada: la app trabaja en el ordenador del usuario, y
        una web estática no puede ejecutar yt-dlp. Al pulsar descargar se dice
@@ -1067,16 +1250,16 @@
         const out = $("#demo-crop-out");
         out.classList.toggle("err", bad);
         out.textContent = bad
-          ? "El recorte deja el vídeo sin imagen"
-          : `${DEMO.width}x${DEMO.height} queda en ${w}x${h}`;
+          ? I18N.t("cropbad")
+          : I18N.t("becomes")(`${DEMO.width}x${DEMO.height}`, `${w}x${h}`);
         f.style.display = bad ? "none" : "block";
 
         const parts = [];
         if (trim.start > 0 || trim.end < DEMO.duration) parts.push(`${fmt(trim.start)}-${fmt(trim.end)}`);
-        if (c.t || c.b || c.l || c.r) parts.push("bordes");
-        if ($("#demo-mute").checked) parts.push("sin audio");
+        if (c.t || c.b || c.l || c.r) parts.push(I18N.t("edges"));
+        if ($("#demo-mute").checked) parts.push(I18N.t("noaudio"));
         const sum = $("#demo-edit-sum");
-        sum.textContent = parts.length ? parts.join(" · ") : "sin cambios";
+        sum.textContent = parts.length ? parts.join(" · ") : I18N.t("nochange");
         sum.classList.toggle("on", parts.length > 0);
       }
 
@@ -1091,13 +1274,13 @@
         // Fase 1: el botón trabaja. Corto a propósito: la gracia es ver la app
         // montarse, no esperar. En la app real esto es la consulta del vídeo.
         btn.disabled = true;
-        btn.textContent = "Analizando";
+        btn.textContent = I18N.t("analyzing");
         btn.classList.add("demo-dots");
         steps.forEach((el) => el.classList.remove("in"));
 
         setTimeout(() => {
           btn.disabled = false;
-          btn.textContent = "Analizar";
+          btn.textContent = I18N.t("analyze");
           btn.classList.remove("demo-dots");
 
           // Fase 2: llegan los datos y el panel se abre
@@ -1180,6 +1363,12 @@
       $("#demo-download").addEventListener("click", () => {
         $("#demo-note").classList.remove("hidden");
         $("#demo-note").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      // Los textos que escribe este código ("sin cambios", "queda en"...) no llevan
+      // data-en, así que hay que repintarlos al cambiar de idioma.
+      I18N.onChange(() => {
+        if (!$("#demo-preview").classList.contains("hidden")) renderEdit();
       });
 
       // Arranca SIN analizar, a propósito: la gracia de la demo es que el visitante
