@@ -198,47 +198,26 @@
     html.motion body.settled .fade-up,
     html.motion body.settled .line > span { transition: none; }
 
-    /* ---------- Captura: entra con tilt 3D ligado al scroll ---------- */
-    .shot {
-      margin: 64px auto -40px;
-      max-width: 880px;
-      width: 100%;
-    }
-    .shot img {
-      width: 100%;
-      display: block;
-      border-radius: 18px 18px 0 0;
-      border: 1px solid var(--border-strong);
-      border-bottom: none;
-      box-shadow: 0 -10px 90px rgba(0, 105, 255, 0.22), 0 30px 80px rgba(0, 0, 0, 0.6);
-    }
-    .shot-fade { position: relative; }
-    .shot-fade::after {
-      content: "";
-      position: absolute;
-      left: 0; right: 0; bottom: 0;
-      height: 180px;
-      background: linear-gradient(180deg, transparent, var(--bg));
-    }
-    /* Fallback universal: reveal clásico vía IntersectionObserver */
-    html.motion .shot {
+    /* ---------- La demo se endereza en 3D ligada al scroll ----------
+       Fallback universal: reveal clásico vía IntersectionObserver. */
+    html.motion .demo-app {
       opacity: 0;
       transform: translateY(48px);
       transition: opacity 1s var(--ease), transform 1s var(--ease);
     }
-    html.motion .shot.in { opacity: 1; transform: none; }
-    /* Mejora progresiva: si el navegador soporta CSS scroll-driven animations,
-       la captura se "endereza" en 3D ATADA al scroll (scrub nativo, 0 JS, GPU). */
+    html.motion .demo-app.in { opacity: 1; transform: none; }
+    /* Mejora progresiva: si el navegador soporta scroll-driven animations, la demo
+       sube y se endereza ATADA al scroll (scrub nativo, 0 JS, va por GPU). */
     @supports (animation-timeline: view()) {
-      html.motion .shot, html.motion .shot.in {
+      html.motion .demo-app, html.motion .demo-app.in {
         opacity: 1; transform: none; transition: none;
         transform-origin: 50% 100%;
-        animation: shot-rise linear both;
+        animation: demo-rise linear both;
         animation-timeline: view();
-        animation-range: entry 0% cover 45%;
+        animation-range: entry 0% cover 40%;
       }
-      @keyframes shot-rise {
-        from { opacity: 0.3; transform: perspective(1200px) rotateX(16deg) translateY(70px) scale(0.94); }
+      @keyframes demo-rise {
+        from { opacity: 0.35; transform: perspective(1200px) rotateX(14deg) translateY(80px) scale(0.94); }
         to   { opacity: 1; transform: none; }
       }
     }
@@ -573,51 +552,9 @@
       <a class="inline-link" href="https://github.com/Mun1to/Expoal" target="_blank" rel="noopener">ver el código</a>
     </p>
 
-    <div class="shot shot-fade">
-      <img src="assets/screenshot-dark.png" alt="Interfaz de Expoal">
-    </div>
   </header>
 
-  <section>
-    <p class="kicker" data-reveal>Sin anuncios ni pasos de más</p>
-    <h2 data-reveal style="--i:1">Todo lo que necesitas, nada que no</h2>
-    <p class="section-sub" data-reveal style="--i:2">Una herramienta directa que corre entera en tu PC.</p>
-    <div class="points">
-      <div class="point" data-reveal style="--i:0">
-        <div class="ic">🔒</div>
-        <h3>100% privado</h3>
-        <p>Tus enlaces y archivos nunca salen de tu ordenador.</p>
-      </div>
-      <div class="point" data-reveal style="--i:1">
-        <div class="ic">🎬</div>
-        <h3>MP4 o MP3</h3>
-        <p>Elige formato y calidad, hasta la máxima disponible.</p>
-      </div>
-      <div class="point" data-reveal style="--i:2">
-        <div class="ic">📥</div>
-        <h3>Cola e historial</h3>
-        <p>Varias descargas con progreso en vivo y registro de todo.</p>
-      </div>
-      <div class="point" data-reveal style="--i:3">
-        <div class="ic">🔄</div>
-        <h3>Se actualiza solo</h3>
-        <p>Un aviso, un clic, y siempre tienes la última versión.</p>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <p class="kicker" data-reveal>Así de corto</p>
-    <div class="steps">
-      <b data-reveal style="--i:1">Pega el enlace</b>
-      <svg data-reveal style="--i:2" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
-      <b data-reveal style="--i:3">Elige formato</b>
-      <svg data-reveal style="--i:4" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
-      <b data-reveal style="--i:5">A tu disco</b>
-    </div>
-  </section>
-
-  <section id="demo">
+  <section id="demo" data-parallax="-0.05">
     <p class="kicker" data-reveal>Pruébalo aquí mismo</p>
     <h2 data-reveal style="--i:1">Así se siente Expoal</h2>
     <p class="section-sub" data-reveal style="--i:2">
@@ -709,6 +646,45 @@
           </p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker" data-reveal>Sin anuncios ni pasos de más</p>
+    <h2 data-reveal style="--i:1">Todo lo que necesitas, nada que no</h2>
+    <p class="section-sub" data-reveal style="--i:2">Una herramienta directa que corre entera en tu PC.</p>
+    <div class="points">
+      <div class="point" data-reveal style="--i:0">
+        <div class="ic">🔒</div>
+        <h3>100% privado</h3>
+        <p>Tus enlaces y archivos nunca salen de tu ordenador.</p>
+      </div>
+      <div class="point" data-reveal style="--i:1">
+        <div class="ic">🎬</div>
+        <h3>MP4 o MP3</h3>
+        <p>Elige formato y calidad, hasta la máxima disponible.</p>
+      </div>
+      <div class="point" data-reveal style="--i:2">
+        <div class="ic">📥</div>
+        <h3>Cola e historial</h3>
+        <p>Varias descargas con progreso en vivo y registro de todo.</p>
+      </div>
+      <div class="point" data-reveal style="--i:3">
+        <div class="ic">🔄</div>
+        <h3>Se actualiza solo</h3>
+        <p>Un aviso, un clic, y siempre tienes la última versión.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker" data-reveal>Así de corto</p>
+    <div class="steps">
+      <b data-reveal style="--i:1">Pega el enlace</b>
+      <svg data-reveal style="--i:2" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
+      <b data-reveal style="--i:3">Elige formato</b>
+      <svg data-reveal style="--i:4" class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m0 0l-6-6m6 6l-6 6"/></svg>
+      <b data-reveal style="--i:5">A tu disco</b>
     </div>
   </section>
 
@@ -997,6 +973,10 @@
         $("#demo-note").classList.remove("hidden");
         $("#demo-note").scrollIntoView({ behavior: "smooth", block: "nearest" });
       });
+
+      // Arranca ya analizada: así se ve la app completa de un vistazo en vez de
+      // un formulario vacío. El botón Analizar sigue funcionando igual.
+      analyze();
     })();
   </script>
 </body>
