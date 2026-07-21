@@ -10,8 +10,9 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).parent.parent
-# En español, igual que el texto de la propia OG
-SHOT = (ROOT / "assets" / "screenshot-dark-es.png").resolve().as_uri()
+# La tarjeta va SIEMPRE en inglés, aunque la web se adapte al idioma del visitante:
+# es una sola imagen para todo el mundo y se comparte sobre todo fuera de España.
+SHOT = (ROOT / "assets" / "screenshot-dark-en.png").resolve().as_uri()
 ICON = (ROOT / "assets" / "logo-512.png").resolve().as_uri()
 
 HTML = f"""<!DOCTYPE html>
@@ -46,8 +47,8 @@ HTML = f"""<!DOCTYPE html>
 <body>
   <div class="left">
     <div class="brand"><img src="{ICON}"><span>Expoal</span></div>
-    <h1>Del link<br><span class="grad">a tu disco</span></h1>
-    <p>Descarga vídeos de YouTube, TikTok e Instagram directo a tu ordenador.<br><b>100% open source, local y gratis.</b></p>
+    <h1>From link<br><span class="grad">to disk.</span></h1>
+    <p>Download videos from YouTube, TikTok and Instagram straight to your computer.<br><b>100% open source, local and free.</b></p>
   </div>
   <div class="right"><img src="{SHOT}"></div>
 </body></html>
