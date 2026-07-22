@@ -18,8 +18,11 @@ trato «Munito»/«socio», nunca Co-Authored-By, preguntar antes de push, confi
 antes de ejecutar preguntando hasta estar seguro, simplicidad primero con cambios quirúrgicos
 (código mínimo, tocar solo lo que la tarea pide y verificar contra el objetivo antes de dar por
 hecho), arranque estructurado (investigar el stack y montar los cimientos AGENTS.md/README/docs/METAS.md
-antes de programar: el plano antes que los ladrillos), y cerrar en una frase (lo hecho en una línea
-arriba, los pasos siguientes debajo, el detalle largo solo si aporta)).
+antes de programar: el plano antes que los ladrillos), cerrar en una frase (lo hecho en una línea
+arriba, los pasos siguientes debajo, el detalle largo solo si aporta), saber el día y la hora reales
+(no asumirlos, consultarlos con `Get-Date` al fechar documentos o commits y antes de dar por buena
+cualquier convocatoria o plazo), y ambición por defecto (la meta no se negocia, se critica el riesgo
+y la secuencia; todo lo aparcado sale con su condición de desbloqueo, nunca un "no" seco)).
 
 Antes de cualquier tarea, lee [FEEDBACK.md](FEEDBACK.md) para no repetir errores pasados.
 
