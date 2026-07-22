@@ -25,26 +25,45 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 ## What it looks like
 
-Two real screenshots, not mockups. Click either one to open it full size.
+Four real screenshots, not mockups, following one download from start to finish.
 
-### 01 · Analyze and download
+### 01 · Analyze
 
-Paste a link, Expoal reads the video and shows you the formats and resolutions it can pull,
-you pick a destination folder and it lands on your disk. Below, a history of everything you
-have saved. There is a light theme too, and the interface is in English or Spanish.
+Paste a link and Expoal reads the video, showing you the formats and resolutions it can
+actually pull. Pick a quality, a container and a destination folder.
 
 <div align="center">
-<img src="assets/screenshot-light-en.png" width="740" alt="Expoal in light mode">
+<img src="assets/screenshot-light-en.png" width="740" alt="Expoal in light mode: a link analyzed, with format, quality and destination folder ready">
 </div>
 
-### 02 · Live download queue
+There is a light theme, shown above, and a dark one. The interface is in English or Spanish.
 
-Once a download starts you get the queue: progress, speed and time left for the one running,
-a cancel button next to it, and a folder button on the ones already finished that opens the
-file where it landed.
+### 02 · Edit before it downloads
+
+Trim the length with the slider or exact timecodes, crop the edges by pixels, strip the audio
+track. This is the part no other downloader gives you: the file arrives the way you wanted it,
+without opening a video editor afterwards.
 
 <div align="center">
-<img src="assets/screenshot-queue-dark-en.png" width="740" alt="Expoal's download queue: one video downloading with progress and speed, one finished, and the history below">
+<img src="assets/screenshot-editor-dark-en.png" width="740" alt="Expoal's editor: a duration slider, pixel crop fields for all four edges with a live preview, and a checkbox to remove the audio">
+</div>
+
+### 03 · Live download queue
+
+Once a download starts you get the queue: progress, speed and time left, and a cancel button
+that stops it cleanly and leaves no half-written files behind.
+
+<div align="center">
+<img src="assets/screenshot-queue-dark-en.png" width="740" alt="Expoal's download queue: a video downloading with its progress, speed, time left and a cancel button">
+</div>
+
+### 04 · Done, and on your disk
+
+Finished downloads keep a folder button that opens the file where it landed, and the history
+below survives restarts.
+
+<div align="center">
+<img src="assets/screenshot-done-dark-en.png" width="740" alt="Expoal with a finished download and the history below, each entry with a button to open its folder">
 </div>
 
 ## Why not just yt-dlp?

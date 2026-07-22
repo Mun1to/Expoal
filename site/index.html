@@ -373,15 +373,21 @@
        ========================================================================== */
     .shots { position: relative; }
     .shot-card {
-      max-width: 900px;
+      /* Más estrecha que el resto de la sección a propósito: cuatro tarjetas
+         apiladas tienen que caber en la pantalla con su desplazamiento, y una
+         captura 4:3 crece rápido de alto. */
+      max-width: 760px;
       margin: 0 auto 30px;
-      padding: 20px 20px 22px;
+      padding: 18px 18px 20px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 20px;
       box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
       position: sticky;
-      top: calc(24px + (var(--stack) - 1) * 34px);
+      /* El asomo (46px) es justo el alto de la cabecera: así de la tarjeta de
+         atrás se lee su número y su título enteros. Con menos, el texto sale
+         cortado por la mitad y parece un fallo, no un apilado. */
+      top: calc(20px + (var(--stack) - 1) * 46px);
       z-index: var(--stack);
     }
     .shot-head {
@@ -404,10 +410,12 @@
     .shot.zoomable { cursor: zoom-in; transition: outline-color 0.15s; outline: 2px solid transparent; outline-offset: 3px; }
     .shot.zoomable:hover, .shot.zoomable:focus-visible { outline-color: var(--primary-strong); }
 
-    /* En pantallas estrechas el sticky-stack no aporta (poco recorrido de scroll
-       para apreciarlo) y complica el layout: las tarjetas vuelven a apilarse en
-       flujo normal, una debajo de otra, sin pegarse ni superponerse. */
-    @media (max-width: 720px) {
+    /* El apilado se desactiva en dos casos, y en ambos las tarjetas vuelven al
+       flujo normal, una debajo de otra:
+       - Pantallas estrechas: poco recorrido de scroll para apreciarlo.
+       - Ventanas bajas: una tarjeta pegada más alta que el hueco disponible
+         nunca deja ver su parte de abajo, así que el pie se quedaría cortado. */
+    @media (max-width: 720px), (max-height: 800px) {
       .shot-card { position: static; }
     }
 
@@ -1012,8 +1020,8 @@
     <p class="kicker" data-reveal data-en="No mockups">Nada de maquetas</p>
     <h2 data-reveal style="--i:1" data-en="The app, exactly as it is">La app, tal cual es</h2>
     <p class="section-sub" data-reveal style="--i:2"
-       data-en="A real screenshot of Expoal running. What you see up there is a recreation; this is the actual thing.">
-      Una captura de verdad de Expoal funcionando. Lo de ahí arriba es una recreación; esto es lo real.</p>
+       data-en="Four real screenshots, start to finish. What you see up there is a recreation; this is the actual thing.">
+      Cuatro capturas de verdad, de principio a fin. Lo de ahí arriba es una recreación; esto es lo real.</p>
 
     <!-- Pila de capturas: misma receta que .hero-wrap/.sheet (sticky + tarjeta
          sólida que sube y tapa), a escala de tarjeta en vez de a escala de página.
@@ -1022,7 +1030,7 @@
       <div class="shot-card" style="--stack:1">
         <div class="shot-head" data-reveal style="--i:3">
           <span class="shot-num">01</span>
-          <h3 data-en="Analyze and download">Analiza y descarga</h3>
+          <h3 data-en="Paste and analyze">Pega y analiza</h3>
           <span class="demo-badge" data-en="Real screenshot">Captura real</span>
         </div>
         <div class="shot zoomable" data-reveal style="--i:3" tabindex="0" role="button"
@@ -1040,19 +1048,55 @@
       <div class="shot-card" style="--stack:2">
         <div class="shot-head" data-reveal style="--i:4">
           <span class="shot-num">02</span>
-          <h3 data-en="Live download queue">Cola de descargas en vivo</h3>
+          <h3 data-en="Edit before it downloads">Edita antes de descargar</h3>
           <span class="demo-badge" data-en="Real screenshot">Captura real</span>
         </div>
         <div class="shot zoomable" data-reveal style="--i:4" tabindex="0" role="button"
              aria-label="Ampliar la captura" data-en-aria="Enlarge the screenshot">
           <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-          <img src="assets/screenshot-queue-dark-es.png" data-en-src="assets/screenshot-queue-dark-en.png"
+          <img src="assets/screenshot-editor-dark-es.png" data-en-src="assets/screenshot-editor-dark-en.png"
                width="2160" height="1620" loading="lazy" decoding="async"
-               alt="La cola de Expoal: un vídeo descargando con su progreso y velocidad, otro terminado y el historial debajo">
+               alt="El editor de Expoal: barra para recortar la duración, campos para recortar los bordes en píxeles y casilla para quitar el audio">
         </div>
         <p class="shot-cap" data-reveal style="--i:5"
+           data-en="Trim the length, crop the edges by pixels, strip the audio. No other downloader does this.">
+          Recorta la duración, recorta los bordes por píxeles, quita el audio. Ningún otro descargador hace esto.</p>
+      </div>
+
+      <div class="shot-card" style="--stack:3">
+        <div class="shot-head" data-reveal style="--i:5">
+          <span class="shot-num">03</span>
+          <h3 data-en="Live download queue">Cola de descargas en vivo</h3>
+          <span class="demo-badge" data-en="Real screenshot">Captura real</span>
+        </div>
+        <div class="shot zoomable" data-reveal style="--i:5" tabindex="0" role="button"
+             aria-label="Ampliar la captura" data-en-aria="Enlarge the screenshot">
+          <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="assets/screenshot-queue-dark-es.png" data-en-src="assets/screenshot-queue-dark-en.png"
+               width="2160" height="1620" loading="lazy" decoding="async"
+               alt="La cola de Expoal con un vídeo descargando: porcentaje, velocidad, tiempo restante y botón de cancelar">
+        </div>
+        <p class="shot-cap" data-reveal style="--i:6"
            data-en="Progress, speed and time left while it downloads; cancel it with one click.">
           Progreso, velocidad y tiempo restante mientras descarga; cancélala con un clic.</p>
+      </div>
+
+      <div class="shot-card" style="--stack:4">
+        <div class="shot-head" data-reveal style="--i:6">
+          <span class="shot-num">04</span>
+          <h3 data-en="Done, and on your disk">Listo, y en tu disco</h3>
+          <span class="demo-badge" data-en="Real screenshot">Captura real</span>
+        </div>
+        <div class="shot zoomable" data-reveal style="--i:6" tabindex="0" role="button"
+             aria-label="Ampliar la captura" data-en-aria="Enlarge the screenshot">
+          <div class="shot-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="assets/screenshot-done-dark-es.png" data-en-src="assets/screenshot-done-dark-en.png"
+               width="2160" height="1620" loading="lazy" decoding="async"
+               alt="Expoal con una descarga terminada y el historial debajo, cada archivo con su botón para abrir la carpeta">
+        </div>
+        <p class="shot-cap" data-reveal style="--i:7"
+           data-en="Open the folder from the app, and a history that survives restarts.">
+          Abre la carpeta desde la app, y un historial que sobrevive a reiniciar.</p>
       </div>
     </div>
   </section>
