@@ -88,6 +88,9 @@ for the times you want a window, and for the people who would never open a termi
 - Extract the transcript: save subtitles as clean text or as timed `.srt`, in any of the languages the video offers, either instead of the video or alongside it
 - Pick the resolution, and choose the destination folder with a native file browser
 - Edit while you download: trim the length (visual slider or exact timecodes), crop the edges by pixels, and strip the audio track
+- Sign in where you already are: use your browser's cookies for private, age-restricted or members-only videos, and for YouTube's bot checks
+- One click for the things everyone wants: cut sponsor segments with SponsorBlock, embed the thumbnail as cover art, the title and author, the chapters, the subtitles
+- A field for raw yt-dlp options, in the same syntax as the official docs, for everything the window doesn't show
 - Download queue with live progress, speed and ETA, and one-click cancel for any download
 - Persistent download history, with a button to open any file's folder right from the app
 - The download engine (yt-dlp) refreshes itself between app releases, so videos keep working when platforms change

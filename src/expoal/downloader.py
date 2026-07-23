@@ -42,7 +42,7 @@ def _apply_extra_opts(opts: dict) -> None:
     si no, pedir "incrusta la miniatura" borraría la extracción de audio y el
     MP3 saldría siendo un MP4.
     """
-    extra = settings.extra_opts()
+    extra = settings.user_opts()
     if not extra:
         return
     mine = [dict(p) for p in opts.get("postprocessors") or []]

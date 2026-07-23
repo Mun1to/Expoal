@@ -52,6 +52,11 @@ class ArgsRequest(BaseModel):
     args: str = ""
 
 
+class ToggleRequest(BaseModel):
+    name: str
+    value: bool = False
+
+
 class EditRequest(BaseModel):
     """Ediciones opcionales sobre el vídeo descargado."""
 
@@ -94,7 +99,19 @@ def get_config() -> dict:
         "cookies_browser": settings.cookies_browser(),
         "browsers": list(settings.BROWSERS),
         "extra_args": settings.extra_args(),
+        "toggles": settings.toggles(),
+        "toggles_need_ffmpeg": sorted(settings.TOGGLES_NEED_FFMPEG),
     }
+
+
+@app.post("/api/settings/toggle")
+def set_toggle(req: ToggleRequest) -> dict:
+    """Activa o desactiva una de las casillas de opciones comunes."""
+    try:
+        value = settings.set_toggle(req.name, req.value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"name": req.name, "value": value}
 
 
 @app.post("/api/settings/cookies")

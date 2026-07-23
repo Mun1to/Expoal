@@ -42,6 +42,9 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] **Opciones avanzadas de yt-dlp** (v2.1.0): campo libre con flags de la documentación
       oficial, validados al guardar. Cubre de golpe lo que la interfaz no expone, sin llenarla
       de casillas ni tener que implementar cada opción una a una
+- [x] **SponsorBlock e incrustar carátula, metadatos, capítulos y subtítulos** (v2.1.0): casillas
+      para lo que casi todo el mundo quiere y nadie debería tener que escribir a mano. Cada una
+      es la opción de yt-dlp que le corresponde, traducida por el mismo camino que el campo libre
 - [ ] Build para macOS (.dmg / .app) — requiere runner macOS
 - [ ] Playlists y perfiles completos (hoy `noplaylist: True`; decisión de producto pendiente)
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor

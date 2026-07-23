@@ -37,7 +37,28 @@ BROWSERS: tuple[str, ...] = (
     "whale",
 ) + (("safari",) if sys.platform == "darwin" else ())
 
-_DEFAULTS: dict = {"cookies_browser": "", "extra_args": ""}
+# Casillas para lo que casi todo el mundo quiere y nadie debería tener que
+# escribir a mano. Cada una es LITERALMENTE la opción de yt-dlp que le
+# corresponde: así no hay una segunda implementación que mantener, se traducen
+# por el mismo camino que las opciones avanzadas y no pueden desincronizarse.
+TOGGLES: dict[str, str] = {
+    "sponsorblock": "--sponsorblock-remove sponsor",
+    "embed_thumbnail": "--embed-thumbnail",
+    "embed_metadata": "--embed-metadata",
+    "embed_chapters": "--embed-chapters",
+    "embed_subs": "--embed-subs",
+}
+
+# Las que recortan o reescriben el archivo necesitan FFmpeg sí o sí.
+TOGGLES_NEED_FFMPEG: frozenset[str] = frozenset(
+    {"sponsorblock", "embed_thumbnail", "embed_chapters", "embed_subs"}
+)
+
+_DEFAULTS: dict = {
+    "cookies_browser": "",
+    "extra_args": "",
+    **{name: False for name in TOGGLES},
+}
 
 
 def load() -> dict:
@@ -167,10 +188,37 @@ def set_extra_args(text: str) -> str:
     return text
 
 
-def extra_opts() -> dict:
-    """Opciones avanzadas ya traducidas, o vacío si no hay o si dejaron de valer."""
+def toggles() -> dict[str, bool]:
+    data = load()
+    return {name: bool(data.get(name)) for name in TOGGLES}
+
+
+def set_toggle(name: str, value: bool) -> bool:
+    if name not in TOGGLES:
+        raise ValueError(f"Opción desconocida: {name}")
+    save({name: bool(value)})
+    return bool(value)
+
+
+def user_args_line() -> str:
+    """Todo lo que ha pedido el usuario, casillas y texto libre, en una sola línea.
+
+    Se juntan a propósito antes de traducir, para que sea el propio yt-dlp quien
+    resuelva la combinación (sumar postprocesadores, resolver repetidos). Si se
+    tradujeran por separado habría que reimplementar esa lógica a mano.
+    El texto libre va al final: quien escribe flags manda sobre las casillas.
+    """
+    marked = [flags for name, flags in TOGGLES.items() if toggles().get(name)]
+    free = extra_args()
+    if free:
+        marked.append(free)
+    return " ".join(marked)
+
+
+def user_opts() -> dict:
+    """Lo que pidió el usuario, ya traducido; vacío si dejó de valer."""
     try:
-        return parse_extra_args(extra_args())
+        return parse_extra_args(user_args_line())
     except ArgsError:
         # Guardadas válidas pero rotas por un cambio de yt-dlp: mejor descargar
         # sin ellas que no descargar.

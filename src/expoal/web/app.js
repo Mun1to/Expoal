@@ -156,6 +156,10 @@ const state = {
   cookiesOpen: false,
   // Opciones avanzadas de yt-dlp, tal cual las escribió el usuario.
   extraArgs: "",
+  // Casillas de lo común (SponsorBlock, incrustar carátula...) y cuáles de
+  // ellas necesitan FFmpeg para poder ofrecerse.
+  toggles: {},
+  togglesNeedFfmpeg: [],
 };
 
 async function api(path, options) {
@@ -279,6 +283,29 @@ function renderCookies() {
   row.classList.toggle("hidden", !open);
   // El enlace y el bloque son la misma cosa en dos estados: nunca los dos.
   $("#cookies-toggle").classList.toggle("hidden", Boolean(open));
+}
+
+function renderToggles() {
+  for (const input of document.querySelectorAll("[data-toggle]")) {
+    const name = input.dataset.toggle;
+    input.checked = Boolean(state.toggles[name]);
+    // Recortar patrocinios o incrustar cosas reescribe el archivo, y eso lo
+    // hace FFmpeg. Sin él, la casilla se apaga y dice por qué, en vez de
+    // dejar que el usuario la marque y la descarga falle luego.
+    const needs = state.togglesNeedFfmpeg.includes(name) && !state.ffmpeg;
+    input.disabled = needs;
+    input.closest(".toggle").title = needs ? I18N.t("needsffmpeg") : "";
+  }
+}
+
+async function setToggle(name, value) {
+  try {
+    await post("/api/settings/toggle", { name, value });
+    state.toggles[name] = value;
+  } catch (err) {
+    showError($("#url-error"), err.message);
+    renderToggles();   // devuelve la casilla a su estado real
+  }
 }
 
 async function saveExtraArgs() {
@@ -915,10 +942,15 @@ async function init() {
     state.browsers = cfg.browsers || [];
     state.cookiesBrowser = cfg.cookies_browser || "";
     state.extraArgs = cfg.extra_args || "";
+    state.toggles = cfg.toggles || {};
+    state.togglesNeedFfmpeg = cfg.toggles_need_ffmpeg || [];
     $("#args-input").value = state.extraArgs;
-    // Si ya hay opciones puestas, el panel se abre solo: son invisibles y
-    // afectan a todas las descargas, así que esconderlas confundiría.
-    if (state.extraArgs) $("#args-row").classList.remove("hidden");
+    renderToggles();
+    // Si ya hay algo puesto, el panel se abre solo: son ajustes invisibles que
+    // afectan a todas las descargas, así que esconderlos confundiría.
+    if (state.extraArgs || Object.values(state.toggles).some(Boolean)) {
+      $("#args-row").classList.remove("hidden");
+    }
     renderCookies();
     if (!cfg.ffmpeg) {
       $("#ffmpeg-banner").classList.remove("hidden");
@@ -944,6 +976,9 @@ async function init() {
     if (!$("#args-row").classList.contains("hidden")) $("#args-input").focus();
   });
   $("#args-save").addEventListener("click", saveExtraArgs);
+  for (const input of document.querySelectorAll("[data-toggle]")) {
+    input.addEventListener("change", () => setToggle(input.dataset.toggle, input.checked));
+  }
   // Ctrl+Enter guarda: es un campo de una línea larga, no un formulario, y
   // obligar a soltar el teclado para pulsar el botón molesta.
   $("#args-input").addEventListener("keydown", (e) => {

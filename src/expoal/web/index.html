@@ -110,6 +110,31 @@
            porque enterarse de que una opción estaba mal a mitad de la descarga
            es la peor forma de descubrirlo. -->
       <div id="args-row" class="args-row hidden">
+        <!-- Lo que casi todo el mundo quiere, sin tener que escribirlo. Cada
+             casilla ES una opción de yt-dlp; el campo de abajo cubre el resto. -->
+        <div class="toggles">
+          <label class="toggle">
+            <input type="checkbox" data-toggle="sponsorblock">
+            <span data-en="Cut out sponsor segments (SponsorBlock)">Quitar los patrocinios (SponsorBlock)</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" data-toggle="embed_thumbnail">
+            <span data-en="Embed the thumbnail as cover art">Incrustar la miniatura como carátula</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" data-toggle="embed_metadata">
+            <span data-en="Embed title, author and date">Incrustar título, autor y fecha</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" data-toggle="embed_chapters">
+            <span data-en="Embed the chapters">Incrustar los capítulos</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" data-toggle="embed_subs">
+            <span data-en="Embed the subtitles inside the video">Incrustar los subtítulos dentro del vídeo</span>
+          </label>
+        </div>
+
         <label for="args-input" data-en="Extra yt-dlp options, applied to every download">Opciones extra de yt-dlp, se aplican a todas las descargas</label>
         <textarea id="args-input" rows="2" spellcheck="false" autocomplete="off"
                   placeholder="--embed-thumbnail --sponsorblock-remove sponsor"></textarea>
