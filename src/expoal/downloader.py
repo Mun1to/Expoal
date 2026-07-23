@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yt_dlp
 
-from . import config, subtitles
+from . import config, settings, subtitles
 from .editor import Edits, apply as apply_edits
 from .history import History
 
@@ -141,6 +141,9 @@ class Job:
             "speed": self.speed,
             "eta": self.eta,
             "error": self.error,
+            # Un fallo por falta de sesión tiene arreglo (elegir navegador), así
+            # que la interfaz lo trata distinto de un error cualquiera.
+            "needs_cookies": bool(self.error) and settings.looks_like_login_error(self.error),
             "file_path": self.file_path,
         }
 
@@ -282,6 +285,9 @@ class DownloadManager:
             "no_warnings": True,
             "noprogress": True,
             "progress_hooks": [hook],
+            # Cookies del navegador si el usuario eligió uno: es lo que
+            # desbloquea privados, con edad restringida y los anti-bot.
+            **settings.cookie_opts(),
         }
         if has_ffmpeg:
             opts["ffmpeg_location"] = ffmpeg_path

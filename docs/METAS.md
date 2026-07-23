@@ -36,8 +36,10 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
       salida en texto limpio o `.srt` con tiempos, eligiendo idioma
 - [x] **Motor actualizable** (v1.9.0): yt-dlp se renueva desde la app sin reinstalarla
       (`engine.py`; el punto más frágil del producto, YouTube cambia cada pocas semanas)
+- [x] **Cookies del navegador** (v2.1.0): desbloquea privados, con edad, de miembros y los
+      anti-bot de YouTube. El backend distingue "falta sesión" de "no pude leer las cookies" y
+      la interfaz ofrece el arreglo donde falla, en vez de soltar un error sin salida
 - [ ] Build para macOS (.dmg / .app) — requiere runner macOS
-- [ ] Soporte de contenido privado con `cookiesfrombrowser` (Instagram logueado, etc.)
 - [ ] Playlists y perfiles completos (hoy `noplaylist: True`; decisión de producto pendiente)
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor
 - [ ] Descargar solo un fragmento SIN bajar el vídeo entero (hoy el recorte de duración

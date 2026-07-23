@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, dialogs, engine, subtitles, updater
+from . import __version__, config, dialogs, engine, settings, subtitles, updater
 from .downloader import AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error
 from .editor import Edits
 from .history import History
@@ -42,6 +42,10 @@ async def local_origin_guard(request: Request, call_next):
 
 class InfoRequest(BaseModel):
     url: str
+
+
+class CookiesRequest(BaseModel):
+    browser: str = ""
 
 
 class EditRequest(BaseModel):
@@ -83,18 +87,46 @@ def get_config() -> dict:
         "engine": engine.current_version(),
         "default_folder": str(config.DEFAULT_DOWNLOAD_DIR),
         "ffmpeg": config.ffmpeg_available(),
+        "cookies_browser": settings.cookies_browser(),
+        "browsers": list(settings.BROWSERS),
     }
+
+
+@app.post("/api/settings/cookies")
+def set_cookies(req: CookiesRequest) -> dict:
+    """Elige de qué navegador tomar las cookies. Cadena vacía las desactiva."""
+    try:
+        name = settings.set_cookies_browser(req.browser)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"cookies_browser": name}
 
 
 @app.post("/api/info")
 def video_info(req: InfoRequest) -> dict:
     url = _validate_url(req.url)
-    opts = {"quiet": True, "no_warnings": True, "noplaylist": True}
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        **settings.cookie_opts(),
+    }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
     except yt_dlp.utils.DownloadError as exc:
-        raise HTTPException(status_code=422, detail=clean_error(exc)) from exc
+        # Un fallo por falta de sesión no es lo mismo que un vídeo roto: la
+        # interfaz necesita distinguirlos para poder ofrecer las cookies en vez
+        # de dejar al usuario con un error que no sabe cómo arreglar.
+        message = clean_error(exc)
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": message,
+                "needs_cookies": settings.looks_like_login_error(message),
+                "cookie_error": settings.looks_like_cookie_error(message),
+            },
+        ) from exc
     if info.get("_type") == "playlist":
         entries = [e for e in (info.get("entries") or []) if e]
         if not entries:

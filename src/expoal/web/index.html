@@ -92,6 +92,27 @@
         <button type="submit" id="analyze-btn" class="btn primary" data-en="Analyze">Analizar</button>
       </form>
       <p id="url-error" class="error hidden"></p>
+
+      <!-- Cookies del navegador. El bloque no se enseña de entrada: el 90% de
+           los enlaces no lo necesita y llenaría de preguntas la pantalla más
+           simple de la app. Se abre solo cuando un vídeo pide sesión, y este
+           enlace lo deja a mano para quien ya sabe que lo necesita, sin
+           obligarle a fallar una vez primero. -->
+      <button type="button" id="cookies-toggle" class="cookies-toggle"
+              data-en="Does the video ask you to sign in?">¿El vídeo pide iniciar sesión?</button>
+
+      <div id="cookies-row" class="cookies-row hidden">
+        <div class="cookies-text">
+          <strong id="cookies-title" data-en="This video asks you to sign in">Este vídeo pide iniciar sesión</strong>
+          <span id="cookies-help" data-en="Expoal can use the cookies from a browser where you are already signed in. Nothing is copied anywhere: they are read on your computer, at download time.">Expoal puede usar las cookies de un navegador donde ya tengas la sesión abierta. No se copian a ningún sitio: se leen en tu equipo, en el momento de descargar.</span>
+        </div>
+        <div class="cookies-actions">
+          <select id="cookies-select" aria-label="Navegador del que tomar las cookies"
+                  data-en-aria="Browser to take the cookies from"></select>
+          <button type="button" id="cookies-retry" class="btn primary small hidden"
+                  data-en="Try again">Reintentar</button>
+        </div>
+      </div>
     </section>
 
     <section class="card hidden" id="preview">

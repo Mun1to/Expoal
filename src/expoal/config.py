@@ -10,6 +10,7 @@ APP_NAME = "Expoal"
 
 DATA_DIR = Path(user_data_dir(APP_NAME, appauthor=False))
 HISTORY_FILE = DATA_DIR / "history.json"
+SETTINGS_FILE = DATA_DIR / "settings.json"
 DEFAULT_DOWNLOAD_DIR = Path.home() / "Downloads" / "Expoal"
 
 

@@ -31,6 +31,11 @@ const I18N = (function () {
       cancel: "Cancelar descarga",
       openfolder: "Abrir la carpeta del archivo",
       filegone: "El archivo ya no está ahí",
+      cookiesnone: "Sin cookies",
+      cookiesask: "Este vídeo pide iniciar sesión",
+      cookiesactive: (b) => `Usando las cookies de ${b}`,
+      cookiesfail: "No se han podido leer las cookies de ese navegador",
+      cookiesfailhelp: "Ciérralo del todo y vuelve a probar. Si es Chrome o Edge en Windows, prueba con Firefox: las versiones nuevas cifran las cookies de forma que Expoal no puede leerlas.",
       edges: "bordes", noaudio: "sin audio",
       status: {
         en_cola: "En cola", descargando: "Descargando...", procesando: "Procesando...",
@@ -60,6 +65,11 @@ const I18N = (function () {
       cancel: "Cancel download",
       openfolder: "Open the file's folder",
       filegone: "The file is not there anymore",
+      cookiesnone: "No cookies",
+      cookiesask: "This video asks you to sign in",
+      cookiesactive: (b) => `Using cookies from ${b}`,
+      cookiesfail: "Could not read the cookies from that browser",
+      cookiesfailhelp: "Close it completely and try again. If it is Chrome or Edge on Windows, try Firefox instead: recent versions encrypt cookies in a way Expoal cannot read.",
       edges: "edges", noaudio: "no audio",
       status: {
         en_cola: "Queued", descargando: "Downloading...", procesando: "Processing...",
@@ -134,17 +144,35 @@ const state = {
   ffmpeg: false,
   // Edición del vídeo: recorte de duración (segundos), bordes (píxeles) y silenciado.
   edit: { start: 0, end: 0, duration: 0 },
+  // Cookies del navegador: lista disponible, el elegido, y si hay un fallo que
+  // resolver ("login" = el vídeo pide sesión, "fail" = no se pudieron leer).
+  browsers: [],
+  cookiesBrowser: "",
+  cookiesProblem: "",
+  cookiesOpen: false,
 };
 
 async function api(path, options) {
   const res = await fetch(path, options);
   if (!res.ok) {
     let detail = I18N.t("neterror");
+    let extra = null;
     try {
       const data = await res.json();
-      if (data && data.detail) detail = String(data.detail);
+      if (data && data.detail) {
+        // El detalle puede venir como texto o, cuando el fallo tiene arreglo
+        // (falta de sesión), como objeto con banderas para la interfaz.
+        if (typeof data.detail === "object") {
+          extra = data.detail;
+          detail = String(data.detail.message || detail);
+        } else {
+          detail = String(data.detail);
+        }
+      }
     } catch (_) { /* respuesta sin JSON */ }
-    throw new Error(detail);
+    const err = new Error(detail);
+    if (extra) Object.assign(err, extra);
+    throw err;
   }
   return res.json();
 }
@@ -193,8 +221,71 @@ function formatTime(seconds) {
 
 // --- Análisis del enlace ---
 
+/* ============================================================================
+   COOKIES DEL NAVEGADOR
+   Muchos vídeos no fallan porque la app esté rota, sino porque la plataforma
+   pide sesión iniciada (privados, con edad, de miembros, anti-bot). yt-dlp sabe
+   leer las cookies del navegador que ya tienes abierto.
+   El bloque NO se enseña de entrada: la mayoría de enlaces no lo necesitan y
+   llenaría de preguntas la pantalla más simple de la app. Aparece cuando el
+   fallo lo pide, y se queda en tono bajo mientras haya un navegador elegido.
+   ============================================================================ */
+function renderCookies() {
+  const row = $("#cookies-row");
+  const select = $("#cookies-select");
+  const chosen = state.cookiesBrowser || "";
+  // El desplegable se repuebla al cambiar de idioma ("Sin cookies" se traduce).
+  select.innerHTML = "";
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = I18N.t("cookiesnone");
+  select.appendChild(none);
+  for (const b of state.browsers) {
+    const opt = document.createElement("option");
+    opt.value = b;
+    // Los nombres de navegador son marcas: se muestran con mayúscula inicial.
+    opt.textContent = b.charAt(0).toUpperCase() + b.slice(1);
+    select.appendChild(opt);
+  }
+  select.value = chosen;
+
+  const title = $("#cookies-title");
+  const help = $("#cookies-help");
+  if (state.cookiesProblem === "fail") {
+    title.textContent = I18N.t("cookiesfail");
+    help.textContent = I18N.t("cookiesfailhelp");
+  } else if (state.cookiesProblem === "login") {
+    title.textContent = I18N.t("cookiesask");
+    help.textContent = help.dataset.base || "";
+  } else {
+    title.textContent = I18N.t("cookiesactive")(
+      chosen.charAt(0).toUpperCase() + chosen.slice(1)
+    );
+    help.textContent = help.dataset.base || "";
+  }
+
+  // Con problema, el bloque llama la atención y ofrece reintentar. Sin él, solo
+  // recuerda en bajo que las cookies están puestas.
+  const problem = Boolean(state.cookiesProblem);
+  row.classList.toggle("quiet", !problem);
+  $("#cookies-retry").classList.toggle("hidden", !problem);
+  const open = problem || chosen || state.cookiesOpen;
+  row.classList.toggle("hidden", !open);
+  // El enlace y el bloque son la misma cosa en dos estados: nunca los dos.
+  $("#cookies-toggle").classList.toggle("hidden", Boolean(open));
+}
+
+async function setCookiesBrowser(name) {
+  const res = await post("/api/settings/cookies", { browser: name });
+  state.cookiesBrowser = res.cookies_browser;
+  // Elegir navegador es el intento de arreglo: se limpia el problema para que
+  // el bloque no siga en rojo antes de saber si ha funcionado.
+  state.cookiesProblem = "";
+  renderCookies();
+}
+
 async function analyze(event) {
-  event.preventDefault();
+  if (event) event.preventDefault();
   const btn = $("#analyze-btn");
   const errorEl = $("#url-error");
   hideError(errorEl);
@@ -202,13 +293,23 @@ async function analyze(event) {
   btn.textContent = I18N.t("analyzing");
   try {
     state.info = await post("/api/info", { url: $("#url-input").value });
+    state.cookiesProblem = "";
     renderPreview();
   } catch (err) {
     $("#preview").classList.add("hidden");
-    showError(errorEl, err.message);
+    // Si el fallo tiene arreglo, se ofrece ahí mismo en vez de dejar al
+    // usuario con un mensaje que no sabe cómo resolver.
+    if (err.cookie_error) state.cookiesProblem = "fail";
+    else if (err.needs_cookies) state.cookiesProblem = "login";
+    // Cuando falla la lectura de cookies, el mensaje de yt-dlp es un volcado de
+    // rutas del sistema: no aporta nada sobre lo que ya dice el bloque de abajo
+    // en cristiano, y encima enseña la carpeta del usuario. Se calla.
+    if (state.cookiesProblem === "fail") hideError(errorEl);
+    else showError(errorEl, err.message);
   } finally {
     btn.disabled = false;
     btn.textContent = I18N.t("analyze");
+    renderCookies();
   }
 }
 
@@ -649,6 +750,12 @@ function renderJob(job) {
     err.className = "job-error";
     err.textContent = job.error;
     item.appendChild(err);
+    // Si la descarga murió por falta de sesión, se levanta el bloque de cookies
+    // arriba: el arreglo está ahí y si no, el usuario se queda sin salida.
+    if (job.needs_cookies && !state.cookiesProblem) {
+      state.cookiesProblem = "login";
+      renderCookies();
+    }
   }
 
   if (job.status === "completado" && job.file_path) {
@@ -769,11 +876,19 @@ async function init() {
     document.body.style.display = "";
   });
 
+  // El texto largo de ayuda de las cookies vive en el HTML (con su data-en);
+  // se guarda antes de tocarlo para poder restaurarlo tras enseñar un fallo.
+  const cookiesHelp = $("#cookies-help");
+  cookiesHelp.dataset.base = cookiesHelp.textContent;
+
   try {
     const cfg = await api("/api/config");
     $("#version").textContent = `v${cfg.version}`;
     $("#folder-input").value = cfg.default_folder;
     state.ffmpeg = cfg.ffmpeg;
+    state.browsers = cfg.browsers || [];
+    state.cookiesBrowser = cfg.cookies_browser || "";
+    renderCookies();
     if (!cfg.ffmpeg) {
       $("#ffmpeg-banner").classList.remove("hidden");
       const audioBtn = $("#audio-btn");
@@ -781,6 +896,18 @@ async function init() {
       audioBtn.title = I18N.t("needsffmpeg");
     }
   } catch (_) { /* se reintenta al refrescar */ }
+
+  $("#cookies-select").addEventListener("change", (e) => {
+    setCookiesBrowser(e.target.value).catch((err) => {
+      showError($("#url-error"), err.message);
+    });
+  });
+  $("#cookies-retry").addEventListener("click", () => analyze());
+  $("#cookies-toggle").addEventListener("click", () => {
+    state.cookiesOpen = true;
+    renderCookies();
+    $("#cookies-select").focus();
+  });
 
   for (const btn of document.querySelectorAll("#sub-format-group button")) {
     btn.addEventListener("click", () => {
@@ -797,6 +924,11 @@ async function init() {
   // de idioma hay que repintar lo que ya esté en pantalla. La cola y el
   // historial se arreglan solos en el siguiente refresh().
   I18N.onChange(() => {
+    // El bloque de cookies se repinta siempre (existe aunque no haya vídeo).
+    // I18N ya ha devuelto la ayuda a su texto original en el idioma nuevo, así
+    // que este es el momento de volver a guardarla como base.
+    cookiesHelp.dataset.base = cookiesHelp.textContent;
+    renderCookies();
     if (!state.info) return;
     // renderSubtitleOptions solo repuebla el select si cambia el vídeo; al
     // cambiar de idioma el vídeo es el mismo, así que hay que invalidarlo a

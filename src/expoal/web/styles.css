@@ -546,6 +546,47 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
 .error { color: var(--error); font-size: 14px; margin: 10px 0 0; }
 .hidden { display: none !important; }
 
+/* Entrada discreta a las cookies: peso visual mínimo para no ensuciar la
+   pantalla de inicio, pero siempre a mano. */
+.cookies-toggle {
+  display: block;
+  margin: 10px 0 0;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.cookies-toggle:hover { color: var(--text); }
+
+/* Cookies del navegador: aviso con su propio selector, para que el usuario
+   arregle el fallo ahí mismo en vez de quedarse con un error sin salida. */
+.cookies-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 13px 15px;
+  background: var(--surface-2, rgba(127, 127, 127, 0.06));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.cookies-text { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 3px; }
+.cookies-text strong { font-size: 14px; font-weight: 600; }
+.cookies-text span { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.cookies-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.cookies-row select { min-width: 130px; }
+/* Cuando ya hay navegador elegido y no hay ningún fallo, el bloque baja de
+   tono: es un ajuste activo, no un aviso que reclame atención. */
+.cookies-row.quiet { background: none; border-color: transparent; padding: 6px 0 0; }
+.cookies-row.quiet .cookies-text strong { font-weight: 500; color: var(--muted); font-size: 13px; }
+.cookies-row.quiet .cookies-text span { display: none; }
+
 footer {
   text-align: center;
   padding: 14px;
