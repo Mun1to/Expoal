@@ -39,6 +39,9 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] **Cookies del navegador** (v2.1.0): desbloquea privados, con edad, de miembros y los
       anti-bot de YouTube. El backend distingue "falta sesión" de "no pude leer las cookies" y
       la interfaz ofrece el arreglo donde falla, en vez de soltar un error sin salida
+- [x] **Opciones avanzadas de yt-dlp** (v2.1.0): campo libre con flags de la documentación
+      oficial, validados al guardar. Cubre de golpe lo que la interfaz no expone, sin llenarla
+      de casillas ni tener que implementar cada opción una a una
 - [ ] Build para macOS (.dmg / .app) — requiere runner macOS
 - [ ] Playlists y perfiles completos (hoy `noplaylist: True`; decisión de producto pendiente)
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor

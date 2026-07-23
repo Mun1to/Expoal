@@ -27,6 +27,33 @@ class JobCancelled(Exception):
     """El usuario canceló el trabajo; no es un error."""
 
 
+# Opciones que las avanzadas NO pueden pisar, porque son las que sostienen la
+# app: sin el hook no hay progreso ni forma de cancelar, y sin el modo callado
+# yt-dlp escribe en una salida que nadie lee.
+_PROTECTED_OPTS = ("progress_hooks", "quiet", "no_warnings", "noprogress")
+
+
+def _apply_extra_opts(opts: dict) -> None:
+    """Mezcla las opciones avanzadas del usuario sobre las de la app, en el sitio.
+
+    Se hace al final y en este orden a propósito: lo que escribe el usuario gana
+    (para eso es una válvula de escape y puede querer cambiar el formato), salvo
+    lo que rompería la app. Los postprocesadores se SUMAN en vez de sustituirse:
+    si no, pedir "incrusta la miniatura" borraría la extracción de audio y el
+    MP3 saldría siendo un MP4.
+    """
+    extra = settings.extra_opts()
+    if not extra:
+        return
+    mine = [dict(p) for p in opts.get("postprocessors") or []]
+    theirs = [dict(p) for p in extra.get("postprocessors") or []]
+    protected = {k: opts[k] for k in _PROTECTED_OPTS if k in opts}
+    opts.update(extra)
+    opts.update(protected)
+    if mine or theirs:
+        opts["postprocessors"] = mine + theirs
+
+
 # Formatos de salida que ofrecemos. Los de vídeo se obtienen remuxeando (cambiar el
 # envoltorio sin tocar los datos, casi instantáneo) salvo WEBM, que obliga a recodificar
 # porque necesita códecs distintos. Los de audio los produce FFmpeg al extraer.
@@ -278,7 +305,13 @@ class DownloadManager:
 
         opts: dict = {
             "format": _format_selector(job.mode, job.quality, has_ffmpeg, job.out_format),
-            "outtmpl": str(folder / "%(title)s [%(id)s].%(ext)s"),
+            # La carpeta va en "paths" y NO dentro de outtmpl. Parece lo mismo,
+            # pero no lo es: si la ruta viviera en la plantilla, un usuario que
+            # pusiera su propio "-o" en las opciones avanzadas la borraría sin
+            # querer y el archivo acabaría en donde se lanzó la app. Separadas,
+            # puede cambiar el nombre sin perder la carpeta que eligió.
+            "paths": {"home": str(folder)},
+            "outtmpl": "%(title)s [%(id)s].%(ext)s",
             "noplaylist": True,
             "windowsfilenames": True,
             "quiet": True,
@@ -325,6 +358,8 @@ class DownloadManager:
             if job.mode == "text":
                 opts["skip_download"] = True
                 opts["format"] = None
+
+        _apply_extra_opts(opts)
 
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(job.url, download=True)

@@ -34,6 +34,8 @@ const I18N = (function () {
       cookiesnone: "Sin cookies",
       cookiesask: "Este vídeo pide iniciar sesión",
       cookiesactive: (b) => `Usando las cookies de ${b}`,
+      argssaved: "Guardado, se aplicará a las próximas descargas",
+      argscleared: "Sin opciones extra",
       cookiesfail: "No se han podido leer las cookies de ese navegador",
       cookiesfailhelp: "Ciérralo del todo y vuelve a probar. Si es Chrome o Edge en Windows, prueba con Firefox: las versiones nuevas cifran las cookies de forma que Expoal no puede leerlas.",
       edges: "bordes", noaudio: "sin audio",
@@ -68,6 +70,8 @@ const I18N = (function () {
       cookiesnone: "No cookies",
       cookiesask: "This video asks you to sign in",
       cookiesactive: (b) => `Using cookies from ${b}`,
+      argssaved: "Saved, it will apply to your next downloads",
+      argscleared: "No extra options",
       cookiesfail: "Could not read the cookies from that browser",
       cookiesfailhelp: "Close it completely and try again. If it is Chrome or Edge on Windows, try Firefox instead: recent versions encrypt cookies in a way Expoal cannot read.",
       edges: "edges", noaudio: "no audio",
@@ -150,6 +154,8 @@ const state = {
   cookiesBrowser: "",
   cookiesProblem: "",
   cookiesOpen: false,
+  // Opciones avanzadas de yt-dlp, tal cual las escribió el usuario.
+  extraArgs: "",
 };
 
 async function api(path, options) {
@@ -273,6 +279,26 @@ function renderCookies() {
   row.classList.toggle("hidden", !open);
   // El enlace y el bloque son la misma cosa en dos estados: nunca los dos.
   $("#cookies-toggle").classList.toggle("hidden", Boolean(open));
+}
+
+async function saveExtraArgs() {
+  const input = $("#args-input");
+  const status = $("#args-status");
+  const btn = $("#args-save");
+  btn.disabled = true;
+  try {
+    const res = await post("/api/settings/args", { args: input.value });
+    state.extraArgs = res.extra_args;
+    status.className = "args-status ok";
+    status.textContent = res.extra_args ? I18N.t("argssaved") : I18N.t("argscleared");
+  } catch (err) {
+    // El mensaje viene del propio yt-dlp ("no such option: --foo"), que es
+    // exactamente lo que necesita quien escribe flags a mano.
+    status.className = "args-status err";
+    status.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function setCookiesBrowser(name) {
@@ -888,6 +914,11 @@ async function init() {
     state.ffmpeg = cfg.ffmpeg;
     state.browsers = cfg.browsers || [];
     state.cookiesBrowser = cfg.cookies_browser || "";
+    state.extraArgs = cfg.extra_args || "";
+    $("#args-input").value = state.extraArgs;
+    // Si ya hay opciones puestas, el panel se abre solo: son invisibles y
+    // afectan a todas las descargas, así que esconderlas confundiría.
+    if (state.extraArgs) $("#args-row").classList.remove("hidden");
     renderCookies();
     if (!cfg.ffmpeg) {
       $("#ffmpeg-banner").classList.remove("hidden");
@@ -907,6 +938,16 @@ async function init() {
     state.cookiesOpen = true;
     renderCookies();
     $("#cookies-select").focus();
+  });
+  $("#args-toggle").addEventListener("click", () => {
+    $("#args-row").classList.toggle("hidden");
+    if (!$("#args-row").classList.contains("hidden")) $("#args-input").focus();
+  });
+  $("#args-save").addEventListener("click", saveExtraArgs);
+  // Ctrl+Enter guarda: es un campo de una línea larga, no un formulario, y
+  // obligar a soltar el teclado para pulsar el botón molesta.
+  $("#args-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveExtraArgs(); }
   });
 
   for (const btn of document.querySelectorAll("#sub-format-group button")) {

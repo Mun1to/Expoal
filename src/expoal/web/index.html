@@ -98,8 +98,28 @@
            simple de la app. Se abre solo cuando un vídeo pide sesión, y este
            enlace lo deja a mano para quien ya sabe que lo necesita, sin
            obligarle a fallar una vez primero. -->
-      <button type="button" id="cookies-toggle" class="cookies-toggle"
-              data-en="Does the video ask you to sign in?">¿El vídeo pide iniciar sesión?</button>
+      <div class="adv-links">
+        <button type="button" id="cookies-toggle" class="cookies-toggle"
+                data-en="Does the video ask you to sign in?">¿El vídeo pide iniciar sesión?</button>
+        <button type="button" id="args-toggle" class="cookies-toggle"
+                data-en="Advanced options">Opciones avanzadas</button>
+      </div>
+
+      <!-- Válvula de escape para quien conoce yt-dlp: aquí cabe todo lo que la
+           interfaz no expone, sin llenarla de casillas. Se valida al guardar,
+           porque enterarse de que una opción estaba mal a mitad de la descarga
+           es la peor forma de descubrirlo. -->
+      <div id="args-row" class="args-row hidden">
+        <label for="args-input" data-en="Extra yt-dlp options, applied to every download">Opciones extra de yt-dlp, se aplican a todas las descargas</label>
+        <textarea id="args-input" rows="2" spellcheck="false" autocomplete="off"
+                  placeholder="--embed-thumbnail --sponsorblock-remove sponsor"></textarea>
+        <div class="args-foot">
+          <a class="inline-link" href="https://github.com/yt-dlp/yt-dlp#usage-and-options"
+             target="_blank" rel="noopener" data-en="See every option">Ver todas las opciones</a>
+          <span id="args-status" class="args-status"></span>
+          <button type="button" id="args-save" class="btn primary small" data-en="Save">Guardar</button>
+        </div>
+      </div>
 
       <div id="cookies-row" class="cookies-row hidden">
         <div class="cookies-text">

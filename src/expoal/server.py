@@ -48,6 +48,10 @@ class CookiesRequest(BaseModel):
     browser: str = ""
 
 
+class ArgsRequest(BaseModel):
+    args: str = ""
+
+
 class EditRequest(BaseModel):
     """Ediciones opcionales sobre el vídeo descargado."""
 
@@ -89,6 +93,7 @@ def get_config() -> dict:
         "ffmpeg": config.ffmpeg_available(),
         "cookies_browser": settings.cookies_browser(),
         "browsers": list(settings.BROWSERS),
+        "extra_args": settings.extra_args(),
     }
 
 
@@ -100,6 +105,21 @@ def set_cookies(req: CookiesRequest) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"cookies_browser": name}
+
+
+@app.post("/api/settings/args")
+def set_args(req: ArgsRequest) -> dict:
+    """Guarda las opciones avanzadas de yt-dlp, validándolas antes.
+
+    Devuelve además un resumen de lo que hacen: enseñar al usuario que su texto
+    se ha entendido (y en qué se traduce) evita el "lo escribí y no sé si vale".
+    """
+    try:
+        text = settings.set_extra_args(req.args)
+        opts = settings.parse_extra_args(text)
+    except settings.ArgsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"extra_args": text, "applied": sorted(opts.keys())}
 
 
 @app.post("/api/info")
