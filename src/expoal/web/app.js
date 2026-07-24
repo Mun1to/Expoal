@@ -36,6 +36,11 @@ const I18N = (function () {
       cookiesactive: (b) => `Usando las cookies de ${b}`,
       argssaved: "Guardado, se aplicará a las próximas descargas",
       argscleared: "Sin opciones extra",
+      playlist: "Lista de reproducción",
+      plvideos: (n) => `${n} vídeo${n === 1 ? "" : "s"}`,
+      plmore: (n) => `más de ${n} vídeos`,
+      plselected: (n) => `${n} elegido${n === 1 ? "" : "s"}`,
+      pladd: (n) => n ? `Añadir ${n} a la cola` : "Elige al menos un vídeo",
       cookiesfail: "No se han podido leer las cookies de ese navegador",
       cookiesfailhelp: "Ciérralo del todo y vuelve a probar. Si es Chrome o Edge en Windows, prueba con Firefox: las versiones nuevas cifran las cookies de forma que Expoal no puede leerlas.",
       edges: "bordes", noaudio: "sin audio",
@@ -72,6 +77,11 @@ const I18N = (function () {
       cookiesactive: (b) => `Using cookies from ${b}`,
       argssaved: "Saved, it will apply to your next downloads",
       argscleared: "No extra options",
+      playlist: "Playlist",
+      plvideos: (n) => `${n} video${n === 1 ? "" : "s"}`,
+      plmore: (n) => `more than ${n} videos`,
+      plselected: (n) => `${n} selected`,
+      pladd: (n) => n ? `Add ${n} to queue` : "Pick at least one video",
       cookiesfail: "Could not read the cookies from that browser",
       cookiesfailhelp: "Close it completely and try again. If it is Chrome or Edge on Windows, try Firefox instead: recent versions encrypt cookies in a way Expoal cannot read.",
       edges: "edges", noaudio: "no audio",
@@ -144,6 +154,7 @@ const I18N = (function () {
 const state = {
   info: null,
   mode: "video",
+  plMode: "video",   // modo de la playlist (solo vídeo o audio)
   subFormat: "txt",
   ffmpeg: false,
   // Edición del vídeo: recorte de duración (segundos), bordes (píxeles) y silenciado.
@@ -347,9 +358,17 @@ async function analyze(event) {
   try {
     state.info = await post("/api/info", { url: $("#url-input").value });
     state.cookiesProblem = "";
-    renderPreview();
+    // Un enlace puede ser un vídeo o una lista entera: cada uno tiene su vista.
+    if (state.info.type === "playlist") {
+      $("#preview").classList.add("hidden");
+      renderPlaylist();
+    } else {
+      $("#playlist").classList.add("hidden");
+      renderPreview();
+    }
   } catch (err) {
     $("#preview").classList.add("hidden");
+    $("#playlist").classList.add("hidden");
     // Si el fallo tiene arreglo, se ofrece ahí mismo en vez de dejar al
     // usuario con un mensaje que no sabe cómo resolver.
     if (err.cookie_error) state.cookiesProblem = "fail";
@@ -678,6 +697,144 @@ function resetEdit() {
   renderEdit();
 }
 
+/* ============================================================================
+   PLAYLIST
+   Cuando el enlace es una lista o un canal, en vez del preview de un vídeo se
+   muestra la lista de vídeos con casillas. Comparten formato, calidad y carpeta;
+   cada vídeo elegido se encola como un trabajo normal. Sin edición por vídeo (el
+   mismo recorte en 30 vídeos no tiene sentido) ni modo texto.
+   Las opciones globales (SponsorBlock, cookies, incrustar...) se aplican igual,
+   porque viven en los ajustes y se leen al descargar, sea un vídeo o una lista.
+   ============================================================================ */
+const QUALITY_LADDER = ["2160", "1440", "1080", "720", "480", "360"];
+
+function fmtDur(seconds) {
+  const s = Number(seconds) || 0;
+  if (!s) return "";
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  const two = (n) => String(n).padStart(2, "0");
+  return h ? `${h}:${two(m)}:${two(sec)}` : `${m}:${two(sec)}`;
+}
+
+function renderPlaylist() {
+  const info = state.info;
+  $("#pl-title").textContent = info.title || I18N.t("playlist");
+  const parts = [];
+  if (info.uploader) parts.push(info.uploader);
+  // Si la lista se cortó en el tope, se dice claramente: "más de N".
+  parts.push(info.truncated ? I18N.t("plmore")(info.count) : I18N.t("plvideos")(info.count));
+  $("#pl-sub").textContent = parts.join(" · ");
+
+  // Calidad: escalera fija (las entradas ligeras no traen formatos por vídeo).
+  const q = $("#pl-quality-select");
+  q.innerHTML = "";
+  const best = document.createElement("option");
+  best.value = "best";
+  best.textContent = I18N.t("best");
+  q.appendChild(best);
+  for (const h of QUALITY_LADDER) {
+    const opt = document.createElement("option");
+    opt.value = h;
+    opt.textContent = `${h}p`;
+    q.appendChild(opt);
+  }
+  renderPlModeUI();
+
+  if (!$("#pl-folder-input").value) $("#pl-folder-input").value = $("#folder-input").value;
+
+  // La lista de vídeos, todos marcados de entrada.
+  const ul = $("#pl-list");
+  ul.innerHTML = "";
+  info.entries.forEach((e, i) => {
+    const li = document.createElement("li");
+    li.className = "pl-item";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = true;
+    cb.dataset.idx = String(i);
+    cb.addEventListener("change", updatePlCount);
+    const num = document.createElement("span");
+    num.className = "pl-num";
+    num.textContent = String(i + 1);
+    const name = document.createElement("span");
+    name.className = "pl-name";
+    name.textContent = e.title;          // textContent: el título es entrada externa
+    name.title = e.title;
+    const dur = document.createElement("span");
+    dur.className = "pl-dur";
+    dur.textContent = fmtDur(e.duration);
+    li.append(cb, num, name, dur);
+    // Clic en toda la fila alterna la casilla, salvo si se pulsa la casilla misma.
+    li.addEventListener("click", (ev) => {
+      if (ev.target !== cb) { cb.checked = !cb.checked; updatePlCount(); }
+    });
+    ul.appendChild(li);
+  });
+
+  updatePlCount();
+  $("#playlist").classList.remove("hidden");
+}
+
+function renderPlModeUI() {
+  const isAudio = state.plMode === "audio";
+  const list = isAudio
+    ? (state.info?.audio_formats || ["mp3", "m4a", "wav", "flac", "opus"])
+    : (state.info?.video_formats || ["mp4", "mkv", "mov", "webm"]);
+  $("#pl-quality-select").disabled = isAudio;   // el audio no tiene resolución
+  $("#pl-format-option").classList.toggle("hidden", !state.ffmpeg);
+  const sel = $("#pl-format-select");
+  const previous = sel.value;
+  sel.innerHTML = "";
+  for (const f of list) {
+    const opt = document.createElement("option");
+    opt.value = f;
+    opt.textContent = f.toUpperCase();
+    sel.appendChild(opt);
+  }
+  sel.value = list.includes(previous) ? previous : (isAudio ? "mp3" : "mp4");
+}
+
+function plChecks() {
+  return [...document.querySelectorAll("#pl-list input[type=checkbox]")];
+}
+
+function updatePlCount() {
+  const n = plChecks().filter((c) => c.checked).length;
+  $("#pl-selected").textContent = I18N.t("plselected")(n);
+  const btn = $("#pl-add");
+  btn.textContent = I18N.t("pladd")(n);
+  btn.disabled = n === 0;
+}
+
+async function addPlaylist() {
+  const btn = $("#pl-add");
+  const errorEl = $("#pl-error");
+  hideError(errorEl);
+  const chosen = plChecks().filter((c) => c.checked).map((c) => state.info.entries[Number(c.dataset.idx)]);
+  if (!chosen.length) return;
+  btn.disabled = true;
+  try {
+    // El formato solo se manda si se pudo elegir (sin FFmpeg no hay selector).
+    const hasFormat = !$("#pl-format-option").classList.contains("hidden");
+    await post("/api/download-batch", {
+      items: chosen.map((e) => ({ url: e.url, title: e.title })),
+      mode: state.plMode,
+      quality: $("#pl-quality-select").value,
+      folder: $("#pl-folder-input").value,
+      out_format: hasFormat ? $("#pl-format-select").value : "",
+    });
+    $("#playlist").classList.add("hidden");
+    $("#url-input").value = "";
+    state.info = null;
+    await refresh();
+  } catch (err) {
+    showError(errorEl, err.message);
+    updatePlCount();   // devuelve el botón a su estado
+  }
+}
+
 // --- Descarga ---
 
 async function download() {
@@ -905,18 +1062,34 @@ async function init() {
 
   // El explorador nativo lo abre el servidor (corre en el mismo PC), así que
   // funciona igual en el navegador y en la ventana de escritorio.
-  $("#folder-btn").addEventListener("click", async () => {
-    const folderBtn = $("#folder-btn");
-    folderBtn.disabled = true;
+  const pickInto = async (btn, input) => {
+    btn.disabled = true;
     try {
       const res = await api("/api/pick-folder", { method: "POST" });
-      if (res.folder) $("#folder-input").value = res.folder;
+      if (res.folder) input.value = res.folder;
     } catch (_) {
       // Si el diálogo no está disponible, queda el cuadro de texto.
     } finally {
-      folderBtn.disabled = false;
+      btn.disabled = false;
     }
-  });
+  };
+  $("#folder-btn").addEventListener("click", () => pickInto($("#folder-btn"), $("#folder-input")));
+
+  // Playlist: modo (vídeo/audio), elegir/quitar todos, carpeta y añadir.
+  for (const btn of document.querySelectorAll("#pl-mode-group button")) {
+    btn.addEventListener("click", () => {
+      state.plMode = btn.dataset.plmode;
+      for (const b of document.querySelectorAll("#pl-mode-group button")) {
+        b.classList.toggle("active", b === btn);
+      }
+      renderPlModeUI();
+    });
+  }
+  const setAllPl = (checked) => { plChecks().forEach((c) => { c.checked = checked; }); updatePlCount(); };
+  $("#pl-all").addEventListener("click", () => setAllPl(true));
+  $("#pl-none").addEventListener("click", () => setAllPl(false));
+  $("#pl-folder-btn").addEventListener("click", () => pickInto($("#pl-folder-btn"), $("#pl-folder-input")));
+  $("#pl-add").addEventListener("click", addPlaylist);
 
   $("#theme-toggle").addEventListener("click", () => {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
@@ -1006,6 +1179,19 @@ async function init() {
     cookiesHelp.dataset.base = cookiesHelp.textContent;
     renderCookies();
     if (!state.info) return;
+    if (state.info.type === "playlist") {
+      // Repintado ligero: NO reconstruir la lista o se perderían las casillas
+      // que el usuario haya tocado. Solo se retraducen los textos.
+      const info = state.info;
+      const parts = [];
+      if (info.uploader) parts.push(info.uploader);
+      parts.push(info.truncated ? I18N.t("plmore")(info.count) : I18N.t("plvideos")(info.count));
+      $("#pl-sub").textContent = parts.join(" · ");
+      const best = $("#pl-quality-select").options[0];
+      if (best) best.textContent = I18N.t("best");
+      updatePlCount();
+      return;
+    }
     // renderSubtitleOptions solo repuebla el select si cambia el vídeo; al
     // cambiar de idioma el vídeo es el mismo, así que hay que invalidarlo a
     // mano o el "(automático)" se quedaría en el idioma anterior.

@@ -57,6 +57,19 @@ class ToggleRequest(BaseModel):
     value: bool = False
 
 
+class BatchItem(BaseModel):
+    url: str
+    title: str = ""
+
+
+class BatchRequest(BaseModel):
+    items: list[BatchItem] = []
+    mode: str = "video"
+    quality: str = "best"
+    folder: str = ""
+    out_format: str = ""
+
+
 class EditRequest(BaseModel):
     """Ediciones opcionales sobre el vídeo descargado."""
 
@@ -139,13 +152,28 @@ def set_args(req: ArgsRequest) -> dict:
     return {"extra_args": text, "applied": sorted(opts.keys())}
 
 
+# Tope de vídeos que se leen de una playlist. Un canal puede tener miles; una
+# lista de casillas con miles de filas no la usa nadie y la extracción tardaría.
+# Con este límite la lista carga rápido y, si se alcanza, se avisa de que hay más.
+PLAYLIST_LIMIT = 200
+
+
 @app.post("/api/info")
 def video_info(req: InfoRequest) -> dict:
     url = _validate_url(req.url)
     opts = {
         "quiet": True,
         "no_warnings": True,
+        # noplaylist=True es la clave del "sin sustos": un enlace de vídeo que
+        # lleva &list=... (una lista de reproducción de fondo) se lee como un
+        # vídeo suelto, no como la lista entera. Solo un enlace que ES una lista
+        # (o un canal) vuelve como playlist.
         "noplaylist": True,
+        # in_playlist lee las entradas en modo ligero (título e id, sin sondear
+        # cada vídeo), así una lista de 200 carga en un momento. Un vídeo suelto
+        # sí trae sus formatos completos, comprobado.
+        "extract_flat": "in_playlist",
+        "playlistend": PLAYLIST_LIMIT,
         **settings.cookie_opts(),
     }
     try:
@@ -164,15 +192,36 @@ def video_info(req: InfoRequest) -> dict:
                 "cookie_error": settings.looks_like_cookie_error(message),
             },
         ) from exc
+
     if info.get("_type") == "playlist":
-        entries = [e for e in (info.get("entries") or []) if e]
+        entries = [e for e in (info.get("entries") or []) if e and e.get("url")]
         if not entries:
             raise HTTPException(status_code=422, detail="El enlace no contiene ningún vídeo")
-        info = entries[0]
+        return {
+            "type": "playlist",
+            "title": info.get("title") or "",
+            "uploader": info.get("uploader") or info.get("channel") or "",
+            "count": len(entries),
+            # Si la lista trajo justo el tope, es que había más y se cortó.
+            "truncated": len(entries) >= PLAYLIST_LIMIT,
+            "entries": [
+                {
+                    "url": e["url"],
+                    "title": e.get("title") or e["url"],
+                    "duration": e.get("duration"),
+                }
+                for e in entries
+            ],
+            "ffmpeg": config.ffmpeg_available(),
+            "video_formats": sorted(VIDEO_FORMATS),
+            "audio_formats": sorted(AUDIO_FORMATS),
+        }
+
     heights = sorted(
         {f["height"] for f in info.get("formats", []) if f.get("height")}, reverse=True
     )
     return {
+        "type": "video",
         "url": url,
         "title": info.get("title", ""),
         "uploader": info.get("uploader") or info.get("channel") or "",
@@ -249,6 +298,54 @@ def start_download(req: DownloadRequest) -> dict:
         subs=req.subs, sub_lang=req.sub_lang, sub_format=req.sub_format,
         out_format=out_format,
     )
+
+
+@app.post("/api/download-batch")
+def start_batch(req: BatchRequest) -> dict:
+    """Encola de golpe los vídeos elegidos de una playlist, con opciones comunes.
+
+    Reusa la misma cola que un vídeo suelto: cada elemento es un trabajo normal,
+    solo que comparten formato, calidad y carpeta. Sin edición por vídeo (no
+    tiene sentido el mismo recorte en 30 vídeos distintos) y sin modo texto
+    (elegir idioma de subtítulos para una lista entera es una rareza).
+    """
+    if req.mode not in {"video", "audio"}:
+        raise HTTPException(status_code=422, detail="Modo no válido para una lista")
+    if req.quality != "best" and not req.quality.isdigit():
+        raise HTTPException(status_code=422, detail="Calidad no válida")
+    if req.mode == "audio" and not config.ffmpeg_available():
+        raise HTTPException(
+            status_code=422,
+            detail="Para extraer MP3 hace falta FFmpeg (winget install Gyan.FFmpeg)",
+        )
+    out_format = (req.out_format or "").lower()
+    if out_format:
+        allowed = VIDEO_FORMATS if req.mode == "video" else AUDIO_FORMATS
+        if out_format not in allowed:
+            raise HTTPException(status_code=422, detail="Formato de salida no válido")
+        if not config.ffmpeg_available():
+            raise HTTPException(
+                status_code=422,
+                detail="Para elegir el formato hace falta FFmpeg (winget install Gyan.FFmpeg)",
+            )
+
+    items = [it for it in req.items if (it.url or "").strip()]
+    if not items:
+        raise HTTPException(status_code=422, detail="No has elegido ningún vídeo")
+    if len(items) > PLAYLIST_LIMIT:
+        raise HTTPException(status_code=422, detail=f"Máximo {PLAYLIST_LIMIT} vídeos de una vez")
+
+    folder = (req.folder or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
+    for it in items:
+        _validate_url(it.url)
+    queued = [
+        manager.enqueue(
+            it.url, req.mode, req.quality, folder,
+            title=(it.title or "").strip(), out_format=out_format,
+        )
+        for it in items
+    ]
+    return {"queued": len(queued)}
 
 
 @app.post("/api/pick-folder")

@@ -288,6 +288,55 @@
       <p id="download-error" class="error hidden"></p>
     </section>
 
+    <!-- Playlist: se muestra en vez del preview cuando el enlace es una lista o
+         un canal. Mismas opciones comunes que un vídeo (sin edición ni modo
+         texto), más la lista de vídeos con casillas para elegir cuáles. -->
+    <section class="card hidden" id="playlist">
+      <div class="pl-head">
+        <span class="badge" id="pl-platform" data-en="Playlist">Lista</span>
+        <div>
+          <h2 id="pl-title"></h2>
+          <p id="pl-sub"></p>
+        </div>
+      </div>
+      <div class="options">
+        <div class="option">
+          <label data-en="Format">Formato</label>
+          <div class="segmented" id="pl-mode-group">
+            <button type="button" data-plmode="video" class="active" data-en="Video MP4">Vídeo MP4</button>
+            <button type="button" data-plmode="audio" id="pl-audio-btn" data-en="Audio MP3">Audio MP3</button>
+          </div>
+        </div>
+        <div class="option">
+          <label for="pl-quality-select" data-en="Quality">Calidad</label>
+          <select id="pl-quality-select"></select>
+        </div>
+        <div class="option" id="pl-format-option">
+          <label for="pl-format-select" data-en="Output format">Formato de salida</label>
+          <select id="pl-format-select"></select>
+        </div>
+        <div class="option grow">
+          <label for="pl-folder-input" data-en="Destination folder">Carpeta de destino</label>
+          <div class="folder-row">
+            <input type="text" id="pl-folder-input" spellcheck="false">
+            <button type="button" id="pl-folder-btn" class="btn ghost" data-en="Browse...">Examinar...</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pl-list-head">
+        <span id="pl-selected"></span>
+        <div class="pl-select-actions">
+          <button type="button" id="pl-all" class="btn ghost small" data-en="Select all">Todos</button>
+          <button type="button" id="pl-none" class="btn ghost small" data-en="None">Ninguno</button>
+        </div>
+      </div>
+      <ul id="pl-list" class="pl-list"></ul>
+
+      <button type="button" id="pl-add" class="btn primary big"></button>
+      <p id="pl-error" class="error hidden"></p>
+    </section>
+
     <section class="list-section hidden" id="queue-section">
       <div class="section-head">
         <h3 data-en="Download queue">Cola de descargas</h3>

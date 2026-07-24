@@ -46,7 +46,10 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
       para lo que casi todo el mundo quiere y nadie debería tener que escribir a mano. Cada una
       es la opción de yt-dlp que le corresponde, traducida por el mismo camino que el campo libre
 - [ ] Build para macOS (.dmg / .app) — requiere runner macOS
-- [ ] Playlists y perfiles completos (hoy `noplaylist: True`; decisión de producto pendiente)
+- [x] **Playlists** (v2.2.0): pegar una lista o un canal muestra sus vídeos con casillas (todas
+      marcadas), eliges cuáles y se encolan de golpe con formato/calidad/carpeta comunes. Un
+      enlace de vídeo con lista de fondo (`&list=`) se sigue tratando como un solo vídeo, sin
+      sustos. Modo vídeo o audio; sin edición por vídeo ni modo texto
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor
 - [ ] Descargar solo un fragmento SIN bajar el vídeo entero (hoy el recorte de duración
       descarga todo y corta después; esto sería ahorro de datos, no una función nueva)
