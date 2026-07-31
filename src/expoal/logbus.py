@@ -10,6 +10,12 @@ un panel plegable con pinta de terminal.
 En memoria y con tope a propósito: es una ventana a lo que está pasando ahora
 mismo, no un archivo de registro que crece en el disco de nadie. Si hiciera falta
 guardarlo, el usuario copia y pega lo que ve.
+
+IDIOMA: las líneas propias ("[expoal] Queued: ...") se escriben en INGLÉS, como
+las de yt-dlp, aunque el resto de la interfaz sea bilingüe. Este panel es una
+consola técnica: mezclar español con la salida inglesa del motor quedaba raro en
+la versión en inglés, y traducirlas obligaría a que el backend supiera en qué
+idioma está mirando el usuario, que es justo lo que no sabe.
 """
 from __future__ import annotations
 

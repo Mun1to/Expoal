@@ -216,7 +216,7 @@ class DownloadManager:
             self._jobs[job.id] = job
             self._order.append(job.id)
         self._queue.put(job.id)
-        logbus.bus.add(f"[expoal] En cola: {title or url}", "info", job.id)
+        logbus.bus.add(f"[expoal] Queued: {title or url}", "info", job.id)
         return job.public()
 
     def snapshot(self) -> list[dict]:
@@ -262,11 +262,11 @@ class DownloadManager:
             job.paused = True
             job.speed = ""
             job.eta = ""
-            logbus.bus.add(f"[expoal] Pausado: {job.title or job.url}", "warn", job.id)
+            logbus.bus.add(f"[expoal] Paused: {job.title or job.url}", "warn", job.id)
         else:
             job.pause_event.clear()
             job.paused = False
-            logbus.bus.add(f"[expoal] Reanudado: {job.title or job.url}", "info", job.id)
+            logbus.bus.add(f"[expoal] Resumed: {job.title or job.url}", "info", job.id)
         return job.public()
 
     def retry(self, job_id: str) -> dict | None:
@@ -294,7 +294,7 @@ class DownloadManager:
             job.cancel_event = threading.Event()
             job.pause_event = threading.Event()
         self._queue.put(job.id)
-        logbus.bus.add(f"[expoal] Reintentando: {job.title or job.url}", "info", job.id)
+        logbus.bus.add(f"[expoal] Retrying: {job.title or job.url}", "info", job.id)
         return job.public()
 
     def retry_failed(self) -> int:
@@ -339,7 +339,7 @@ class DownloadManager:
                     job.eta = ""
                     job.paused = False
                     self._cleanup_partial(job)
-                    logbus.bus.add(f"[expoal] Cancelado: {job.title or job.url}", "warn", job.id)
+                    logbus.bus.add(f"[expoal] Cancelled: {job.title or job.url}", "warn", job.id)
                 else:
                     job.status = "error"
                     job.error = clean_error(exc)
@@ -393,7 +393,7 @@ class DownloadManager:
         ffmpeg_path = config.find_ffmpeg()
         has_ffmpeg = ffmpeg_path is not None
         job.status = "descargando"
-        logbus.bus.add(f"[expoal] Empezando: {job.url}", "info", job.id)
+        logbus.bus.add(f"[expoal] Starting: {job.url}", "info", job.id)
 
         def hook(d: dict) -> None:
             if job.cancel_event.is_set():
@@ -513,7 +513,7 @@ class DownloadManager:
                 raise RuntimeError("Para editar el vídeo hace falta FFmpeg")
             job.status = "editando"
             job.progress = 100.0
-            logbus.bus.add("[expoal] Editando el vídeo con FFmpeg...", "info", job.id)
+            logbus.bus.add("[expoal] Editing the video with FFmpeg...", "info", job.id)
             apply_edits(
                 Path(job.file_path),
                 job.edits,
@@ -524,7 +524,7 @@ class DownloadManager:
 
         job.status = "completado"
         job.progress = 100.0
-        logbus.bus.add(f"[expoal] Listo: {job.file_path or job.title}", "ok", job.id)
+        logbus.bus.add(f"[expoal] Done: {job.file_path or job.title}", "ok", job.id)
         self._history.add(
             {
                 "url": job.url,

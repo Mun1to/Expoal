@@ -25,7 +25,7 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 ## What it looks like
 
-Four real screenshots, not mockups, following one download from start to finish.
+Five real screenshots, not mockups, following one download from start to finish.
 
 ### 01 · Analyze
 
@@ -50,8 +50,9 @@ without opening a video editor afterwards.
 
 ### 03 · Live download queue
 
-Once a download starts you get the queue: progress, speed and time left, and a cancel button
-that stops it cleanly and leaves no half-written files behind.
+Once a download starts you get the queue: progress, speed and time left, a pause button that
+keeps what it already has, and a cancel button that stops it cleanly and leaves no half-written
+files behind.
 
 <div align="center">
 <img src="assets/screenshot-queue-dark-en.png" width="740" alt="Expoal's download queue: a video downloading with its progress, speed, time left and a cancel button">
@@ -64,6 +65,17 @@ below survives restarts.
 
 <div align="center">
 <img src="assets/screenshot-done-dark-en.png" width="740" alt="Expoal with a finished download and the history below, each entry with a button to open its folder">
+</div>
+
+### 05 · Nothing hidden
+
+One button in the header opens a terminal panel with the engine's live output: which extractor
+ran, which formats it picked, when it is merging. It is off by default, because the app should
+stay simple, and it is exactly what you need the day something breaks. Copy the whole thing with
+one click when you report a problem.
+
+<div align="center">
+<img src="assets/screenshot-log-dark-en.png" width="740" alt="Expoal's log panel showing yt-dlp's live output while a video downloads">
 </div>
 
 ## Why not just yt-dlp?

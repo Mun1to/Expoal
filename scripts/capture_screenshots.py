@@ -60,6 +60,24 @@ JOBS_DONE = [
     },
 ]
 
+# El panel de terminal se inyecta igual que la cola: así la captura enseña una
+# sesión real de yt-dlp (la salida de verdad, con sus nombres de formato) sin
+# depender de qué conteste YouTube el día que se genere.
+LOG_LINES = [
+    (1, "18:24:07", "info", "[expoal] Queued: Big Buck Bunny 60fps 4K - Official Blender Foundation Short Film"),
+    (2, "18:24:07", "info", "[expoal] Starting: https://www.youtube.com/watch?v=aqz-KE-bpKQ"),
+    (3, "18:24:07", "info", "[youtube] Extracting URL: https://www.youtube.com/watch?v=aqz-KE-bpKQ"),
+    (4, "18:24:08", "info", "[youtube] aqz-KE-bpKQ: Downloading webpage"),
+    (5, "18:24:08", "info", "[youtube] aqz-KE-bpKQ: Downloading tv client config"),
+    (6, "18:24:09", "info", "[youtube] aqz-KE-bpKQ: Downloading player 03dbdfab"),
+    (7, "18:24:09", "info", "[youtube] aqz-KE-bpKQ: Downloading tv player API JSON"),
+    (8, "18:24:10", "info", "[info] aqz-KE-bpKQ: Downloading 1 format(s): 137+251"),
+    (9, "18:24:10", "info", "[download] Destination: Big Buck Bunny 60fps 4K [aqz-KE-bpKQ].f137.mp4"),
+    (10, "18:24:26", "info", "[download] Destination: Big Buck Bunny 60fps 4K [aqz-KE-bpKQ].f251.webm"),
+    (11, "18:24:31", "warn", "[Merger] Merging formats into \"Big Buck Bunny 60fps 4K [aqz-KE-bpKQ].mp4\""),
+    (12, "18:24:34", "ok", "[expoal] Done: C:\\Users\\You\\Downloads\\Expoal\\Big Buck Bunny 60fps 4K [aqz-KE-bpKQ].mp4"),
+]
+
 HISTORY = [
     {
         "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
@@ -112,6 +130,34 @@ def fake_jobs(route, request):
         status=200,
         content_type="application/json",
         body=json.dumps(jobs),
+    )
+
+
+def fake_log(route, request):
+    """Sirve el registro de ejemplo respetando el cursor del cliente.
+
+    Hay que respetarlo: la interfaz sondea cada segundo y va añadiendo lo que
+    llega, así que devolver siempre las mismas líneas las repetiría en pantalla
+    hasta llenar el panel de duplicados.
+    """
+    if request.method != "GET":
+        route.continue_()
+        return
+    after = 0
+    if "after=" in request.url:
+        try:
+            after = int(request.url.split("after=")[1].split("&")[0])
+        except ValueError:
+            after = 0
+    lines = [
+        {"n": n, "at": at, "level": level, "job": "capture-1", "text": text}
+        for n, at, level, text in LOG_LINES
+        if n > after
+    ]
+    route.fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps({"lines": lines, "cursor": LOG_LINES[-1][0], "lost": False}),
     )
 
 
@@ -179,17 +225,32 @@ def capture_editor(page, theme: str, lang: str) -> None:
     print("guardada:", filename)
 
 
-def _capture_state(page, theme: str, lang: str, filename: str) -> None:
+def _capture_state(page, theme: str, lang: str, filename: str, log: bool = False) -> None:
     """Captura la app recién abierta, con la cola que toque ya inyectada."""
     page.goto(URL, wait_until="networkidle")
     page.evaluate(
-        "([t, l]) => { localStorage.setItem('expoal-theme', t);"
-        " localStorage.setItem('expoal-lang', l); }",
-        [theme, lang],
+        "([t, l, g]) => { localStorage.setItem('expoal-theme', t);"
+        " localStorage.setItem('expoal-lang', l);"
+        " localStorage.setItem('expoal-log', g); }",
+        [theme, lang, "1" if log else "0"],
     )
     page.reload(wait_until="networkidle")
     page.wait_for_selector("#queue-section:not(.hidden)", timeout=10000)
     page.wait_for_selector("#history-section:not(.hidden)", timeout=10000)
+    if log:
+        page.wait_for_selector("#log-section:not(.hidden)", timeout=10000)
+        page.wait_for_function(
+            "() => document.querySelectorAll('#log-view > div').length > 5", timeout=10000
+        )
+        # El panel vive debajo de la cola y se queda fuera de la primera pantalla.
+        # Se encuadra desde la CABECERA de la cola (no desde el panel) para que el
+        # corte de arriba caiga en el hueco entre secciones: cortar una tarjeta por
+        # la mitad se lee como captura mal hecha, no como app.
+        page.evaluate(
+            "() => { const el = document.querySelector('#queue-section');"
+            " const r = el.getBoundingClientRect();"
+            " window.scrollTo(0, window.scrollY + r.top - 34); }"
+        )
     page.wait_for_timeout(700)
     page.screenshot(path=str(OUT / filename))
     print("guardada:", filename)
@@ -205,6 +266,15 @@ def capture_done(page, theme: str, lang: str) -> None:
     _capture_state(page, theme, lang, f"screenshot-done-{theme}-{lang}.png")
 
 
+def capture_log(page, theme: str, lang: str) -> None:
+    """El panel de terminal abierto: la prueba de que la app no esconde nada.
+
+    Es lo que separa a Expoal de un descargador caja negra, así que merece su
+    propia captura en vez de quedarse escondido detrás de un botón.
+    """
+    _capture_state(page, theme, lang, f"screenshot-log-{theme}-{lang}.png", log=True)
+
+
 def main() -> None:
     global JOBS_STATE
     with sync_playwright() as p:
@@ -214,6 +284,7 @@ def main() -> None:
         )
         page.route("**/api/history", fake_history)
         page.route("**/api/jobs", fake_jobs)
+        page.route("**/api/log*", fake_log)
         # El recorrido completo, en el orden en que lo vive quien usa la app:
         # analizar, editar, descargar y terminar.
         JOBS_STATE = ""
@@ -225,6 +296,7 @@ def main() -> None:
         for theme in ("dark", "light"):
             for lang in ("es", "en"):
                 capture_queue(page, theme, lang)
+                capture_log(page, theme, lang)
         JOBS_STATE = "done"
         for theme in ("dark", "light"):
             for lang in ("es", "en"):
