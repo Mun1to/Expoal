@@ -73,9 +73,13 @@ is the engine; Expoal is everything you would otherwise have to remember, script
 
 - A window instead of a command line, so you can hand it to someone who does not use a terminal
 - Format and quality pickers built from what the video actually offers, instead of format strings
-- A queue with live progress, speed and ETA, and a history that survives restarts
+- A queue with live progress, speed and ETA, pause/resume, and a history that survives restarts
+- Failed downloads recorded and retried with one click, instead of scrolling back through a terminal
 - Trimming, edge cropping and audio stripping without touching FFmpeg flags
 - An installer, a desktop shortcut and one-click self-updates on Windows and Linux
+
+And when you *do* want the terminal, it is one button away: the log panel shows yt-dlp's real
+output live, so nothing is hidden from you — it is just not in your face by default.
 
 If you are happy typing `yt-dlp -f bestvideo+bestaudio <url>`, you do not need Expoal. It exists
 for the times you want a window, and for the people who would never open a terminal at all.
@@ -89,7 +93,11 @@ for the times you want a window, and for the people who would never open a termi
 - Pick the resolution, and choose the destination folder with a native file browser
 - Edit while you download: trim the length (visual slider or exact timecodes), crop the edges by pixels, and strip the audio track
 - Playlists and channels: paste one and pick which videos to grab from a checklist, all queued at once with shared format and quality
-- Sign in where you already are: use your browser's cookies for private, age-restricted or members-only videos, and for YouTube's bot checks
+- Several links at once: paste a whole list, duplicates and junk lines are dropped before anything is queued
+- See what it is doing: a terminal panel with the engine's live output, off by default, one click away when something goes wrong
+- Faster downloads: concurrent fragments out of the box, plus optional [aria2c](https://aria2.github.io/) multi-connection support when it is installed
+- Pause and resume a download, and retry the ones that failed — individually or all at once
+- Sign in where you already are: use your browser's cookies for private, age-restricted or members-only videos, and for YouTube's bot checks, or point it at an exported `cookies.txt`
 - One click for the things everyone wants: cut sponsor segments with SponsorBlock, embed the thumbnail as cover art, the title and author, the chapters, the subtitles
 - A field for raw yt-dlp options, in the same syntax as the official docs, for everything the window doesn't show
 - Download queue with live progress, speed and ETA, and one-click cancel for any download
@@ -159,6 +167,16 @@ uv run expoal --desktop
 
 Options: `--port <n>` to change the web port, `--no-browser` to skip opening the browser.
 
+### Tests
+
+```bash
+uv run pytest
+```
+
+They cover the parts where a silent mistake is expensive: translating yt-dlp flags into
+library options, the queue's states (pause, cancel, retry), the subtitle cleanup, the
+history and the log buffer. No network, and no touching your real settings or history.
+
 ### Build the standalone app yourself
 
 ```powershell
@@ -187,7 +205,9 @@ The [release workflow](.github/workflows/release.yml) then builds the `.exe` and
 
 ## How it works
 
-A small FastAPI server wraps yt-dlp and exposes a minimal API (`/api/info`, `/api/download`, `/api/pick-folder`, `/api/jobs`, `/api/history`). The same static web UI is served in your browser (web mode) or inside a pywebview native window (desktop mode). A local-origin guard blocks cross-origin requests, so no other site can talk to the server. Downloads run in a background queue, one at a time, and the history is stored as JSON in your user data folder.
+A small FastAPI server wraps yt-dlp and exposes a minimal API (`/api/info`, `/api/download`, `/api/pick-folder`, `/api/jobs`, `/api/history`, `/api/log`). The same static web UI is served in your browser (web mode) or inside a pywebview native window (desktop mode). A local-origin guard blocks cross-origin requests, so no other site can talk to the server. Downloads run in a background queue, one at a time, and the history is stored as JSON in your user data folder. The log panel reads from an in-memory ring buffer — nothing is written to disk, so there is no log file quietly growing on your machine.
+
+Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); release-by-release changes are in [CHANGELOG.md](CHANGELOG.md).
 
 ## Legal notice
 

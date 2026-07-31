@@ -45,6 +45,20 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [x] **SponsorBlock e incrustar carátula, metadatos, capítulos y subtítulos** (v2.1.0): casillas
       para lo que casi todo el mundo quiere y nadie debería tener que escribir a mano. Cada una
       es la opción de yt-dlp que le corresponde, traducida por el mismo camino que el campo libre
+- [x] **Ver lo que hace por detrás** (v2.3.0): panel con pinta de terminal, apagado por defecto,
+      que enseña la salida real del motor en vivo. Cuando algo falla, "Error" no basta ni para
+      el usuario ni para quien le ayuda; y se copia entero de un clic para pedir ayuda
+- [x] **Descarga más rápida** (v2.3.0): fragmentos concurrentes (de yt-dlp, sin instalar nada) y
+      aria2c multi-conexión cuando el binario está en el equipo
+- [x] **Pausar y reanudar** (v2.3.0): lo descargado se conserva, así que reanudar continúa
+- [x] **Reintentar lo que falló** (v2.3.0): de uno en uno o todo de golpe, y los fallos se
+      guardan en el historial para que sobrevivan al reinicio. Con listas de cuarenta vídeos,
+      los tres que fallan ya no se pierden
+- [x] **Varios enlaces a la vez** (v2.3.0): pegar una lista, limpiarla (duplicados, basura) y
+      elegir cuáles bajar en la misma vista de las playlists
+- [x] **Cookies desde archivo** (v2.3.0): la salida para Chrome y Edge en Windows, que cifran
+      las suyas desde la v127 y no hay forma de leerlas del navegador
+- [x] **Tests** (v2.3.0): `uv run pytest`, sin red y sin tocar los datos reales del usuario
 - [ ] Build para macOS (.dmg / .app) — requiere runner macOS
 - [x] **Playlists** (v2.2.0): pegar una lista o un canal muestra sus vídeos con casillas (todas
       marcadas), eliges cuáles y se encolan de golpe con formato/calidad/carpeta comunes. Un
@@ -53,3 +67,8 @@ Progreso por niveles, sin fechas. Cada meta desbloquea la siguiente.
 - [ ] Extraer `expoal-core` si Rolyal lo necesita en su servidor
 - [ ] Descargar solo un fragmento SIN bajar el vídeo entero (hoy el recorte de duración
       descarga todo y corta después; esto sería ahorro de datos, no una función nueva)
+- [ ] Varias descargas a la vez (hoy la cola es de una en una). Con los fragmentos concurrentes
+      de v2.3.0 se gana casi la misma velocidad sin tocar la arquitectura, así que esto solo
+      merece la pena si alguien baja listas largas y lo pide de verdad
+- [ ] Plantilla de nombre de archivo con presets en la interfaz (hoy se puede con `-o` en las
+      opciones avanzadas, que ya cubre a quien lo necesita)

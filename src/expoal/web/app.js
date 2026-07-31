@@ -32,6 +32,7 @@ const I18N = (function () {
       openfolder: "Abrir la carpeta del archivo",
       filegone: "El archivo ya no está ahí",
       cookiesnone: "Sin cookies",
+      cookiespick: "¿De dónde saco las cookies?",
       cookiesask: "Este vídeo pide iniciar sesión",
       cookiesactive: (b) => `Usando las cookies de ${b}`,
       argssaved: "Guardado, se aplicará a las próximas descargas",
@@ -42,8 +43,25 @@ const I18N = (function () {
       plselected: (n) => `${n} elegido${n === 1 ? "" : "s"}`,
       pladd: (n) => n ? `Añadir ${n} a la cola` : "Elige al menos un vídeo",
       cookiesfail: "No se han podido leer las cookies de ese navegador",
-      cookiesfailhelp: "Ciérralo del todo y vuelve a probar. Si es Chrome o Edge en Windows, prueba con Firefox: las versiones nuevas cifran las cookies de forma que Expoal no puede leerlas.",
+      cookiesfailhelp: "Ciérralo del todo y vuelve a probar. Si es Chrome o Edge en Windows, prueba con Firefox o exporta las cookies a un archivo: las versiones nuevas cifran las cookies de forma que Expoal no puede leerlas.",
+      cookiesfileopt: "Archivo cookies.txt...",
+      cookiesfileactive: "Usando un archivo de cookies",
+      cookiesfilebad: "Ese archivo de cookies no existe",
       edges: "bordes", noaudio: "sin audio",
+      pause: "Pausar la descarga", resume: "Reanudar la descarga",
+      retry: "Reintentar", paused: "Pausada",
+      logempty: "Todavía no hay nada. Analiza o descarga algo y aquí verás, paso a paso, lo que hace el motor.",
+      loglost: "... (líneas antiguas descartadas)",
+      copied: "Copiado", copyfail: "No se ha podido copiar",
+      multiempty: "No hay ningún enlace en ese texto",
+      multititle: "Enlaces pegados",
+      multiready: (n, dup, bad) => {
+        const parts = [`${n} enlace${n === 1 ? "" : "s"}`];
+        if (dup) parts.push(`${dup} repetido${dup === 1 ? "" : "s"} quitado${dup === 1 ? "" : "s"}`);
+        if (bad) parts.push(`${bad} línea${bad === 1 ? "" : "s"} sin enlace`);
+        return parts.join(" · ");
+      },
+      needsaria2c: "Necesita aria2c instalado en el equipo",
       status: {
         en_cola: "En cola", descargando: "Descargando...", procesando: "Procesando...",
         editando: "Editando...", completado: "Completado", error: "Error",
@@ -73,6 +91,7 @@ const I18N = (function () {
       openfolder: "Open the file's folder",
       filegone: "The file is not there anymore",
       cookiesnone: "No cookies",
+      cookiespick: "Where should the cookies come from?",
       cookiesask: "This video asks you to sign in",
       cookiesactive: (b) => `Using cookies from ${b}`,
       argssaved: "Saved, it will apply to your next downloads",
@@ -83,8 +102,25 @@ const I18N = (function () {
       plselected: (n) => `${n} selected`,
       pladd: (n) => n ? `Add ${n} to queue` : "Pick at least one video",
       cookiesfail: "Could not read the cookies from that browser",
-      cookiesfailhelp: "Close it completely and try again. If it is Chrome or Edge on Windows, try Firefox instead: recent versions encrypt cookies in a way Expoal cannot read.",
+      cookiesfailhelp: "Close it completely and try again. If it is Chrome or Edge on Windows, try Firefox instead or export your cookies to a file: recent versions encrypt cookies in a way Expoal cannot read.",
+      cookiesfileopt: "cookies.txt file...",
+      cookiesfileactive: "Using a cookies file",
+      cookiesfilebad: "That cookies file does not exist",
       edges: "edges", noaudio: "no audio",
+      pause: "Pause the download", resume: "Resume the download",
+      retry: "Try again", paused: "Paused",
+      logempty: "Nothing yet. Analyze or download something and you will see, step by step, what the engine does.",
+      loglost: "... (older lines dropped)",
+      copied: "Copied", copyfail: "Could not copy",
+      multiempty: "There is no link in that text",
+      multititle: "Pasted links",
+      multiready: (n, dup, bad) => {
+        const parts = [`${n} link${n === 1 ? "" : "s"}`];
+        if (dup) parts.push(`${dup} duplicate${dup === 1 ? "" : "s"} removed`);
+        if (bad) parts.push(`${bad} line${bad === 1 ? "" : "s"} with no link`);
+        return parts.join(" · ");
+      },
+      needsaria2c: "Needs aria2c installed on this computer",
       status: {
         en_cola: "Queued", descargando: "Downloading...", procesando: "Processing...",
         editando: "Editing...", completado: "Done", error: "Error",
@@ -163,14 +199,21 @@ const state = {
   // resolver ("login" = el vídeo pide sesión, "fail" = no se pudieron leer).
   browsers: [],
   cookiesBrowser: "",
+  cookiesFile: "",
   cookiesProblem: "",
   cookiesOpen: false,
   // Opciones avanzadas de yt-dlp, tal cual las escribió el usuario.
   extraArgs: "",
-  // Casillas de lo común (SponsorBlock, incrustar carátula...) y cuáles de
-  // ellas necesitan FFmpeg para poder ofrecerse.
+  // Casillas de lo común (SponsorBlock, incrustar carátula...) y qué necesita
+  // cada una para poder ofrecerse (FFmpeg, o el aria2c del sistema).
   toggles: {},
   togglesNeedFfmpeg: [],
+  togglesNeedAria2c: [],
+  aria2c: false,
+  // Panel de terminal: si está abierto, por qué línea va y cuántas pinta.
+  log: { open: false, cursor: 0, count: 0 },
+  // Último recuento de la lista de enlaces pegados, para poder retraducirlo.
+  multi: null,
 };
 
 async function api(path, options) {
@@ -255,6 +298,7 @@ function renderCookies() {
   const row = $("#cookies-row");
   const select = $("#cookies-select");
   const chosen = state.cookiesBrowser || "";
+  const file = state.cookiesFile || "";
   // El desplegable se repuebla al cambiar de idioma ("Sin cookies" se traduce).
   select.innerHTML = "";
   const none = document.createElement("option");
@@ -268,7 +312,17 @@ function renderCookies() {
     opt.textContent = b.charAt(0).toUpperCase() + b.slice(1);
     select.appendChild(opt);
   }
-  select.value = chosen;
+  // El archivo es la última opción de la misma lista, no otro sitio: para el
+  // usuario es "de dónde saco las cookies", y el navegador o un archivo son
+  // dos respuestas a esa única pregunta.
+  const fileOpt = document.createElement("option");
+  fileOpt.value = "file";
+  fileOpt.textContent = I18N.t("cookiesfileopt");
+  select.appendChild(fileOpt);
+  select.value = file ? "file" : chosen;
+
+  $("#cookies-file-row").classList.toggle("hidden", !file);
+  if (document.activeElement !== $("#cookies-file-input")) $("#cookies-file-input").value = file;
 
   const title = $("#cookies-title");
   const help = $("#cookies-help");
@@ -278,10 +332,18 @@ function renderCookies() {
   } else if (state.cookiesProblem === "login") {
     title.textContent = I18N.t("cookiesask");
     help.textContent = help.dataset.base || "";
-  } else {
+  } else if (file) {
+    title.textContent = I18N.t("cookiesfileactive");
+    help.textContent = help.dataset.base || "";
+  } else if (chosen) {
     title.textContent = I18N.t("cookiesactive")(
       chosen.charAt(0).toUpperCase() + chosen.slice(1)
     );
+    help.textContent = help.dataset.base || "";
+  } else {
+    // Abierto a mano y sin nada elegido todavía: preguntar, en vez de decir
+    // "Usando las cookies de " con el hueco vacío al final.
+    title.textContent = I18N.t("cookiespick");
     help.textContent = help.dataset.base || "";
   }
 
@@ -290,7 +352,7 @@ function renderCookies() {
   const problem = Boolean(state.cookiesProblem);
   row.classList.toggle("quiet", !problem);
   $("#cookies-retry").classList.toggle("hidden", !problem);
-  const open = problem || chosen || state.cookiesOpen;
+  const open = problem || chosen || file || state.cookiesOpen;
   row.classList.toggle("hidden", !open);
   // El enlace y el bloque son la misma cosa en dos estados: nunca los dos.
   $("#cookies-toggle").classList.toggle("hidden", Boolean(open));
@@ -301,11 +363,14 @@ function renderToggles() {
     const name = input.dataset.toggle;
     input.checked = Boolean(state.toggles[name]);
     // Recortar patrocinios o incrustar cosas reescribe el archivo, y eso lo
-    // hace FFmpeg. Sin él, la casilla se apaga y dice por qué, en vez de
-    // dejar que el usuario la marque y la descarga falle luego.
-    const needs = state.togglesNeedFfmpeg.includes(name) && !state.ffmpeg;
-    input.disabled = needs;
-    input.closest(".toggle").title = needs ? I18N.t("needsffmpeg") : "";
+    // hace FFmpeg; aria2c es un programa aparte que Expoal no instala. Sin lo
+    // que hace falta, la casilla se apaga y dice por qué, en vez de dejar que
+    // el usuario la marque y la descarga falle luego.
+    let missing = "";
+    if (state.togglesNeedFfmpeg.includes(name) && !state.ffmpeg) missing = I18N.t("needsffmpeg");
+    else if (state.togglesNeedAria2c.includes(name) && !state.aria2c) missing = I18N.t("needsaria2c");
+    input.disabled = Boolean(missing);
+    input.closest(".toggle").title = missing;
   }
 }
 
@@ -342,10 +407,40 @@ async function saveExtraArgs() {
 async function setCookiesBrowser(name) {
   const res = await post("/api/settings/cookies", { browser: name });
   state.cookiesBrowser = res.cookies_browser;
+  state.cookiesFile = res.cookies_file || "";
   // Elegir navegador es el intento de arreglo: se limpia el problema para que
   // el bloque no siga en rojo antes de saber si ha funcionado.
   state.cookiesProblem = "";
   renderCookies();
+}
+
+async function setCookiesFile(path) {
+  const res = await post("/api/settings/cookies-file", { path });
+  state.cookiesFile = res.cookies_file || "";
+  state.cookiesBrowser = res.cookies_browser || "";
+  state.cookiesProblem = "";
+  renderCookies();
+}
+
+/* Elegir "Archivo cookies.txt..." abre el explorador. Si el diálogo nativo no
+   está disponible (o el usuario lo cancela) se deja igualmente la fila abierta
+   con el campo de texto, para poder pegar la ruta a mano. */
+async function chooseCookiesFile() {
+  $("#cookies-file-row").classList.remove("hidden");
+  let picked = null;
+  try {
+    const res = await api("/api/pick-file", { method: "POST" });
+    picked = res.path;
+  } catch (_) { /* sin diálogo: queda el campo de texto */ }
+  if (picked) {
+    try {
+      await setCookiesFile(picked);
+    } catch (err) {
+      showError($("#url-error"), err.message);
+    }
+  } else {
+    $("#cookies-file-input").focus();
+  }
 }
 
 async function analyze(event) {
@@ -708,6 +803,49 @@ function resetEdit() {
    ============================================================================ */
 const QUALITY_LADDER = ["2160", "1440", "1080", "720", "480", "360"];
 
+/* Varios enlaces pegados a la vez. Se limpian en el servidor (misma limpieza
+   para todos, y con tests) y se muestran en la MISMA vista de la playlist: la
+   tarea es idéntica —elegir de una lista y encolar con opciones comunes—, así
+   que reutilizarla es una pantalla menos que mantener y una menos que aprender.
+   No se pide el título de cada vídeo: serían N peticiones de red antes de
+   empezar, y el título real aparece solo en la cola en cuanto arranca. */
+async function prepareMulti() {
+  const btn = $("#multi-prepare");
+  const status = $("#multi-status");
+  btn.disabled = true;
+  try {
+    const res = await post("/api/urls/clean", { text: $("#multi-input").value });
+    if (!res.urls.length) {
+      status.className = "args-status err";
+      status.textContent = I18N.t("multiempty");
+      $("#playlist").classList.add("hidden");
+      return;
+    }
+    status.className = "args-status ok";
+    // Se guarda el recuento, no solo el texto: al cambiar de idioma hay que
+    // poder volver a escribirlo (lo escribe este archivo, no lleva data-en).
+    state.multi = res;
+    status.textContent = I18N.t("multiready")(res.urls.length, res.duplicates, res.invalid);
+    state.info = {
+      type: "playlist",
+      pasted: true,        // el título lo ponemos nosotros: hay que retraducirlo
+      title: I18N.t("multititle"),
+      uploader: "",
+      count: res.urls.length,
+      truncated: res.truncated,
+      entries: res.urls.map((url) => ({ url, title: url, duration: null })),
+    };
+    $("#preview").classList.add("hidden");
+    renderPlaylist();
+    $("#playlist").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (err) {
+    status.className = "args-status err";
+    status.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function fmtDur(seconds) {
   const s = Number(seconds) || 0;
   if (!s) return "";
@@ -866,6 +1004,81 @@ async function download() {
   }
 }
 
+/* ============================================================================
+   TERMINAL — lo que hace el motor por detrás
+   Cuando algo falla o tarda, "Error" no dice nada. Este panel enseña la salida
+   real de yt-dlp: qué extractor entró, qué formato eligió, si está fusionando.
+   No se enseña de entrada (la app tiene que seguir siendo simple); se enciende
+   con el botón de la cabecera y se queda encendido hasta que se apague.
+   El sondeo lleva un cursor: solo se pide lo nuevo desde la última línea vista.
+   ============================================================================ */
+const LOG_MAX_NODES = 600;   // por encima de esto se recortan las más viejas
+
+function logNotice(text) {
+  const view = $("#log-view");
+  const row = document.createElement("div");
+  row.className = "log-empty";
+  row.textContent = text;
+  view.appendChild(row);
+}
+
+function appendLogLines(lines) {
+  const view = $("#log-view");
+  if (state.log.count === 0) view.textContent = "";   // fuera el aviso de vacío
+  const frag = document.createDocumentFragment();
+  for (const ln of lines) {
+    const row = document.createElement("div");
+    row.className = `l-${ln.level}`;
+    const time = document.createElement("span");
+    time.className = "t";
+    // El espacio va en el texto, no solo en el CSS: al copiar el panel, la
+    // hora y el mensaje tienen que salir separados.
+    time.textContent = `${ln.at} `;
+    // textContent, nunca innerHTML: esto viene de yt-dlp y lleva dentro
+    // títulos de vídeo, que son entrada externa.
+    row.append(time, document.createTextNode(ln.text));
+    frag.appendChild(row);
+  }
+  view.appendChild(frag);
+  state.log.count += lines.length;
+  while (state.log.count > LOG_MAX_NODES && view.firstChild) {
+    view.removeChild(view.firstChild);
+    state.log.count -= 1;
+  }
+  if ($("#log-follow").checked) view.scrollTop = view.scrollHeight;
+}
+
+async function pollLog() {
+  if (!state.log.open) return;
+  try {
+    const res = await api(`/api/log?after=${state.log.cursor}`);
+    if (res.lost) logNotice(I18N.t("loglost"));
+    if (res.lines && res.lines.length) appendLogLines(res.lines);
+    state.log.cursor = res.cursor;
+    if (state.log.count === 0) {
+      $("#log-view").textContent = "";
+      logNotice(I18N.t("logempty"));
+    }
+  } catch (_) {
+    // El servidor puede estar arrancando; se reintenta en el siguiente ciclo.
+  }
+}
+
+function setLogOpen(open) {
+  state.log.open = open;
+  $("#log-section").classList.toggle("hidden", !open);
+  $("#log-toggle").classList.toggle("active", open);
+  try { localStorage.setItem("expoal-log", open ? "1" : "0"); } catch (e) { /* modo privado */ }
+  if (open) {
+    // Al abrir se pide todo el buffer: interesa lo que ya pasó, no solo lo que
+    // venga a partir de ahora.
+    state.log.cursor = 0;
+    state.log.count = 0;
+    $("#log-view").textContent = "";
+    pollLog();
+  }
+}
+
 // --- Cola e historial ---
 
 // Iconos de los botones de fila. innerHTML seguro: cadenas constantes de este
@@ -877,6 +1090,16 @@ const ICON_FOLDER =
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
   'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
   '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>';
+const ICON_PAUSE =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+  '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+const ICON_PLAY =
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+  '<path d="M8 5.5v13l11-6.5z"/></svg>';
+const ICON_RETRY =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
 
 function iconButton(icon, title) {
   const btn = document.createElement("button");
@@ -921,25 +1144,44 @@ function renderJob(job) {
   if (job.status === "error") status.classList.add("err");
   let statusText = I18N.t("status")[job.status] || job.status;
   if (job.status === "descargando") {
-    statusText = `${job.progress}%`;
+    statusText = job.paused ? `${I18N.t("paused")} · ${job.progress}%` : `${job.progress}%`;
     if (job.speed) statusText += ` · ${job.speed}`;
     if (job.eta) statusText += ` · ${job.eta}`;
   }
   status.textContent = statusText;
   head.append(title, status);
-  if (job.status === "en_cola" || job.status === "descargando") {
-    const cancel = iconButton(ICON_X, I18N.t("cancel"));
-    cancel.classList.add("job-cancel");
-    cancel.addEventListener("click", async () => {
-      cancel.disabled = true;
+
+  // Botón de acción que llama al endpoint y refresca; el patrón se repite en
+  // pausar, reanudar y reintentar, así que va una vez.
+  const actionButton = (icon, label, path, extraClass) => {
+    const btn = iconButton(icon, label);
+    if (extraClass) btn.classList.add(extraClass);
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
       try {
-        await api(`/api/jobs/${job.id}/cancel`, { method: "POST" });
+        await api(path, { method: "POST" });
         refresh();
       } catch (_) {
-        cancel.disabled = false;
+        btn.disabled = false;
       }
     });
-    head.appendChild(cancel);
+    return btn;
+  };
+
+  // Pausar solo mientras descarga: en cola no ha empezado, y con FFmpeg
+  // trabajando no hay nada que pausar.
+  if (job.status === "descargando") {
+    head.appendChild(job.paused
+      ? actionButton(ICON_PLAY, I18N.t("resume"), `/api/jobs/${job.id}/resume`)
+      : actionButton(ICON_PAUSE, I18N.t("pause"), `/api/jobs/${job.id}/pause`));
+  }
+  if (job.status === "error" || job.status === "cancelado") {
+    head.appendChild(actionButton(ICON_RETRY, I18N.t("retry"), `/api/jobs/${job.id}/retry`));
+  }
+  if (job.status === "en_cola" || job.status === "descargando") {
+    head.appendChild(
+      actionButton(ICON_X, I18N.t("cancel"), `/api/jobs/${job.id}/cancel`, "job-cancel")
+    );
   }
   if (job.status === "completado" && job.file_path) {
     head.appendChild(folderButton(job.file_path));
@@ -978,15 +1220,49 @@ function renderJob(job) {
   return item;
 }
 
+/* Reintentar una descarga del historial: se vuelve a encolar con las mismas
+   opciones que tenía (modo, calidad, carpeta y formato se guardan justo para
+   esto). Sirve tanto para repetir una que salió bien como para recuperar una
+   que falló hace días, que es el caso que de verdad importa. */
+function historyRetryButton(entry) {
+  const btn = iconButton(ICON_RETRY, I18N.t("retry"));
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      await post("/api/download", {
+        url: entry.url,
+        mode: entry.mode || "video",
+        quality: entry.quality || "best",
+        folder: entry.folder || "",
+        title: entry.title || "",
+        sub_lang: entry.sub_lang || "",
+        sub_format: entry.sub_format || "txt",
+        out_format: entry.out_format || "",
+      });
+      await refresh();
+    } catch (err) {
+      btn.classList.add("err");
+      btn.title = err.message;
+      btn.setAttribute("aria-label", err.message);
+      btn.disabled = false;
+    }
+  });
+  return btn;
+}
+
 function renderHistoryItem(entry) {
   const item = document.createElement("div");
   item.className = "history-item";
+  const failed = entry.status === "error";
+  if (failed) item.classList.add("err");
 
   const head = document.createElement("div");
   head.className = "history-head";
   const badge = document.createElement("span");
   badge.className = "badge";
-  badge.textContent = I18N.t("badges")[entry.mode] || entry.platform || I18N.t("video");
+  badge.textContent = failed
+    ? I18N.t("status").error
+    : (I18N.t("badges")[entry.mode] || entry.platform || I18N.t("video"));
   const title = document.createElement("span");
   title.className = "history-title";
   title.textContent = entry.title || entry.url;
@@ -994,8 +1270,16 @@ function renderHistoryItem(entry) {
   date.className = "history-date";
   date.textContent = (entry.downloaded_at || "").replace("T", " ");
   head.append(badge, title, date);
+  head.appendChild(historyRetryButton(entry));
   if (entry.file_path) head.appendChild(folderButton(entry.file_path));
   item.appendChild(head);
+
+  if (failed && entry.error) {
+    const err = document.createElement("p");
+    err.className = "history-error";
+    err.textContent = entry.error;
+    item.appendChild(err);
+  }
 
   if (entry.file_path) {
     const path = document.createElement("p");
@@ -1017,10 +1301,14 @@ async function refresh() {
     const queueList = $("#queue-list");
     queueList.replaceChildren(...jobs.map(renderJob));
     $("#queue-section").classList.toggle("hidden", jobs.length === 0);
-    // "Limpiar terminadas" solo cuando hay algo que limpiar.
+    // "Limpiar terminadas" solo cuando hay algo que limpiar, y "reintentar
+    // fallidas" solo cuando hay fallos: en una lista de cuarenta vídeos es la
+    // diferencia entre recuperarlos de un clic o buscarlos uno a uno.
     const doneStates = ["completado", "error", "cancelado"];
     const hasDone = jobs.some((j) => doneStates.includes(j.status));
     $("#clear-queue").classList.toggle("hidden", !hasDone);
+    const hasFailed = jobs.some((j) => j.status === "error" || j.status === "cancelado");
+    $("#retry-failed").classList.toggle("hidden", !hasFailed);
 
     const historyList = $("#history-list");
     historyList.replaceChildren(...historyEntries.map(renderHistoryItem));
@@ -1028,6 +1316,9 @@ async function refresh() {
   } catch (_) {
     // El servidor puede estar arrancando; se reintenta en el siguiente ciclo.
   }
+  // El panel de terminal se refresca en el mismo ciclo que la cola: es la misma
+  // cadencia y así no hay un segundo temporizador dando vueltas.
+  pollLog();
 }
 
 // --- Arranque ---
@@ -1042,6 +1333,31 @@ async function init() {
   $("#clear-queue").addEventListener("click", async () => {
     await api("/api/jobs", { method: "DELETE" });
     refresh();
+  });
+  $("#retry-failed").addEventListener("click", async () => {
+    await api("/api/jobs/retry-failed", { method: "POST" });
+    refresh();
+  });
+
+  // Terminal: se abre con el botón de la cabecera y recuerda si quedó abierta.
+  $("#log-toggle").addEventListener("click", () => setLogOpen(!state.log.open));
+  $("#log-clear").addEventListener("click", async () => {
+    try { await api("/api/log", { method: "DELETE" }); } catch (_) { /* da igual */ }
+    state.log.cursor = 0;
+    state.log.count = 0;
+    $("#log-view").textContent = "";
+    logNotice(I18N.t("logempty"));
+  });
+  $("#log-copy").addEventListener("click", async () => {
+    const btn = $("#log-copy");
+    const before = btn.textContent;
+    try {
+      await navigator.clipboard.writeText($("#log-view").innerText);
+      btn.textContent = I18N.t("copied");
+    } catch (_) {
+      btn.textContent = I18N.t("copyfail");
+    }
+    setTimeout(() => { btn.textContent = before; }, 1600);
   });
 
   for (const btn of document.querySelectorAll("#mode-group button")) {
@@ -1112,11 +1428,14 @@ async function init() {
     $("#version").textContent = `v${cfg.version}`;
     $("#folder-input").value = cfg.default_folder;
     state.ffmpeg = cfg.ffmpeg;
+    state.aria2c = Boolean(cfg.aria2c);
     state.browsers = cfg.browsers || [];
     state.cookiesBrowser = cfg.cookies_browser || "";
+    state.cookiesFile = cfg.cookies_file || "";
     state.extraArgs = cfg.extra_args || "";
     state.toggles = cfg.toggles || {};
     state.togglesNeedFfmpeg = cfg.toggles_need_ffmpeg || [];
+    state.togglesNeedAria2c = cfg.toggles_need_aria2c || [];
     $("#args-input").value = state.extraArgs;
     renderToggles();
     // Si ya hay algo puesto, el panel se abre solo: son ajustes invisibles que
@@ -1134,9 +1453,25 @@ async function init() {
   } catch (_) { /* se reintenta al refrescar */ }
 
   $("#cookies-select").addEventListener("change", (e) => {
+    // "file" no es un navegador: abre el explorador para elegir el cookies.txt.
+    if (e.target.value === "file") {
+      chooseCookiesFile();
+      return;
+    }
     setCookiesBrowser(e.target.value).catch((err) => {
       showError($("#url-error"), err.message);
     });
+  });
+  $("#cookies-file-btn").addEventListener("click", chooseCookiesFile);
+  // Escribir la ruta a mano también vale: en el .exe sin ventana no hay
+  // diálogo nativo, y quedarse sin salida por eso sería absurdo.
+  $("#cookies-file-input").addEventListener("change", async (e) => {
+    try {
+      await setCookiesFile(e.target.value.trim());
+    } catch (err) {
+      showError($("#url-error"), err.message);
+      renderCookies();
+    }
   });
   $("#cookies-retry").addEventListener("click", () => analyze());
   $("#cookies-toggle").addEventListener("click", () => {
@@ -1147,6 +1482,16 @@ async function init() {
   $("#args-toggle").addEventListener("click", () => {
     $("#args-row").classList.toggle("hidden");
     if (!$("#args-row").classList.contains("hidden")) $("#args-input").focus();
+  });
+  $("#multi-toggle").addEventListener("click", () => {
+    $("#multi-row").classList.toggle("hidden");
+    if (!$("#multi-row").classList.contains("hidden")) $("#multi-input").focus();
+  });
+  $("#multi-prepare").addEventListener("click", prepareMulti);
+  // Ctrl+Enter prepara la lista: mismo atajo que guardar las opciones, porque
+  // los dos son campos de varias líneas donde Enter hace falta para escribir.
+  $("#multi-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); prepareMulti(); }
   });
   $("#args-save").addEventListener("click", saveExtraArgs);
   for (const input of document.querySelectorAll("[data-toggle]")) {
@@ -1178,6 +1523,20 @@ async function init() {
     // que este es el momento de volver a guardarla como base.
     cookiesHelp.dataset.base = cookiesHelp.textContent;
     renderCookies();
+    // Los avisos de las casillas ("Requiere FFmpeg", "Necesita aria2c") van en
+    // el title, que lo escribe este archivo: sin repintar aquí se quedaban en
+    // el idioma anterior (cazado con el barrido de traducciones).
+    renderToggles();
+    // El aviso de "aquí no hay nada todavía" es de este archivo: si el panel
+    // está abierto y vacío, hay que volver a escribirlo en el idioma nuevo.
+    if (state.log.open && state.log.count === 0) {
+      $("#log-view").textContent = "";
+      logNotice(I18N.t("logempty"));
+    }
+    if (state.multi) {
+      const m = state.multi;
+      $("#multi-status").textContent = I18N.t("multiready")(m.urls.length, m.duplicates, m.invalid);
+    }
     if (!state.info) return;
     if (state.info.type === "playlist") {
       // Repintado ligero: NO reconstruir la lista o se perderían las casillas
@@ -1187,6 +1546,12 @@ async function init() {
       if (info.uploader) parts.push(info.uploader);
       parts.push(info.truncated ? I18N.t("plmore")(info.count) : I18N.t("plvideos")(info.count));
       $("#pl-sub").textContent = parts.join(" · ");
+      // El de una lista real es el título del sitio y no se toca; el de una
+      // lista pegada a mano lo escribimos nosotros, así que se traduce.
+      if (info.pasted) {
+        info.title = I18N.t("multititle");
+        $("#pl-title").textContent = info.title;
+      }
       const best = $("#pl-quality-select").options[0];
       if (best) best.textContent = I18N.t("best");
       updatePlCount();
@@ -1200,6 +1565,11 @@ async function init() {
     renderSubtitleOptions();
     renderEdit();
   });
+
+  // El panel de terminal vuelve como se dejó: quien lo usa, lo usa siempre.
+  try {
+    if (localStorage.getItem("expoal-log") === "1") setLogOpen(true);
+  } catch (e) { /* modo privado */ }
 
   checkForUpdate();
   refresh();

@@ -32,6 +32,18 @@
     <div class="top-actions">
       <span class="version" id="version"></span>
       <button type="button" class="lang" id="lang"></button>
+      <!-- Panel de terminal: enseña lo que hace el motor por detrás. Está
+           apagado por defecto (la app tiene que seguir siendo simple) y el
+           botón lo enciende; el estado se recuerda entre sesiones. -->
+      <button type="button" id="log-toggle" class="icon-btn"
+              data-en-title="Show what it is doing" title="Ver lo que hace por detrás"
+              aria-label="Ver lo que hace por detrás">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="4" width="19" height="16" rx="2.5"/>
+          <path d="M7 9.5l3 2.5-3 2.5M12.5 15h4"/>
+        </svg>
+      </button>
       <button type="button" id="theme-toggle" class="icon-btn"
               data-en-title="Switch theme" title="Cambiar tema" aria-label="Cambiar tema">
         <svg id="icon-sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -101,8 +113,25 @@
       <div class="adv-links">
         <button type="button" id="cookies-toggle" class="cookies-toggle"
                 data-en="Does the video ask you to sign in?">¿El vídeo pide iniciar sesión?</button>
+        <button type="button" id="multi-toggle" class="cookies-toggle"
+                data-en="Several links at once">Varios enlaces a la vez</button>
         <button type="button" id="args-toggle" class="cookies-toggle"
                 data-en="Advanced options">Opciones avanzadas</button>
+      </div>
+
+      <!-- Varios enlaces de golpe: lo normal cuando se han ido guardando en una
+           nota o en un chat. Se limpian antes de encolar nada (duplicados,
+           líneas sueltas, comentarios) y se reutiliza la misma lista con
+           casillas de las playlists para elegir cuáles bajar. -->
+      <div id="multi-row" class="args-row hidden">
+        <label for="multi-input" data-en="One link per line. Lines starting with # are ignored.">Un enlace por línea. Las líneas que empiezan por # se ignoran.</label>
+        <textarea id="multi-input" rows="4" spellcheck="false" autocomplete="off"
+                  placeholder="https://www.youtube.com/watch?v=...&#10;https://vimeo.com/..."></textarea>
+        <div class="args-foot">
+          <span id="multi-status" class="args-status"></span>
+          <button type="button" id="multi-prepare" class="btn primary small"
+                  data-en="Prepare list">Preparar lista</button>
+        </div>
       </div>
 
       <!-- Válvula de escape para quien conoce yt-dlp: aquí cabe todo lo que la
@@ -133,6 +162,18 @@
             <input type="checkbox" data-toggle="embed_subs">
             <span data-en="Embed the subtitles inside the video">Incrustar los subtítulos dentro del vídeo</span>
           </label>
+          <!-- Velocidad. La primera no necesita nada instalado; la segunda pide
+               aria2c y se apaga sola si no está en el equipo. Van con su propio
+               título para que no parezcan otra forma de incrustar cosas. -->
+          <span class="toggles-group" data-en="Speed">Velocidad</span>
+          <label class="toggle">
+            <input type="checkbox" data-toggle="fast_fragments">
+            <span data-en="Faster download (several chunks at once)">Descarga más rápida (varios trozos a la vez)</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" data-toggle="aria2c">
+            <span data-en="Use aria2c (much faster, must be installed)">Usar aria2c (mucho más rápido, hay que tenerlo instalado)</span>
+          </label>
         </div>
 
         <label for="args-input" data-en="Extra yt-dlp options, applied to every download">Opciones extra de yt-dlp, se aplican a todas las descargas</label>
@@ -156,6 +197,16 @@
                   data-en-aria="Browser to take the cookies from"></select>
           <button type="button" id="cookies-retry" class="btn primary small hidden"
                   data-en="Try again">Reintentar</button>
+        </div>
+        <!-- Salida para Chrome y Edge en Windows: desde la versión 127 cifran
+             las cookies y yt-dlp no puede leerlas, así que quien use esos
+             navegadores necesita exportarlas a un archivo con una extensión. -->
+        <div id="cookies-file-row" class="cookies-file hidden">
+          <input type="text" id="cookies-file-input" spellcheck="false"
+                 placeholder="cookies.txt" aria-label="Ruta del archivo de cookies"
+                 data-en-aria="Path to the cookies file">
+          <button type="button" id="cookies-file-btn" class="btn ghost small"
+                  data-en="Browse...">Examinar...</button>
         </div>
       </div>
     </section>
@@ -340,9 +391,31 @@
     <section class="list-section hidden" id="queue-section">
       <div class="section-head">
         <h3 data-en="Download queue">Cola de descargas</h3>
-        <button type="button" id="clear-queue" class="btn ghost small hidden" data-en="Clear finished">Limpiar terminadas</button>
+        <div class="head-actions">
+          <button type="button" id="retry-failed" class="btn ghost small hidden"
+                  data-en="Retry failed">Reintentar fallidas</button>
+          <button type="button" id="clear-queue" class="btn ghost small hidden" data-en="Clear finished">Limpiar terminadas</button>
+        </div>
       </div>
       <div id="queue-list"></div>
+    </section>
+
+    <!-- Terminal: lo que va diciendo el motor, tal cual. No se enseña de
+         entrada; se enciende con el botón de la cabecera y se queda encendido
+         hasta que se apague. -->
+    <section class="list-section hidden" id="log-section">
+      <div class="section-head">
+        <h3 data-en="What it is doing">Lo que hace por detrás</h3>
+        <div class="head-actions">
+          <label class="log-follow">
+            <input type="checkbox" id="log-follow" checked>
+            <span data-en="Follow">Seguir</span>
+          </label>
+          <button type="button" id="log-copy" class="btn ghost small" data-en="Copy">Copiar</button>
+          <button type="button" id="log-clear" class="btn ghost small" data-en="Clear">Vaciar</button>
+        </div>
+      </div>
+      <div id="log-view" class="log-view" tabindex="0" role="log" aria-live="off"></div>
     </section>
 
     <section class="list-section hidden" id="history-section">

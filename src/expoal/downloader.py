@@ -11,13 +11,16 @@ from pathlib import Path
 
 import yt_dlp
 
-from . import config, settings, subtitles
+from . import config, logbus, settings, subtitles
 from .editor import Edits, apply as apply_edits
 from .history import History
 
 
 def clean_error(exc: BaseException) -> str:
-    msg = str(exc)
+    # Los códigos de color van primero: yt-dlp los antepone al "ERROR:" cuando
+    # cree que escribe en una terminal, y sin quitarlos el prefijo no se
+    # reconoce y el usuario ve caracteres de escape en pantalla.
+    msg = logbus.strip_ansi(str(exc)).strip()
     if msg.startswith("ERROR:"):
         msg = msg[len("ERROR:"):].strip()
     return msg or exc.__class__.__name__
@@ -28,9 +31,10 @@ class JobCancelled(Exception):
 
 
 # Opciones que las avanzadas NO pueden pisar, porque son las que sostienen la
-# app: sin el hook no hay progreso ni forma de cancelar, y sin el modo callado
-# yt-dlp escribe en una salida que nadie lee.
-_PROTECTED_OPTS = ("progress_hooks", "quiet", "no_warnings", "noprogress")
+# app: sin el hook no hay progreso ni forma de cancelar, sin el modo callado
+# yt-dlp escribe en una salida que nadie lee, y sin el logger el panel de
+# terminal se queda mudo justo cuando hace falta.
+_PROTECTED_OPTS = ("progress_hooks", "quiet", "no_warnings", "noprogress", "logger")
 
 
 def _apply_extra_opts(opts: dict) -> None:
@@ -152,6 +156,10 @@ class Job:
     created_at: float = field(default_factory=time.time)
     # Cancelación: el hook de progreso mira este evento en cada tick y aborta.
     cancel_event: threading.Event = field(default_factory=threading.Event)
+    # Pausa: el hook se queda esperando dentro mientras esté puesto, así que
+    # yt-dlp no avanza pero tampoco pierde lo descargado.
+    pause_event: threading.Event = field(default_factory=threading.Event)
+    paused: bool = False
     # Archivos en curso, para poder borrar los restos (.part) al cancelar.
     current_file: str = ""
     current_tmp: str = ""
@@ -162,8 +170,11 @@ class Job:
             "url": self.url,
             "mode": self.mode,
             "quality": self.quality,
+            "folder": self.folder,
+            "out_format": self.out_format,
             "title": self.title,
             "status": self.status,
+            "paused": self.paused,
             "progress": self.progress,
             "speed": self.speed,
             "eta": self.eta,
@@ -205,6 +216,7 @@ class DownloadManager:
             self._jobs[job.id] = job
             self._order.append(job.id)
         self._queue.put(job.id)
+        logbus.bus.add(f"[expoal] En cola: {title or url}", "info", job.id)
         return job.public()
 
     def snapshot(self) -> list[dict]:
@@ -221,10 +233,78 @@ class DownloadManager:
             job.cancel_event.set()
             job.status = "cancelado"
         elif job.status == "descargando":
-            # El hook de progreso lo verá en el siguiente tick y abortará.
+            # El hook de progreso lo verá en el siguiente tick y abortará. Si
+            # estaba pausado hay que soltarlo, o se quedaría esperando dentro
+            # del hook sin llegar nunca a mirar la cancelación.
             job.cancel_event.set()
+            job.pause_event.clear()
+            job.paused = False
         # procesando/editando ya no se cancelan: FFmpeg está en plena escritura.
         return job.public()
+
+    def pause(self, job_id: str, paused: bool) -> dict | None:
+        """Pausa o reanuda una descarga en curso.
+
+        Solo tiene sentido mientras se descarga: un trabajo en cola no ha
+        empezado (y pausarlo bloquearía al worker, que es uno solo para todos),
+        y en procesando/editando manda FFmpeg, que no entiende de pausas.
+        Lo descargado se conserva en el .part, así que reanudar continúa donde
+        estaba en vez de volver a empezar.
+        """
+        with self._lock:
+            job = self._jobs.get(job_id)
+        if job is None:
+            return None
+        if job.status != "descargando":
+            return job.public()
+        if paused:
+            job.pause_event.set()
+            job.paused = True
+            job.speed = ""
+            job.eta = ""
+            logbus.bus.add(f"[expoal] Pausado: {job.title or job.url}", "warn", job.id)
+        else:
+            job.pause_event.clear()
+            job.paused = False
+            logbus.bus.add(f"[expoal] Reanudado: {job.title or job.url}", "info", job.id)
+        return job.public()
+
+    def retry(self, job_id: str) -> dict | None:
+        """Vuelve a encolar un trabajo que falló o se canceló, con sus mismas opciones.
+
+        Se reutiliza la misma fila en vez de crear otra: para quien mira, es el
+        mismo vídeo intentándolo otra vez, no un trabajo nuevo. Los eventos se
+        renuevan porque el viejo puede seguir marcado de la cancelación anterior.
+        """
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return None
+            if job.status not in ("error", "cancelado"):
+                return job.public()   # lo que va bien o ya terminó no se reintenta
+            job.status = "en_cola"
+            job.progress = 0.0
+            job.speed = ""
+            job.eta = ""
+            job.error = ""
+            job.file_path = ""
+            job.current_file = ""
+            job.current_tmp = ""
+            job.paused = False
+            job.cancel_event = threading.Event()
+            job.pause_event = threading.Event()
+        self._queue.put(job.id)
+        logbus.bus.add(f"[expoal] Reintentando: {job.title or job.url}", "info", job.id)
+        return job.public()
+
+    def retry_failed(self) -> int:
+        """Reencola de golpe todo lo que falló o se canceló. Devuelve cuántos."""
+        with self._lock:
+            ids = [
+                jid for jid in self._order
+                if self._jobs[jid].status in ("error", "cancelado")
+            ]
+        return sum(1 for jid in ids if self.retry(jid) is not None)
 
     TERMINAL = {"completado", "error", "cancelado"}
 
@@ -257,12 +337,43 @@ class DownloadManager:
                     job.error = ""
                     job.speed = ""
                     job.eta = ""
+                    job.paused = False
                     self._cleanup_partial(job)
+                    logbus.bus.add(f"[expoal] Cancelado: {job.title or job.url}", "warn", job.id)
                 else:
                     job.status = "error"
                     job.error = clean_error(exc)
+                    logbus.bus.add(f"[expoal] Error: {job.error}", "error", job.id)
+                    self._record_failure(job)
             finally:
                 self._queue.task_done()
+
+    def _record_failure(self, job: Job) -> None:
+        """Deja el fallo en el historial para poder reintentarlo más tarde.
+
+        POR QUÉ: la cola vive en memoria. Si bajas una lista de cuarenta vídeos,
+        fallan tres y cierras la app, esos tres desaparecen y hay que buscarlos
+        a mano. En el historial sobreviven al reinicio y se reintentan de un
+        clic. Los cancelados NO se guardan: pararlos fue una decisión, no un
+        fallo, y llenarían el historial de ruido.
+        """
+        self._history.add(
+            {
+                "url": job.url,
+                "title": job.title or job.url,
+                "platform": "",
+                "mode": job.mode,
+                "quality": job.quality,
+                "folder": job.folder,
+                "out_format": job.out_format,
+                "sub_lang": job.sub_lang,
+                "sub_format": job.sub_format,
+                "status": "error",
+                "error": job.error,
+                "file_path": "",
+                "downloaded_at": dt.datetime.now().isoformat(timespec="seconds"),
+            }
+        )
 
     @staticmethod
     def _cleanup_partial(job: Job) -> None:
@@ -282,10 +393,19 @@ class DownloadManager:
         ffmpeg_path = config.find_ffmpeg()
         has_ffmpeg = ffmpeg_path is not None
         job.status = "descargando"
+        logbus.bus.add(f"[expoal] Empezando: {job.url}", "info", job.id)
 
         def hook(d: dict) -> None:
             if job.cancel_event.is_set():
                 raise JobCancelled("cancelado por el usuario")
+            # Pausa: se espera DENTRO del hook, que es el único punto donde
+            # tenemos el control mientras yt-dlp descarga. El servidor puede
+            # cerrar la conexión si la pausa es larga, pero lo bajado se queda
+            # en el .part y yt-dlp continúa desde ahí al reanudar.
+            while job.pause_event.is_set():
+                if job.cancel_event.is_set():
+                    raise JobCancelled("cancelado por el usuario")
+                time.sleep(0.25)
             # Se apuntan los archivos en curso para poder limpiar al cancelar.
             if d.get("tmpfilename"):
                 job.current_tmp = d["tmpfilename"]
@@ -318,6 +438,10 @@ class DownloadManager:
             "no_warnings": True,
             "noprogress": True,
             "progress_hooks": [hook],
+            # Todo lo que yt-dlp diría por la consola va al panel de terminal de
+            # la interfaz. Con logger puesto, yt-dlp entrega los mensajes aunque
+            # quiet esté activo (ver logbus.YtdlpLogger).
+            "logger": logbus.YtdlpLogger(logbus.bus, job.id),
             # Cookies del navegador si el usuario eligió uno: es lo que
             # desbloquea privados, con edad restringida y los anti-bot.
             **settings.cookie_opts(),
@@ -389,6 +513,7 @@ class DownloadManager:
                 raise RuntimeError("Para editar el vídeo hace falta FFmpeg")
             job.status = "editando"
             job.progress = 100.0
+            logbus.bus.add("[expoal] Editando el vídeo con FFmpeg...", "info", job.id)
             apply_edits(
                 Path(job.file_path),
                 job.edits,
@@ -399,6 +524,7 @@ class DownloadManager:
 
         job.status = "completado"
         job.progress = 100.0
+        logbus.bus.add(f"[expoal] Listo: {job.file_path or job.title}", "ok", job.id)
         self._history.add(
             {
                 "url": job.url,
@@ -406,6 +532,13 @@ class DownloadManager:
                 "platform": info.get("extractor_key", ""),
                 "mode": job.mode,
                 "quality": job.quality,
+                # La carpeta y el formato se guardan para poder repetir la
+                # descarga tal cual desde el historial.
+                "folder": job.folder,
+                "out_format": job.out_format,
+                "sub_lang": job.sub_lang,
+                "sub_format": job.sub_format,
+                "status": "ok",
                 "file_path": job.file_path,
                 "downloaded_at": dt.datetime.now().isoformat(timespec="seconds"),
             }

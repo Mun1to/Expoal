@@ -23,6 +23,16 @@ _TK_SCRIPT = (
     "print(filedialog.askdirectory(title='Expoal: carpeta de destino') or '')\n"
 )
 
+_TK_FILE_SCRIPT = (
+    "import tkinter as tk\n"
+    "from tkinter import filedialog\n"
+    "root = tk.Tk()\n"
+    "root.withdraw()\n"
+    "root.attributes('-topmost', True)\n"
+    "print(filedialog.askopenfilename(title='Expoal: archivo de cookies',\n"
+    "      filetypes=[('Cookies', '*.txt'), ('Todos los archivos', '*.*')]) or '')\n"
+)
+
 
 def reveal_in_folder(path: str) -> None:
     """Abre el explorador del sistema con el archivo seleccionado.
@@ -40,13 +50,21 @@ def reveal_in_folder(path: str) -> None:
         subprocess.Popen(["xdg-open", str(Path(path).parent)], close_fds=True)
 
 
-def pick_folder() -> str | None:
+def _ask(webview_kind: str, script: str, file_types: tuple[str, ...] = ()) -> str | None:
+    """Abre el diálogo nativo por la vía que haya disponible.
+
+    Mismo camino para carpetas y archivos: primero la ventana de escritorio y,
+    si no la hay, el subproceso con tkinter.
+    """
     with _lock:
         try:
             import webview
 
             if webview.windows:
-                result = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
+                kwargs = {"file_types": file_types} if file_types else {}
+                result = webview.windows[0].create_file_dialog(
+                    getattr(webview, webview_kind), **kwargs
+                )
                 return result[0] if result else None
         except Exception:  # noqa: BLE001 - si el modo escritorio falla, probamos tkinter
             pass
@@ -56,12 +74,25 @@ def pick_folder() -> str | None:
 
         try:
             result = subprocess.run(
-                [sys.executable, "-c", _TK_SCRIPT],
+                [sys.executable, "-c", script],
                 capture_output=True,
                 text=True,
                 timeout=300,
             )
         except (OSError, subprocess.TimeoutExpired):
             return None
-        folder = (result.stdout or "").strip()
-        return folder or None
+        chosen = (result.stdout or "").strip()
+        return chosen or None
+
+
+def pick_folder() -> str | None:
+    return _ask("FOLDER_DIALOG", _TK_SCRIPT)
+
+
+def pick_file() -> str | None:
+    """Elige un archivo (hoy solo para el cookies.txt exportado del navegador)."""
+    return _ask(
+        "OPEN_DIALOG",
+        _TK_FILE_SCRIPT,
+        ("Cookies (*.txt)", "Todos los archivos (*.*)"),
+    )

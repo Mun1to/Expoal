@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, dialogs, engine, settings, subtitles, updater
+from . import __version__, config, dialogs, engine, logbus, settings, subtitles, updater, urls
 from .downloader import AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error
 from .editor import Edits
 from .history import History
@@ -46,6 +46,14 @@ class InfoRequest(BaseModel):
 
 class CookiesRequest(BaseModel):
     browser: str = ""
+
+
+class CookiesFileRequest(BaseModel):
+    path: str = ""
+
+
+class UrlsRequest(BaseModel):
+    text: str = ""
 
 
 class ArgsRequest(BaseModel):
@@ -109,11 +117,14 @@ def get_config() -> dict:
         "engine": engine.current_version(),
         "default_folder": str(config.DEFAULT_DOWNLOAD_DIR),
         "ffmpeg": config.ffmpeg_available(),
+        "aria2c": config.aria2c_available(),
         "cookies_browser": settings.cookies_browser(),
+        "cookies_file": settings.cookies_file(),
         "browsers": list(settings.BROWSERS),
         "extra_args": settings.extra_args(),
         "toggles": settings.toggles(),
         "toggles_need_ffmpeg": sorted(settings.TOGGLES_NEED_FFMPEG),
+        "toggles_need_aria2c": sorted(settings.TOGGLES_NEED_ARIA2C),
     }
 
 
@@ -134,7 +145,19 @@ def set_cookies(req: CookiesRequest) -> dict:
         name = settings.set_cookies_browser(req.browser)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {"cookies_browser": name}
+    # El archivo se descarta al elegir navegador: la interfaz necesita saberlo
+    # para no seguir enseñando una ruta que ya no se usa.
+    return {"cookies_browser": name, "cookies_file": settings.cookies_file()}
+
+
+@app.post("/api/settings/cookies-file")
+def set_cookies_file(req: CookiesFileRequest) -> dict:
+    """Guarda un archivo cookies.txt exportado. Cadena vacía lo quita."""
+    try:
+        path = settings.set_cookies_file(req.path)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"cookies_file": path, "cookies_browser": settings.cookies_browser()}
 
 
 @app.post("/api/settings/args")
@@ -348,9 +371,24 @@ def start_batch(req: BatchRequest) -> dict:
     return {"queued": len(queued)}
 
 
+@app.post("/api/urls/clean")
+def clean_url_list(req: UrlsRequest) -> dict:
+    """Ordena una lista de enlaces pegada a mano: quita basura y duplicados.
+
+    Se hace en el servidor (y no en el navegador) para que sea la MISMA limpieza
+    que se puede probar con tests y reutilizar desde cualquier sitio.
+    """
+    return urls.clean_urls(req.text)
+
+
 @app.post("/api/pick-folder")
 def pick_folder() -> dict:
     return {"folder": dialogs.pick_folder()}
+
+
+@app.post("/api/pick-file")
+def pick_file() -> dict:
+    return {"path": dialogs.pick_file()}
 
 
 @app.get("/api/update/check")
@@ -389,9 +427,39 @@ def list_jobs() -> list[dict]:
     return manager.snapshot()
 
 
+@app.post("/api/jobs/retry-failed")
+def retry_failed_jobs() -> dict:
+    """Reencola de una vez todo lo que falló: el caso de la lista larga."""
+    return {"retried": manager.retry_failed()}
+
+
 @app.post("/api/jobs/{job_id}/cancel")
 def cancel_job(job_id: str) -> dict:
     result = manager.cancel(job_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Trabajo no encontrado")
+    return result
+
+
+@app.post("/api/jobs/{job_id}/pause")
+def pause_job(job_id: str) -> dict:
+    result = manager.pause(job_id, True)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Trabajo no encontrado")
+    return result
+
+
+@app.post("/api/jobs/{job_id}/resume")
+def resume_job(job_id: str) -> dict:
+    result = manager.pause(job_id, False)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Trabajo no encontrado")
+    return result
+
+
+@app.post("/api/jobs/{job_id}/retry")
+def retry_job(job_id: str) -> dict:
+    result = manager.retry(job_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Trabajo no encontrado")
     return result
@@ -402,6 +470,22 @@ def clear_jobs() -> dict:
     return {"removed": manager.clear_finished()}
 
 
+@app.get("/api/log")
+def get_log(after: int = 0) -> dict:
+    """Lo que va diciendo el motor, para el panel de terminal de la interfaz.
+
+    Con cursor: el cliente manda por dónde iba y recibe solo lo nuevo, así el
+    sondeo es barato aunque el panel esté abierto todo el rato.
+    """
+    return logbus.bus.since(after)
+
+
+@app.delete("/api/log")
+def clear_log() -> dict:
+    logbus.bus.clear()
+    return {"ok": True}
+
+
 class OpenRequest(BaseModel):
     path: str
 
@@ -410,7 +494,7 @@ class OpenRequest(BaseModel):
 def open_folder(req: OpenRequest) -> dict:
     # Solo rutas que la propia app produjo (historial o trabajos terminados):
     # nunca una arbitraria, aunque la petición venga del propio equipo.
-    known = {e.get("file_path") for e in history.entries()}
+    known = {e.get("file_path") for e in history.entries() if e.get("file_path")}
     known |= {j["file_path"] for j in manager.snapshot() if j.get("file_path")}
     if req.path not in known:
         raise HTTPException(status_code=403, detail="Ruta no reconocida")

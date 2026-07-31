@@ -122,6 +122,9 @@ body {
   transition: background-color 0.18s, color 0.18s;
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+/* Encendido (hoy solo el panel de terminal): se ve que está activo sin tener
+   que abrir nada para comprobarlo. */
+.icon-btn.active { background: var(--surface-2); color: var(--primary-strong); }
 
 /* Botones pequeños dentro de las filas de la cola y el historial */
 .row-btn {
@@ -522,6 +525,7 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
 
 .list-section { margin-top: 30px; }
 .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.head-actions { display: flex; align-items: center; gap: 8px; }
 .list-section h3 {
   margin: 0 0 10px;
   font-size: 12px;
@@ -580,10 +584,45 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
 .history-head { display: flex; gap: 10px; align-items: baseline; }
 .history-head .badge { border-color: var(--accent); color: var(--accent); }
 .history-title { font-weight: 600; font-size: 14px; }
+/* Descarga que falló: se guarda para poder reintentarla, y se distingue de las
+   que salieron bien sin gritar (es un registro, no una alarma). */
+.history-item.err .badge { border-color: var(--error); color: var(--error); }
+.history-error { margin: 7px 0 0; font-size: 12.5px; color: var(--error); }
 .history-date { font-size: 11.5px; font-family: var(--mono); color: var(--muted); margin-left: auto; white-space: nowrap; }
 
 .error { color: var(--error); font-size: 14px; margin: 10px 0 0; }
 .hidden { display: none !important; }
+
+/* ---------- Terminal (lo que hace por detrás) ----------
+   Con pinta de consola a propósito: quien abre esto quiere ver la salida cruda
+   del motor, y disfrazarla de interfaz bonita la haría menos útil, no más. */
+.log-view {
+  margin: 0;
+  max-height: 300px;
+  overflow: auto;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  /* Las líneas largas (rutas, mensajes de yt-dlp) se parten en vez de forzar
+     scroll horizontal, que en un panel estrecho es incomodísimo. */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-view:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.log-view .t { opacity: 0.55; margin-right: 8px; }
+.log-view .l-info { color: var(--text); }
+.log-view .l-debug { opacity: 0.65; }
+.log-view .l-warn { color: var(--accent); }
+.log-view .l-error { color: var(--error); }
+.log-view .l-ok { color: var(--ok); }
+.log-empty { opacity: 0.6; }
+.log-follow { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.log-follow input { width: 14px; height: 14px; accent-color: var(--primary); cursor: pointer; }
 
 /* Entradas discretas a lo avanzado: peso visual mínimo para no ensuciar la
    pantalla de inicio, pero siempre a mano. */
@@ -627,6 +666,24 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
 .cookies-row.quiet .cookies-text strong { font-weight: 500; color: var(--muted); font-size: 13px; }
 .cookies-row.quiet .cookies-text span { display: none; }
 
+/* Archivo de cookies: ocupa toda la fila porque una ruta larga no cabe al lado
+   del desplegable. Se escribe a mano o se elige con el explorador, igual que la
+   carpeta de destino (si el diálogo nativo no está disponible, queda el campo). */
+.cookies-file { display: flex; gap: 8px; width: 100%; }
+.cookies-file input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 11px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--field);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+}
+.cookies-file input:focus { border-color: var(--primary-strong); box-shadow: var(--ring); }
+
 /* Opciones avanzadas: caja de texto con la misma pinta que las rutas de la app
    (monoespaciada), porque lo que se escribe aquí son flags, no prosa. */
 .args-row {
@@ -647,6 +704,17 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
   margin-bottom: 15px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border);
+}
+/* Título de grupo dentro de las casillas: ocupa la fila entera para que las de
+   velocidad no se lean como una variante de las de incrustar. */
+.toggles-group {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
 }
 .toggle { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
 .toggle input { flex: none; width: 15px; height: 15px; accent-color: var(--primary); cursor: pointer; }

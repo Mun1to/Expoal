@@ -19,6 +19,7 @@ import json
 import re
 import shlex
 import sys
+from pathlib import Path
 
 import yt_dlp
 
@@ -47,6 +48,13 @@ TOGGLES: dict[str, str] = {
     "embed_metadata": "--embed-metadata",
     "embed_chapters": "--embed-chapters",
     "embed_subs": "--embed-subs",
+    # Velocidad. YouTube y compañía sirven el vídeo troceado en fragmentos, y
+    # bajarlos de uno en uno desaprovecha la conexión. Esto es de yt-dlp, no
+    # necesita nada instalado, y es la mejora de velocidad más barata que hay.
+    "fast_fragments": "--concurrent-fragments 4",
+    # La ruta real la pone toggle_flags(): aria2c puede estar en el PATH o
+    # sencillamente al lado del .exe, y hay que decirle a yt-dlp cuál usar.
+    "aria2c": '--downloader aria2c --downloader-args "aria2c:-x 16 -s 16 -k 1M"',
 }
 
 # Las que recortan o reescriben el archivo necesitan FFmpeg sí o sí.
@@ -54,8 +62,12 @@ TOGGLES_NEED_FFMPEG: frozenset[str] = frozenset(
     {"sponsorblock", "embed_thumbnail", "embed_chapters", "embed_subs"}
 )
 
+# Y esta necesita un programa que Expoal no trae ni instala por su cuenta.
+TOGGLES_NEED_ARIA2C: frozenset[str] = frozenset({"aria2c"})
+
 _DEFAULTS: dict = {
     "cookies_browser": "",
+    "cookies_file": "",
     "extra_args": "",
     **{name: False for name in TOGGLES},
 }
@@ -88,12 +100,38 @@ def cookies_browser() -> str:
 
 
 def set_cookies_browser(name: str) -> str:
-    """Guarda el navegador elegido. Cadena vacía = no usar cookies."""
+    """Guarda el navegador elegido. Cadena vacía = no usar cookies.
+
+    Elegir navegador borra el archivo de cookies y al revés: son dos formas de
+    lo mismo, y tener las dos puestas dejaría al usuario sin saber cuál manda.
+    """
     name = str(name or "").lower()
     if name and name not in BROWSERS:
         raise ValueError(f"Navegador no soportado: {name}")
-    save({"cookies_browser": name})
+    save({"cookies_browser": name, "cookies_file": ""})
     return name
+
+
+def cookies_file() -> str:
+    return str(load().get("cookies_file") or "")
+
+
+def set_cookies_file(path: str) -> str:
+    """Guarda un archivo cookies.txt exportado del navegador.
+
+    POR QUÉ existe además de leer el navegador: Chrome y Edge en Windows cifran
+    sus cookies desde la versión 127 de una forma que yt-dlp no puede descifrar,
+    así que a quien use esos navegadores no le queda otra salida. Con una
+    extensión de las de "exportar cookies" saca un archivo y lo elige aquí.
+    """
+    path = str(path or "").strip()
+    if path:
+        if not Path(path).is_file():
+            raise ValueError("Ese archivo de cookies no existe")
+        save({"cookies_file": path, "cookies_browser": ""})
+    else:
+        save({"cookies_file": ""})
+    return path
 
 
 # Opciones de yt-dlp que NO se aceptan aunque las escriba el usuario. No es
@@ -200,6 +238,24 @@ def set_toggle(name: str, value: bool) -> bool:
     return bool(value)
 
 
+def toggle_flags(name: str) -> str:
+    """La cadena de flags de una casilla, resuelta para este equipo.
+
+    Todas son literales salvo aria2c: hay que decirle a yt-dlp DÓNDE está el
+    programa, porque puede estar en el PATH o simplemente al lado del .exe. Si
+    no aparece por ningún lado, la casilla no aporta flags: mejor bajar a
+    velocidad normal que reventar la descarga por un binario que ya no está.
+    """
+    if name == "aria2c":
+        path = config.find_aria2c()
+        if not path:
+            return ""
+        return f'--downloader {shlex.quote(path)} --downloader-args "aria2c:-x 16 -s 16 -k 1M"'
+    if name in TOGGLES_NEED_FFMPEG and not config.ffmpeg_available():
+        return ""
+    return TOGGLES.get(name, "")
+
+
 def user_args_line() -> str:
     """Todo lo que ha pedido el usuario, casillas y texto libre, en una sola línea.
 
@@ -208,11 +264,12 @@ def user_args_line() -> str:
     tradujeran por separado habría que reimplementar esa lógica a mano.
     El texto libre va al final: quien escribe flags manda sobre las casillas.
     """
-    marked = [flags for name, flags in TOGGLES.items() if toggles().get(name)]
+    marked_names = toggles()   # una sola lectura del archivo, no una por casilla
+    parts = [flags for name in TOGGLES if marked_names.get(name) and (flags := toggle_flags(name))]
     free = extra_args()
     if free:
-        marked.append(free)
-    return " ".join(marked)
+        parts.append(free)
+    return " ".join(parts)
 
 
 def user_opts() -> dict:
@@ -226,13 +283,21 @@ def user_opts() -> dict:
 
 
 def cookie_opts() -> dict:
-    """Fragmento de opciones para yt-dlp, vacío si no hay navegador elegido.
+    """Fragmento de opciones para yt-dlp, vacío si no hay cookies configuradas.
 
     La tupla de un solo elemento es la forma que espera yt-dlp
     (navegador, perfil, llavero, contenedor); los tres últimos van por defecto.
+    El archivo es la alternativa para quien no puede leer las del navegador.
     """
     name = cookies_browser()
-    return {"cookiesfrombrowser": (name,)} if name else {}
+    if name:
+        return {"cookiesfrombrowser": (name,)}
+    path = cookies_file()
+    # Si el archivo desapareció, mejor bajar sin cookies que fallar con un error
+    # sobre un archivo que el usuario eligió hace semanas y ya no recuerda.
+    if path and Path(path).is_file():
+        return {"cookiefile": path}
+    return {}
 
 
 # Señales de que lo que falla es la falta de sesión, no el vídeo ni la app. La
