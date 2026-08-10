@@ -230,6 +230,20 @@ Download only content you own, content licensed for it, or content you have perm
 Logo, colors and tone are documented in [docs/MARCA.md](docs/MARCA.md). Icons are generated from the
 source logo with `uv run python scripts/make_brand.py`.
 
+## 🔍 Don't trust it, check it
+
+Open source only helps if somebody actually reads the code, and almost nobody does. So
+instead of asking you to trust this project, here is the prompt to check it: point your own
+AI agent at this repository and get a security report, in your language, in a few minutes,
+even if you do not know how to program.
+
+**[Open AI-AUDIT.md](AI-AUDIT.md)** and paste it into Claude Code, Codex, Cursor, Copilot or
+whatever you use. It is the same prompt in every public repository here, so you can compare.
+
+> **ES:** No hace falta que te fíes. Abre [AI-AUDIT.md](AI-AUDIT.md), pega ese texto en tu IA
+> y te dirá en tu idioma qué hace este programa de verdad: qué envía por internet, qué toca
+> en tu ordenador y qué ejecuta al instalarse.
+
 ## License
 
 [MIT](LICENSE) © 2026 Munir Torres (Mun1to)
