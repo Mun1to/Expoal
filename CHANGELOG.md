@@ -3,6 +3,22 @@
 All notable changes to Expoal. Dates are release dates; versions follow
 [semantic versioning](https://semver.org/).
 
+## [2.3.1] — 2026-08-13
+
+### Fixed
+
+- **The cookies box stopped fighting you.** It reappeared every second and a half after a
+  failed download, could not be closed once a browser was picked, closed its own dropdown
+  while you were using it, and lost the row where you were typing the path to a
+  `cookies.txt` if you cancelled the file picker. It now has a close button, closes with
+  Escape, and once closed the link tells you which cookies are in use.
+- **The queue and the history are only redrawn when they change.** Rebuilding them on every
+  poll made the "that file is gone" warning on the folder button vanish before it could be
+  read, and dropped keyboard focus out of the row buttons.
+- A paused download no longer advertises the speed and time left it had before it stopped.
+- A video with no thumbnail no longer leaves a broken image in its place.
+- Subtitles are preselected in the language the app is set to, instead of always Spanish.
+
 ## [2.3.0] — 2026-07-31
 
 ### Added
