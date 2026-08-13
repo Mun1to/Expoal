@@ -222,6 +222,9 @@ const state = {
   log: { open: false, cursor: 0, count: 0 },
   // Último recuento de la lista de enlaces pegados, para poder retraducirlo.
   multi: null,
+  // Lo último que se pintó de la cola y del historial, para no reconstruirlos
+  // cuando el servidor devuelve exactamente lo mismo (ver refresh).
+  painted: { jobs: "", history: "" },
 };
 
 async function api(path, options) {
@@ -534,7 +537,13 @@ async function analyze(event) {
 
 function renderPreview() {
   const info = state.info;
-  $("#preview-thumb").src = info.thumbnail || "";
+  // Sin miniatura se esconde la imagen entera. Un src vacío no deja el hueco en
+  // blanco: el navegador lo resuelve como la propia página, se la pide como si
+  // fuera una imagen y acaba pintando el icono de imagen rota.
+  const thumb = $("#preview-thumb");
+  thumb.classList.toggle("hidden", !info.thumbnail);
+  if (info.thumbnail) thumb.src = info.thumbnail;
+  else thumb.removeAttribute("src");
   $("#preview-platform").textContent = info.platform || I18N.t("video");
   $("#preview-title").textContent = info.title || info.url;
   const parts = [];
@@ -1197,8 +1206,12 @@ function renderJob(job) {
   let statusText = I18N.t("status")[job.status] || job.status;
   if (job.status === "descargando") {
     statusText = job.paused ? `${I18N.t("paused")} · ${job.progress}%` : `${job.progress}%`;
-    if (job.speed) statusText += ` · ${job.speed}`;
-    if (job.eta) statusText += ` · ${job.eta}`;
+    // Pausado no se enseñan velocidad ni tiempo restante: son la última medida
+    // de antes de parar, y anunciar "3 MB/s" de algo que no se mueve es mentira.
+    if (!job.paused) {
+      if (job.speed) statusText += ` · ${job.speed}`;
+      if (job.eta) statusText += ` · ${job.eta}`;
+    }
   }
   status.textContent = statusText;
   head.append(title, status);
@@ -1355,8 +1368,17 @@ async function refresh() {
       api("/api/history"),
     ]);
 
+    // Reconstruir las listas solo cuando de verdad cambian. Hacerlo en cada
+    // ciclo (40 veces por minuto) borraba el aviso en rojo de "el archivo ya no
+    // está" antes de que diera tiempo a leerlo, y tiraba el foco del teclado de
+    // los botones de fila. Al cambiar de idioma se invalidan estas firmas a
+    // mano, porque los textos de estado los escribe este archivo.
     const queueList = $("#queue-list");
-    queueList.replaceChildren(...jobs.map(renderJob));
+    const jobsSig = JSON.stringify(jobs);
+    if (jobsSig !== state.painted.jobs) {
+      state.painted.jobs = jobsSig;
+      queueList.replaceChildren(...jobs.map(renderJob));
+    }
     $("#queue-section").classList.toggle("hidden", jobs.length === 0);
     // "Limpiar terminadas" solo cuando hay algo que limpiar, y "reintentar
     // fallidas" solo cuando hay fallos: en una lista de cuarenta vídeos es la
@@ -1368,7 +1390,11 @@ async function refresh() {
     $("#retry-failed").classList.toggle("hidden", !hasFailed);
 
     const historyList = $("#history-list");
-    historyList.replaceChildren(...historyEntries.map(renderHistoryItem));
+    const historySig = JSON.stringify(historyEntries);
+    if (historySig !== state.painted.history) {
+      state.painted.history = historySig;
+      historyList.replaceChildren(...historyEntries.map(renderHistoryItem));
+    }
     $("#history-section").classList.toggle("hidden", historyEntries.length === 0);
   } catch (_) {
     // El servidor puede estar arrancando; se reintenta en el siguiente ciclo.
@@ -1585,9 +1611,13 @@ async function init() {
   setupEdit();
 
   // Los textos que escribe este archivo no llevan data-en, así que al cambiar
-  // de idioma hay que repintar lo que ya esté en pantalla. La cola y el
-  // historial se arreglan solos en el siguiente refresh().
+  // de idioma hay que repintar lo que ya esté en pantalla.
   I18N.onChange(() => {
+    // La cola y el historial se repintan en el siguiente refresh(), pero solo
+    // si su firma cambió, y el idioma no la cambia: hay que invalidarla aquí o
+    // se quedarían en el idioma anterior hasta la siguiente descarga.
+    state.painted.jobs = "";
+    state.painted.history = "";
     // El bloque de cookies se repinta siempre (existe aunque no haya vídeo).
     // Las bases ya están guardadas en el idioma nuevo: saveCookieBases se
     // registró antes que este listener y los avisa I18N en orden.
