@@ -611,9 +611,13 @@ function renderSubtitleOptions() {
       select.appendChild(opt);
     }
     select.dataset.url = state.info?.url || "";
-    // Preseleccionamos español si existe; si no, el primero (propios van antes).
-    const es = tracks.find((t) => t.code === "es" || t.code.startsWith("es-"));
-    if (es) select.value = es.code;
+    // Se preselecciona el idioma en el que el usuario tiene la app, si el vídeo
+    // lo ofrece; si no, el primero de la lista (los propios van antes que los
+    // automáticos). Antes se preseleccionaba español siempre, así que quien
+    // usaba Expoal en inglés se llevaba los subtítulos en español sin pedirlo.
+    const lang = I18N.lang();
+    const own = tracks.find((t) => t.code === lang || t.code.startsWith(`${lang}-`));
+    if (own) select.value = own.code;
   }
 
   const isText = state.mode === "text";
