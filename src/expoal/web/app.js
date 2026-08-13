@@ -201,7 +201,15 @@ const state = {
   cookiesBrowser: "",
   cookiesFile: "",
   cookiesProblem: "",
-  cookiesOpen: false,
+  // null = decide la app (se abre si hay fallo o si ya hay cookies puestas);
+  // true/false = el usuario lo abrió o lo cerró a mano, y entonces manda él.
+  cookiesOpen: null,
+  // La fila del archivo se queda abierta aunque todavía no haya ruta guardada:
+  // si no, cancelar el explorador la cerraba y no había dónde escribirla.
+  cookiesFileRow: false,
+  // Trabajos fallidos que ya levantaron el aviso. Sin esto, la cola lo volvía a
+  // levantar en cada refresco (cada 1,5 s) y el bloque era imposible de cerrar.
+  cookiesSeen: [],
   // Opciones avanzadas de yt-dlp, tal cual las escribió el usuario.
   extraArgs: "",
   // Casillas de lo común (SponsorBlock, incrustar carátula...) y qué necesita
@@ -299,29 +307,40 @@ function renderCookies() {
   const select = $("#cookies-select");
   const chosen = state.cookiesBrowser || "";
   const file = state.cookiesFile || "";
-  // El desplegable se repuebla al cambiar de idioma ("Sin cookies" se traduce).
-  select.innerHTML = "";
-  const none = document.createElement("option");
-  none.value = "";
-  none.textContent = I18N.t("cookiesnone");
-  select.appendChild(none);
-  for (const b of state.browsers) {
-    const opt = document.createElement("option");
-    opt.value = b;
-    // Los nombres de navegador son marcas: se muestran con mayúscula inicial.
-    opt.textContent = b.charAt(0).toUpperCase() + b.slice(1);
-    select.appendChild(opt);
+  // El desplegable solo se reconstruye cuando cambia lo que lleva dentro: la
+  // lista de navegadores o el idioma ("Sin cookies" se traduce). Repoblarlo en
+  // cada repintado lo cerraba de golpe si el usuario lo tenía desplegado.
+  const sig = `${I18N.lang()}|${state.browsers.join(",")}`;
+  if (select.dataset.sig !== sig) {
+    select.dataset.sig = sig;
+    select.innerHTML = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = I18N.t("cookiesnone");
+    select.appendChild(none);
+    for (const b of state.browsers) {
+      const opt = document.createElement("option");
+      opt.value = b;
+      // Los nombres de navegador son marcas: se muestran con mayúscula inicial.
+      opt.textContent = b.charAt(0).toUpperCase() + b.slice(1);
+      select.appendChild(opt);
+    }
+    // El archivo es la última opción de la misma lista, no otro sitio: para el
+    // usuario es "de dónde saco las cookies", y el navegador o un archivo son
+    // dos respuestas a esa única pregunta.
+    const fileOpt = document.createElement("option");
+    fileOpt.value = "file";
+    fileOpt.textContent = I18N.t("cookiesfileopt");
+    select.appendChild(fileOpt);
   }
-  // El archivo es la última opción de la misma lista, no otro sitio: para el
-  // usuario es "de dónde saco las cookies", y el navegador o un archivo son
-  // dos respuestas a esa única pregunta.
-  const fileOpt = document.createElement("option");
-  fileOpt.value = "file";
-  fileOpt.textContent = I18N.t("cookiesfileopt");
-  select.appendChild(fileOpt);
-  select.value = file ? "file" : chosen;
 
-  $("#cookies-file-row").classList.toggle("hidden", !file);
+  // La fila del archivo sigue abierta mientras esa sea la opción elegida,
+  // aunque todavía no haya ruta: es donde se escribe a mano.
+  const fileRow = state.cookiesFileRow || Boolean(file);
+  // Si el usuario está encima del desplegable o del campo, no se le toca lo que
+  // tiene delante: repintar es cosa de la app, elegir es cosa suya.
+  if (document.activeElement !== select) select.value = fileRow ? "file" : chosen;
+  $("#cookies-file-row").classList.toggle("hidden", !fileRow);
   if (document.activeElement !== $("#cookies-file-input")) $("#cookies-file-input").value = file;
 
   const title = $("#cookies-title");
@@ -352,10 +371,33 @@ function renderCookies() {
   const problem = Boolean(state.cookiesProblem);
   row.classList.toggle("quiet", !problem);
   $("#cookies-retry").classList.toggle("hidden", !problem);
-  const open = problem || chosen || file || state.cookiesOpen;
+  // La app PROPONE abrirlo (hay un fallo que resolver, o cookies ya puestas),
+  // pero si el usuario lo abrió o lo cerró a mano gana su decisión: antes, con
+  // un navegador elegido o un fallo en pantalla, no había forma de salir de ahí.
+  const auto = problem || Boolean(chosen) || Boolean(file);
+  const open = state.cookiesOpen === null ? auto : state.cookiesOpen;
   row.classList.toggle("hidden", !open);
   // El enlace y el bloque son la misma cosa en dos estados: nunca los dos.
-  $("#cookies-toggle").classList.toggle("hidden", Boolean(open));
+  const toggle = $("#cookies-toggle");
+  toggle.classList.toggle("hidden", open);
+  // Cerrado y con cookies puestas, el enlace lo recuerda: si volviera a su
+  // pregunta se perdería la única señal de que están activas.
+  if (!open && (chosen || file)) {
+    toggle.textContent = file
+      ? I18N.t("cookiesfileactive")
+      : I18N.t("cookiesactive")(chosen.charAt(0).toUpperCase() + chosen.slice(1));
+  } else if (toggle.dataset.base) {
+    toggle.textContent = toggle.dataset.base;
+  }
+}
+
+/* Abrir y cerrar el bloque a mano. Un fallo nuevo vuelve a poner la decisión en
+   manos de la app (`null`), para que el aviso salga aunque se cerrara antes. */
+function openCookies(open) {
+  state.cookiesOpen = open;
+  renderCookies();
+  if (open) $("#cookies-select").focus();
+  else $("#cookies-toggle").focus();
 }
 
 function renderToggles() {
@@ -408,6 +450,9 @@ async function setCookiesBrowser(name) {
   const res = await post("/api/settings/cookies", { browser: name });
   state.cookiesBrowser = res.cookies_browser;
   state.cookiesFile = res.cookies_file || "";
+  // Elegir un navegador (o "Sin cookies") es responder a la misma pregunta: la
+  // fila del archivo sobra y se recoge.
+  state.cookiesFileRow = false;
   // Elegir navegador es el intento de arreglo: se limpia el problema para que
   // el bloque no siga en rojo antes de saber si ha funcionado.
   state.cookiesProblem = "";
@@ -418,6 +463,7 @@ async function setCookiesFile(path) {
   const res = await post("/api/settings/cookies-file", { path });
   state.cookiesFile = res.cookies_file || "";
   state.cookiesBrowser = res.cookies_browser || "";
+  state.cookiesFileRow = Boolean(state.cookiesFile);
   state.cookiesProblem = "";
   renderCookies();
 }
@@ -426,7 +472,10 @@ async function setCookiesFile(path) {
    está disponible (o el usuario lo cancela) se deja igualmente la fila abierta
    con el campo de texto, para poder pegar la ruta a mano. */
 async function chooseCookiesFile() {
-  $("#cookies-file-row").classList.remove("hidden");
+  // Por estado, no tocando el DOM a mano: si no, el siguiente repintado cerraba
+  // la fila y el usuario perdía el sitio donde estaba escribiendo la ruta.
+  state.cookiesFileRow = true;
+  renderCookies();
   let picked = null;
   try {
     const res = await api("/api/pick-file", { method: "POST" });
@@ -468,6 +517,9 @@ async function analyze(event) {
     // usuario con un mensaje que no sabe cómo resolver.
     if (err.cookie_error) state.cookiesProblem = "fail";
     else if (err.needs_cookies) state.cookiesProblem = "login";
+    // Un fallo nuevo devuelve la decisión a la app, para que el aviso salga
+    // aunque el usuario hubiera cerrado el bloque en el intento anterior.
+    if (state.cookiesProblem) state.cookiesOpen = null;
     // Cuando falla la lectura de cookies, el mensaje de yt-dlp es un volcado de
     // rutas del sistema: no aporta nada sobre lo que ya dice el bloque de abajo
     // en cristiano, y encima enseña la carpeta del usuario. Se calla.
@@ -1204,8 +1256,13 @@ function renderJob(job) {
     item.appendChild(err);
     // Si la descarga murió por falta de sesión, se levanta el bloque de cookies
     // arriba: el arreglo está ahí y si no, el usuario se queda sin salida.
-    if (job.needs_cookies && !state.cookiesProblem) {
+    // Una vez por trabajo, NO "mientras no haya problema": el trabajo fallido
+    // sigue en la cola, así que la segunda condición lo levantaba otra vez en
+    // cada refresco y el bloque revivía en cuanto lo cerrabas o elegías algo.
+    if (job.needs_cookies && !state.cookiesSeen.includes(job.id)) {
+      state.cookiesSeen.push(job.id);
       state.cookiesProblem = "login";
+      state.cookiesOpen = null;   // un fallo nuevo vuelve a proponer abrirlo
       renderCookies();
     }
   }
@@ -1418,10 +1475,21 @@ async function init() {
     document.body.style.display = "";
   });
 
-  // El texto largo de ayuda de las cookies vive en el HTML (con su data-en);
-  // se guarda antes de tocarlo para poder restaurarlo tras enseñar un fallo.
+  // Dos textos de las cookies viven en el HTML (con su data-en) y este archivo
+  // los pisa a ratos: la ayuda larga, para enseñar un fallo, y el enlace, para
+  // recordar qué cookies hay puestas. Hay que guardar el original para poder
+  // devolverlos. Se registra ANTES del primer await de init(): así el pintado
+  // inicial de I18N ya llama aquí y la base queda en el idioma que toca (init
+  // sigue corriendo después de ese pintado, y guardarla a mano antes dejaría la
+  // versión en español metida en la app en inglés).
   const cookiesHelp = $("#cookies-help");
-  cookiesHelp.dataset.base = cookiesHelp.textContent;
+  const cookiesToggle = $("#cookies-toggle");
+  const saveCookieBases = () => {
+    cookiesHelp.dataset.base = cookiesHelp.textContent;
+    cookiesToggle.dataset.base = cookiesToggle.textContent;
+  };
+  saveCookieBases();
+  I18N.onChange(saveCookieBases);
 
   try {
     const cfg = await api("/api/config");
@@ -1474,10 +1542,12 @@ async function init() {
     }
   });
   $("#cookies-retry").addEventListener("click", () => analyze());
-  $("#cookies-toggle").addEventListener("click", () => {
-    state.cookiesOpen = true;
-    renderCookies();
-    $("#cookies-select").focus();
+  $("#cookies-toggle").addEventListener("click", () => openCookies(true));
+  $("#cookies-close").addEventListener("click", () => openCookies(false));
+  // Escape cierra el bloque desde cualquier campo suyo: es lo que hace todo el
+  // mundo sin pensar cuando quiere salir de algo.
+  $("#cookies-row").addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); openCookies(false); }
   });
   $("#args-toggle").addEventListener("click", () => {
     $("#args-row").classList.toggle("hidden");
@@ -1519,9 +1589,8 @@ async function init() {
   // historial se arreglan solos en el siguiente refresh().
   I18N.onChange(() => {
     // El bloque de cookies se repinta siempre (existe aunque no haya vídeo).
-    // I18N ya ha devuelto la ayuda a su texto original en el idioma nuevo, así
-    // que este es el momento de volver a guardarla como base.
-    cookiesHelp.dataset.base = cookiesHelp.textContent;
+    // Las bases ya están guardadas en el idioma nuevo: saveCookieBases se
+    // registró antes que este listener y los avisa I18N en orden.
     renderCookies();
     // Los avisos de las casillas ("Requiere FFmpeg", "Necesita aria2c") van en
     // el title, que lo escribe este archivo: sin repintar aquí se quedaban en

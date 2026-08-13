@@ -197,6 +197,10 @@
                   data-en-aria="Browser to take the cookies from"></select>
           <button type="button" id="cookies-retry" class="btn primary small hidden"
                   data-en="Try again">Reintentar</button>
+          <!-- Salir del bloque sin tener que quitar las cookies ni acertar con
+               el vídeo: es un ajuste, no una trampa. También cierra con Escape. -->
+          <button type="button" id="cookies-close" class="icon-x"
+                  title="Cerrar" data-en-title="Close">&times;</button>
         </div>
         <!-- Salida para Chrome y Edge en Windows: desde la versión 127 cifran
              las cookies y yt-dlp no puede leerlas, así que quien use esos

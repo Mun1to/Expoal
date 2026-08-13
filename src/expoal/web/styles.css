@@ -660,6 +660,25 @@ select:focus, .folder-row input:focus { border-color: var(--primary-strong); box
 .cookies-text span { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
 .cookies-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 .cookies-row select { min-width: 130px; }
+/* Cerrar el bloque. Discreto porque no es la acción que se busca aquí, pero
+   siempre presente: sin él no había manera de salir una vez abierto. */
+.icon-x {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  padding: 0;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background-color 0.18s, color 0.18s;
+}
+.icon-x:hover { background: var(--surface-2, rgba(127, 127, 127, 0.12)); color: var(--text); }
 /* Cuando ya hay navegador elegido y no hay ningún fallo, el bloque baja de
    tono: es un ajuste activo, no un aviso que reclame atención. */
 .cookies-row.quiet { background: none; border-color: transparent; padding: 6px 0 0; }
