@@ -188,6 +188,99 @@ def test_el_fallo_se_guarda_en_el_historial(manager):
     assert entrada["mode"] == "video" and entrada["folder"] == "C:/tmp"
 
 
+# --- Aguantar los tropiezos de red ---
+
+@pytest.mark.parametrize("mensaje", [
+    "[download] Got error: The read operation timed out",
+    "unable to download video data: HTTP Error 403: Forbidden",
+    "Connection reset by peer",
+    "The remote end closed the connection",
+])
+def test_los_fallos_de_red_se_reintentan(mensaje):
+    assert downloader.looks_temporary(mensaje) is True
+
+
+@pytest.mark.parametrize("mensaje", [
+    "Video unavailable",
+    "This video is private",
+    "Sign in to confirm you're not a bot",       # falta sesión, no es la red
+    "Requested format is not available",
+])
+def test_lo_permanente_no_se_reintenta(mensaje):
+    assert downloader.looks_temporary(mensaje) is False
+
+
+class _FakeYdl:
+    """Sustituto de yt_dlp.YoutubeDL: falla las veces que se le diga."""
+
+    def __init__(self, resultados):
+        self.resultados = resultados
+
+    def __call__(self, opts):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def extract_info(self, url, download=True):
+        item = self.resultados.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+def _sin_esperas(manager, monkeypatch):
+    monkeypatch.setattr(DownloadManager, "_sleep_cancellable",
+                        staticmethod(lambda job, seconds: None))
+
+
+def test_un_corte_de_red_no_tumba_la_descarga(manager, monkeypatch):
+    # Lo que le pasaba a un vídeo de tres horas: un timeout suelto y a empezar.
+    fake = _FakeYdl([Exception("The read operation timed out"), {"title": "ok"}])
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", fake)
+    _sin_esperas(manager, monkeypatch)
+    job = _job(manager)
+    assert manager._extract_with_retries(job, {})["title"] == "ok"
+
+
+def test_se_rinde_despues_de_los_intentos(manager, monkeypatch):
+    fallos = [Exception("The read operation timed out")] * DownloadManager.ATTEMPTS
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", _FakeYdl(fallos))
+    _sin_esperas(manager, monkeypatch)
+    with pytest.raises(Exception, match="timed out"):
+        manager._extract_with_retries(_job(manager), {})
+
+
+def test_un_error_permanente_falla_a_la_primera(manager, monkeypatch):
+    fake = _FakeYdl([Exception("Video unavailable"), {"title": "no deberia llegar"}])
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", fake)
+    _sin_esperas(manager, monkeypatch)
+    with pytest.raises(Exception, match="Video unavailable"):
+        manager._extract_with_retries(_job(manager), {})
+    assert len(fake.resultados) == 1     # no se gastó el segundo intento
+
+
+def test_cancelar_manda_sobre_el_reintento(manager, monkeypatch):
+    fake = _FakeYdl([Exception("The read operation timed out"), {"title": "ok"}])
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", fake)
+    job = _job(manager)
+    job.cancel_event.set()
+    with pytest.raises(Exception, match="timed out"):
+        manager._extract_with_retries(job, {})
+
+
+def test_los_reintentos_de_yt_dlp_estan_puestos():
+    """Sin esto son CERO: los diez por defecto son de su línea de comandos."""
+    assert downloader._NET_OPTS["retries"] >= 10
+    assert downloader._NET_OPTS["fragment_retries"] >= 10
+    assert downloader._NET_OPTS["continuedl"] is True
+    # En trozos, para que un fallo cueste reintentar un trozo y no el vídeo.
+    assert downloader._NET_OPTS["http_chunk_size"] > 0
+
+
 def test_el_hook_espera_mientras_este_pausado():
     """El único punto donde la app tiene el control durante la descarga."""
     job = Job(id="x", url="u", mode="video", quality="best", folder="C:/tmp")

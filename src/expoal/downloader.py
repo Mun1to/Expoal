@@ -37,6 +37,57 @@ class JobCancelled(Exception):
 _PROTECTED_OPTS = ("progress_hooks", "quiet", "no_warnings", "noprogress", "logger")
 
 
+# Reintentos de red. GOTCHA GORDO: los "10 reintentos por defecto" que todo el
+# mundo conoce son de la LÍNEA DE COMANDOS de yt-dlp (viven en su options.py).
+# Usándolo como librería, que es lo que hace Expoal, esos valores no existen:
+# RetryManager recibe None y lo convierte en CERO. Resultado, un corte de un
+# segundo o un "read operation timed out" tumbaba entera la descarga de un vídeo
+# de tres horas. Se ponen a mano los mismos números que usa el comando.
+#
+# http_chunk_size va de la mano: pedir el archivo en trozos de 10 MB convierte
+# una descarga larguísima en muchas cortas, así que un fallo cuesta reintentar
+# un trozo y no el vídeo entero. Es lo que evita los 403 a mitad de camino,
+# porque cada trozo pide su rango con la sesión ya establecida.
+_NET_OPTS = {
+    "retries": 10,
+    "fragment_retries": 10,
+    "file_access_retries": 3,
+    "extractor_retries": 3,
+    "socket_timeout": 30,
+    "continuedl": True,          # reanudar el .part en vez de empezar de cero
+    "http_chunk_size": 10 * 1024 * 1024,
+    # Esperar entre reintentos, subiendo pero con tope: sin esto los diez
+    # reintentos se gastan de golpe en un segundo y no le dan tiempo a la red a
+    # recuperarse. El tope es bajo a propósito, porque yt-dlp duerme sin mirar
+    # nuestro evento de cancelar y no queremos el botón muerto medio minuto.
+    "retry_sleep_functions": {
+        "http": lambda n: min(2 ** n, 5),
+        "fragment": lambda n: min(2 ** n, 5),
+        "extractor": lambda n: min(2 ** n, 5),
+        "file_access": lambda n: 1,
+    },
+}
+
+# Fallos que merecen otro intento entero (volviendo a pedir la información del
+# vídeo). Los reintentos internos de yt-dlp reusan la MISMA url firmada, y
+# cuando esa url ha caducado siguen dando 403 hasta agotarse: la única salida es
+# extraer de nuevo. Lo permanente (privado, borrado, sin sesión) no se reintenta.
+_TEMPORARY_HINTS = (
+    "timed out", "timeout", "read operation",
+    "403", "connection", "connreset", "reset by peer", "remote end closed",
+    "unable to download video data", "content too short", "incomplete",
+    "temporary failure", "handshake", "network is unreachable",
+)
+
+
+def looks_temporary(msg: str) -> bool:
+    """¿El fallo tiene pinta de ser de red y de arreglarse solo al reintentar?"""
+    low = msg.lower()
+    if settings.looks_like_login_error(msg):
+        return False   # falta sesión: reintentar mil veces no la va a crear
+    return any(hint in low for hint in _TEMPORARY_HINTS)
+
+
 def _apply_extra_opts(opts: dict) -> None:
     """Mezcla las opciones avanzadas del usuario sobre las de la app, en el sitio.
 
@@ -387,6 +438,50 @@ class DownloadManager:
                 except OSError:
                     pass  # un resto bloqueado no debe tumbar el worker
 
+    # Intentos completos (con extracción nueva) ante un fallo de red. Tres es el
+    # equilibrio: cubre el corte puntual y la url caducada sin dejar a alguien
+    # media hora mirando un vídeo que no va a bajar nunca.
+    ATTEMPTS = 3
+
+    @staticmethod
+    def _sleep_cancellable(job: Job, seconds: float) -> None:
+        """Espera a trocitos mirando la cancelación, para que el botón responda ya."""
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            if job.cancel_event.is_set():
+                raise JobCancelled("cancelado por el usuario")
+            time.sleep(0.2)
+
+    def _extract_with_retries(self, job: Job, opts: dict) -> dict:
+        """Descarga, y si la red falla vuelve a intentarlo pidiendo la info de nuevo.
+
+        La extracción se repite entera a propósito: las direcciones que sirven el
+        vídeo van firmadas y caducan, así que insistir sobre la vieja solo da más
+        403. Lo ya bajado no se pierde, porque continuedl reanuda el .part.
+        """
+        for attempt in range(1, self.ATTEMPTS + 1):
+            try:
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    return ydl.extract_info(job.url, download=True)
+            except Exception as exc:  # noqa: BLE001 - se decide por el mensaje
+                if job.cancel_event.is_set():
+                    raise
+                msg = clean_error(exc)
+                if attempt >= self.ATTEMPTS or not looks_temporary(msg):
+                    raise
+                logbus.bus.add(
+                    f"[expoal] Network trouble ({msg}). "
+                    f"Retrying {attempt + 1}/{self.ATTEMPTS}...",
+                    "warn",
+                    job.id,
+                )
+                # El hook pudo dejarlo en "procesando" antes de romperse.
+                job.status = "descargando"
+                job.speed = ""
+                job.eta = ""
+                self._sleep_cancellable(job, min(3 * attempt, 10))
+        raise RuntimeError("No se pudo descargar el vídeo")   # inalcanzable
+
     def _download(self, job: Job) -> None:
         folder = Path(job.folder).expanduser()
         folder.mkdir(parents=True, exist_ok=True)
@@ -442,6 +537,8 @@ class DownloadManager:
             # la interfaz. Con logger puesto, yt-dlp entrega los mensajes aunque
             # quiet esté activo (ver logbus.YtdlpLogger).
             "logger": logbus.YtdlpLogger(logbus.bus, job.id),
+            # Aguantar los tropiezos de red en vez de rendirse al primero.
+            **_NET_OPTS,
             # Cookies del navegador si el usuario eligió uno: es lo que
             # desbloquea privados, con edad restringida y los anti-bot.
             **settings.cookie_opts(),
@@ -485,8 +582,7 @@ class DownloadManager:
 
         _apply_extra_opts(opts)
 
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(job.url, download=True)
+        info = self._extract_with_retries(job, opts)
 
         job.title = job.title or info.get("title") or job.url
         job.file_path = _final_path(info)
