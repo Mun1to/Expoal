@@ -795,7 +795,7 @@ class DownloadManager:
                 trim_start=max(0.0, edits.trim_start - offset) if edits.trim_start else None,
                 trim_end=max(0.0, edits.trim_end - offset) if edits.trim_end else None,
             )
-        if job.mode == "video" and edits and edits.has_any and job.file_path:
+        if job.mode in ("video", "audio") and edits and edits.has_any and job.file_path:
             if not has_ffmpeg:
                 raise RuntimeError("Para editar el vídeo hace falta FFmpeg")
             job.status = "editando"

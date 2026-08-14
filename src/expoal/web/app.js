@@ -48,6 +48,7 @@ const I18N = (function () {
       cookiesfileactive: "Usando un archivo de cookies",
       cookiesfilebad: "Ese archivo de cookies no existe",
       edges: "bordes", noaudio: "sin audio",
+      editvideo: "Editar vídeo", editaudio: "Recortar audio",
       pause: "Pausar la descarga", resume: "Reanudar la descarga",
       retry: "Reintentar", paused: "Pausada",
       logempty: "Todavía no hay nada. Analiza o descarga algo y aquí verás, paso a paso, lo que hace el motor.",
@@ -107,6 +108,7 @@ const I18N = (function () {
       cookiesfileactive: "Using a cookies file",
       cookiesfilebad: "That cookies file does not exist",
       edges: "edges", noaudio: "no audio",
+      editvideo: "Edit video", editaudio: "Trim audio",
       pause: "Pause the download", resume: "Resume the download",
       retry: "Try again", paused: "Paused",
       logempty: "Nothing yet. Analyze or download something and you will see, step by step, what the engine does.",
@@ -652,8 +654,11 @@ function cropValues() {
 
 function collectEdits() {
   const { start, end, duration } = state.edit;
-  const crop = cropValues();
-  const mute = $("#mute-check").checked;
+  // En audio solo hay recorte de duración: los bordes y el "quitar el sonido"
+  // no pintan nada ahí, y mandarlos daría un MP3 vacío.
+  const soloAudio = state.mode === "audio";
+  const crop = soloAudio ? { top: 0, bottom: 0, left: 0, right: 0 } : cropValues();
+  const mute = !soloAudio && $("#mute-check").checked;
   const trimmed = duration > 0 && (start > 0 || end < duration);
   const cropped = crop.top || crop.bottom || crop.left || crop.right;
   if (!trimmed && !cropped && !mute) return null;
@@ -849,12 +854,24 @@ function resetEdit() {
   } else {
     preview.classList.add("hidden");
   }
-  // La edición solo aplica a vídeo, y necesita FFmpeg.
-  const usable = state.mode === "video" && duration > 0 && state.ffmpeg;
-  $("#edit-section").classList.toggle("hidden", !usable);
+  renderEditMode();
   $("#edit-body").classList.add("hidden");
   $("#edit-toggle").setAttribute("aria-expanded", "false");
   renderEdit();
+}
+
+/* Qué partes del editor tienen sentido con el modo actual. Recortar la duración
+   vale también para el audio (quedarse con un minuto de una entrevista de tres
+   horas es tan normal en MP3 como en vídeo); lo que no aplica es lo que toca la
+   imagen (los bordes) ni quitarle el sonido a un sonido. */
+function renderEditMode() {
+  const duration = Number(state.info?.duration) || 0;
+  const usable = state.mode !== "text" && duration > 0 && state.ffmpeg;
+  $("#edit-section").classList.toggle("hidden", !usable);
+  const soloAudio = state.mode === "audio";
+  $("#crop-block").classList.toggle("hidden", soloAudio);
+  $("#mute-row").classList.toggle("hidden", soloAudio);
+  $("#edit-label").textContent = soloAudio ? I18N.t("editaudio") : I18N.t("editvideo");
 }
 
 /* ============================================================================
@@ -1052,7 +1069,7 @@ async function download() {
       quality: $("#quality-select").value,
       folder: $("#folder-input").value,
       title: state.info.title,
-      edits: state.mode === "video" ? collectEdits() : null,
+      edits: state.mode === "text" ? null : collectEdits(),
       subs: state.mode === "video" && $("#subs-check").checked,
       sub_lang: $("#sub-lang-select").value || "",
       sub_format: state.subFormat,

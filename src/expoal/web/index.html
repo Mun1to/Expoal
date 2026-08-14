@@ -266,7 +266,7 @@
                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M14.5 4l5.5 5.5M3 21l4-1 11-11a2.5 2.5 0 0 0-3.5-3.5L3.5 16.5 3 21z"/>
           </svg>
-          <span data-en="Edit video">Editar vídeo</span>
+          <span id="edit-label" data-en="Edit video">Editar vídeo</span>
           <span class="edit-summary" id="edit-summary">sin cambios</span>
           <svg class="chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -294,7 +294,7 @@
             </div>
           </div>
 
-          <div class="edit-block">
+          <div class="edit-block" id="crop-block">
             <label><span data-en="Crop edges">Recortar bordes</span> <span class="hint" id="crop-hint"></span></label>
             <div class="crop-layout">
               <figure class="crop-preview" id="crop-preview">
@@ -327,7 +327,7 @@
             </div>
           </div>
 
-          <label class="check">
+          <label class="check" id="mute-row">
             <input type="checkbox" id="mute-check">
             <span data-en="Remove the audio (silent video)">Quitar el audio (vídeo mudo)</span>
           </label>

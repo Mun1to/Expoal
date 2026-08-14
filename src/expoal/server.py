@@ -264,6 +264,26 @@ def video_info(req: InfoRequest) -> dict:
     }
 
 
+def edits_for(mode: str, e: "EditRequest") -> Edits:
+    """Las ediciones que tienen sentido en ese modo.
+
+    En audio solo se recorta la duración: recortar bordes no tiene imagen que
+    recortar, y quitarle el sonido a un sonido deja el archivo vacío. Se ignoran
+    en vez de rechazar la petición, porque no son un error de quien la manda
+    sino algo que la interfaz ni siquiera enseña en ese modo.
+    """
+    solo_audio = mode == "audio"
+    return Edits(
+        trim_start=e.trim_start,
+        trim_end=e.trim_end,
+        crop_top=0 if solo_audio else max(0, e.crop_top),
+        crop_bottom=0 if solo_audio else max(0, e.crop_bottom),
+        crop_left=0 if solo_audio else max(0, e.crop_left),
+        crop_right=0 if solo_audio else max(0, e.crop_right),
+        mute=False if solo_audio else e.mute,
+    )
+
+
 @app.post("/api/download")
 def start_download(req: DownloadRequest) -> dict:
     url = _validate_url(req.url)
@@ -277,17 +297,8 @@ def start_download(req: DownloadRequest) -> dict:
             detail="Para extraer MP3 hace falta FFmpeg (winget install Gyan.FFmpeg)",
         )
     edits = None
-    if req.mode == "video" and req.edits:
-        e = req.edits
-        edits = Edits(
-            trim_start=e.trim_start,
-            trim_end=e.trim_end,
-            crop_top=max(0, e.crop_top),
-            crop_bottom=max(0, e.crop_bottom),
-            crop_left=max(0, e.crop_left),
-            crop_right=max(0, e.crop_right),
-            mute=e.mute,
-        )
+    if req.mode in ("video", "audio") and req.edits:
+        edits = edits_for(req.mode, req.edits)
         if edits.has_any and not config.ffmpeg_available():
             raise HTTPException(
                 status_code=422,
