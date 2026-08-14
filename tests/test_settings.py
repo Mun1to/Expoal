@@ -208,6 +208,14 @@ def test_solo_se_estrena_una_vez():
     assert settings.load()["fast_fragments"] is False
 
 
+def test_se_sabe_como_viene_cada_casilla_de_fabrica():
+    # La interfaz lo usa para no abrir el panel de opciones por una casilla que
+    # viene marcada de serie: si lo abriera, la pantalla dejaría de nacer simple.
+    assert settings.default_of("fast_fragments") is True
+    assert settings.default_of("sponsorblock") is False
+    assert settings.default_of("no existe") is False
+
+
 def test_estrenar_no_toca_lo_que_reescribe_el_archivo():
     settings.upgrade_defaults()
     for name in settings.TOGGLES:

@@ -101,6 +101,11 @@ def load() -> dict:
     return data
 
 
+def default_of(name: str) -> bool:
+    """Cómo viene esa casilla de fábrica."""
+    return bool(_DEFAULTS.get(name, False))
+
+
 def upgrade_defaults() -> None:
     """Estrena los valores nuevos en una instalación que ya existía.
 

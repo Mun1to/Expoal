@@ -1560,11 +1560,17 @@ async function init() {
     state.toggles = cfg.toggles || {};
     state.togglesNeedFfmpeg = cfg.toggles_need_ffmpeg || [];
     state.togglesNeedAria2c = cfg.toggles_need_aria2c || [];
+    state.togglesDefault = cfg.toggles_default || {};
     $("#args-input").value = state.extraArgs;
     renderToggles();
-    // Si ya hay algo puesto, el panel se abre solo: son ajustes invisibles que
-    // afectan a todas las descargas, así que esconderlos confundiría.
-    if (state.extraArgs || Object.values(state.toggles).some(Boolean)) {
+    // Si el usuario ya ha puesto algo, el panel se abre solo: son ajustes
+    // invisibles que afectan a todas las descargas, así que esconderlos
+    // confundiría. Lo que viene de fábrica NO cuenta: si contara, marcar una
+    // casilla de serie abriría este panel a todo el mundo y la pantalla más
+    // simple de la app dejaría de nacer simple.
+    const tocado = Object.entries(state.toggles)
+      .some(([name, on]) => Boolean(on) !== Boolean(state.togglesDefault[name]));
+    if (state.extraArgs || tocado) {
       $("#args-row").classList.remove("hidden");
     }
     renderCookies();

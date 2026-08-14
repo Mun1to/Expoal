@@ -123,6 +123,11 @@ def get_config() -> dict:
         "browsers": list(settings.BROWSERS),
         "extra_args": settings.extra_args(),
         "toggles": settings.toggles(),
+        # Cómo vienen de fábrica. La interfaz lo necesita para saber si el
+        # usuario ha cambiado algo: el panel de opciones se abre solo cuando hay
+        # algo puesto, y una casilla que viene marcada de serie no cuenta como
+        # "puesto por alguien" (si contara, la pantalla ya no nacería simple).
+        "toggles_default": {name: settings.default_of(name) for name in settings.TOGGLES},
         "toggles_need_ffmpeg": sorted(settings.TOGGLES_NEED_FFMPEG),
         "toggles_need_aria2c": sorted(settings.TOGGLES_NEED_ARIA2C),
     }
