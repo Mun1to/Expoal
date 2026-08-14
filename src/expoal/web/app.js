@@ -537,7 +537,11 @@ async function analyze(event) {
   }
 }
 
-function renderPreview() {
+/* `keepEdit` lo usa el cambio de idioma: repintar para traducir no puede
+   deshacer lo que el usuario lleve hecho. Sin él, cambiar de idioma con un
+   recorte puesto lo borraba y cerraba el editor en la cara. Al analizar un
+   vídeo nuevo sí se empieza de cero, que es lo que se espera. */
+function renderPreview(keepEdit = false) {
   const info = state.info;
   // Sin miniatura se esconde la imagen entera. Un src vacío no deja el hueco en
   // blanco: el navegador lo resuelve como la propia página, se la pide como si
@@ -555,7 +559,9 @@ function renderPreview() {
   renderQualityOptions();
   renderOutFormats();
   renderSubtitleOptions();
-  resetEdit();
+  if (!keepEdit) resetEdit();
+  renderEditMode();          // traducir y enseñar lo que toque, se resetee o no
+  renderEdit();
   $("#preview").classList.remove("hidden");
 }
 
@@ -855,6 +861,9 @@ function resetEdit() {
     preview.classList.add("hidden");
   }
   renderEditMode();
+  // Un vídeo nuevo empieza con el editor plegado: lo que se editó del anterior
+  // ya no vale. Al cambiar de idioma no se pasa por aquí, y así no se cierra en
+  // la cara de quien lo tiene abierto.
   $("#edit-body").classList.add("hidden");
   $("#edit-toggle").setAttribute("aria-expanded", "false");
   renderEdit();
@@ -1681,7 +1690,7 @@ async function init() {
     // cambiar de idioma el vídeo es el mismo, así que hay que invalidarlo a
     // mano o el "(automático)" se quedaría en el idioma anterior.
     $("#sub-lang-select").dataset.url = "";
-    renderPreview();
+    renderPreview(true);        // traducir, sin deshacer lo que lleve editado
     renderSubtitleOptions();
     renderEdit();
   });
