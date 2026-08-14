@@ -3,6 +3,25 @@
 All notable changes to Expoal. Dates are release dates; versions follow
 [semantic versioning](https://semver.org/).
 
+## [2.4.0] — 2026-08-14
+
+### Added
+
+- **Trimming downloads only the part you asked for.** Cutting one minute out of a three-hour
+  video used to download all three hours first. Expoal now reads the fragment table that
+  streaming video carries, works out which bytes hold those minutes, and asks for those alone:
+  measured on a real video, 4% of the file and three seconds against thirteen minutes. Where the
+  site does not allow it, the whole video is downloaded and trimmed afterwards, as before, and
+  the result is identical either way.
+
+### Fixed
+
+- **A hiccup in the connection no longer kills the download.** The ten retries yt-dlp is known
+  for are its command line's defaults; used as a library it was doing none, so a single timeout
+  or an expired link threw away a download that was nearly finished. Files are now fetched in
+  chunks, so a failure costs one chunk, and a network error retries the job with fresh links,
+  keeping what had already been downloaded.
+
 ## [2.3.1] — 2026-08-13
 
 ### Fixed
@@ -109,6 +128,8 @@ All notable changes to Expoal. Dates are release dates; versions follow
 - First public release: paste a link, pick quality and folder, watch the queue, keep a history.
   Windows installer, MIT license and landing page.
 
+[2.4.0]: https://github.com/Mun1to/Expoal/releases/tag/v2.4.0
+[2.3.1]: https://github.com/Mun1to/Expoal/releases/tag/v2.3.1
 [2.3.0]: https://github.com/Mun1to/Expoal/releases/tag/v2.3.0
 [2.2.0]: https://github.com/Mun1to/Expoal/releases/tag/v2.2.0
 [2.1.0]: https://github.com/Mun1to/Expoal/releases/tag/v2.1.0

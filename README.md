@@ -44,6 +44,11 @@ Trim the length with the slider or exact timecodes, crop the edges by pixels, st
 track. This is the part no other downloader gives you: the file arrives the way you wanted it,
 without opening a video editor afterwards.
 
+And trimming actually downloads less. Ask for one minute out of a three-hour video and Expoal
+works out which bytes hold that minute and asks the server for those alone: measured at 4% of
+the file and three seconds, against thirteen minutes for the whole thing. Where a site does not
+allow it, the video is downloaded in full and trimmed afterwards, exactly as before.
+
 <div align="center">
 <img src="assets/screenshot-editor-dark-en.png" width="740" alt="Expoal's editor: a duration slider, pixel crop fields for all four edges with a live preview, and a checkbox to remove the audio">
 </div>
