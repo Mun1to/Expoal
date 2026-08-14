@@ -161,6 +161,38 @@ def fake_log(route, request):
     )
 
 
+# El análisis se sirve igual que la cola y el historial, y por el mismo motivo:
+# que generar las capturas no dependa de la red ni de que YouTube esté de buenas
+# (su comprobación anti-bot bloquea a quien pide mucho, y entonces el script se
+# quedaba sin poder capturar nada). Los datos son los del vídeo de verdad, que
+# es libre y está en la lista de los que se pueden enseñar.
+INFO = {
+    "type": "video",
+    "url": VIDEO,
+    "title": "Big Buck Bunny 60fps 4K - Official Blender Foundation Short Film",
+    "uploader": "Blender Foundation",
+    "thumbnail": "https://i.ytimg.com/vi/aqz-KE-bpKQ/maxresdefault.jpg",
+    "duration": 635,
+    "platform": "Youtube",
+    "heights": [2160, 1440, 1080, 720, 480, 360],
+    "width": 3840,
+    "height": 2160,
+    "ffmpeg": True,
+    "subtitles": [
+        {"code": "en", "name": "English"},
+        {"code": "es", "name": "Spanish"},
+        {"code": "fr", "name": "French"},
+        {"code": "de", "name": "German"},
+    ],
+    "video_formats": ["mkv", "mov", "mp4", "webm"],
+    "audio_formats": ["flac", "m4a", "mp3", "opus", "wav"],
+}
+
+
+def fake_info(route) -> None:
+    route.fulfill(status=200, content_type="application/json", body=json.dumps(INFO))
+
+
 def _open_and_analyze(page, theme: str, lang: str) -> None:
     """Deja la app con un vídeo ya analizado: el punto de partida de dos capturas."""
     page.goto(URL, wait_until="networkidle")
@@ -282,6 +314,7 @@ def main() -> None:
         page = browser.new_page(
             viewport={"width": 1080, "height": 810}, device_scale_factor=2
         )
+        page.route("**/api/info", fake_info)
         page.route("**/api/history", fake_history)
         page.route("**/api/jobs", fake_jobs)
         page.route("**/api/log*", fake_log)
