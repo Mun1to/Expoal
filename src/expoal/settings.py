@@ -65,6 +65,13 @@ TOGGLES_NEED_FFMPEG: frozenset[str] = frozenset(
 # Y esta necesita un programa que Expoal no trae ni instala por su cuenta.
 TOGGLES_NEED_ARIA2C: frozenset[str] = frozenset({"aria2c"})
 
+# Las que solo tocan la VELOCIDAD y dejan el archivo igual. La distinción
+# importa para el recorte en origen (clipper.py): ese camino se salta los
+# postprocesadores de yt-dlp, así que solo vale cuando nadie ha pedido nada que
+# reescriba el archivo. Que alguien tenga marcada la descarga rápida no puede
+# costarle el atajo.
+TOGGLES_SPEED_ONLY: frozenset[str] = frozenset({"fast_fragments", "aria2c"})
+
 _DEFAULTS: dict = {
     "cookies_browser": "",
     "cookies_file": "",
@@ -270,6 +277,19 @@ def user_args_line() -> str:
     if free:
         parts.append(free)
     return " ".join(parts)
+
+
+def rewrites_the_file() -> bool:
+    """¿Ha pedido el usuario algo que reescriba el archivo ya descargado?
+
+    Lo mira el recorte en origen antes de coger su atajo: ese camino descarga
+    los bytes a mano y no pasa por los postprocesadores de yt-dlp, así que con
+    cualquiera de estas puestas hay que ir por el camino de siempre.
+    """
+    marked = toggles()
+    if any(marked.get(name) for name in TOGGLES if name not in TOGGLES_SPEED_ONLY):
+        return True
+    return bool(extra_args())
 
 
 def user_opts() -> dict:

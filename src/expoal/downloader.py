@@ -3,15 +3,16 @@ from __future__ import annotations
 
 import datetime as dt
 import queue
+import subprocess
 import threading
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yt_dlp
 
-from . import config, logbus, settings, subtitles
+from . import clipper, config, logbus, settings, subtitles
 from .editor import Edits, apply as apply_edits
 from .history import History
 
@@ -159,6 +160,19 @@ def _fmt_eta(eta: float | None) -> str:
     if eta >= 60:
         return f"{eta // 60}m {eta % 60}s"
     return f"{eta}s"
+
+
+# Dónde se apunta, dentro del info de yt-dlp, el segundo en el que empieza el
+# trozo descargado. Con guion bajo para no chocar nunca con un campo suyo.
+_CLIP_START = "_expoal_clip_start"
+
+
+def _fmt_span(start: float, end: float | None) -> str:
+    """El tramo en minutos y segundos, para contarlo en el panel de terminal."""
+    def hhmmss(value: float) -> str:
+        value = int(value)
+        return f"{value // 60}:{value % 60:02d}"
+    return f"{hhmmss(start)}-{hhmmss(end)}" if end is not None else f"from {hhmmss(start)}"
 
 
 def _find_subtitle(info: dict, folder: Path) -> Path | None:
@@ -438,6 +452,141 @@ class DownloadManager:
                 except OSError:
                     pass  # un resto bloqueado no debe tumbar el worker
 
+    @staticmethod
+    def _can_clip_at_source(job: Job, opts: dict) -> bool:
+        """¿Se puede bajar solo el tramo, en vez del vídeo entero?
+
+        El camino rápido se salta la maquinaria de yt-dlp (postprocesadores,
+        subtítulos, remux), así que solo se coge cuando no hay nada de eso en
+        juego. En cuanto entra algo que no sabemos hacer por aquí, se descarta y
+        manda el camino de siempre, que lo hace todo bien.
+        """
+        if job.mode != "video" or not job.edits or not job.edits.has_trim:
+            return False
+        if job.subs or opts.get("skip_download"):
+            return False
+        if settings.rewrites_the_file():
+            return False              # sus opciones se aplican en el camino normal
+        if job.out_format == "webm":
+            return False              # obliga a recodificar: no ahorraría nada
+        return True
+
+    def _clip_at_source(self, job: Job, opts: dict, ffmpeg_path: str) -> dict | None:
+        """Baja SOLO el tramo pedido y lo deja listo. None si no se ha podido.
+
+        Ver clipper.py para el porqué. Aquí se junta lo que hace falta: las
+        direcciones reales de vídeo y audio, el índice de cada una, la descarga
+        de esos bytes y la fusión con FFmpeg. Cualquier tropiezo devuelve None
+        sin tocar nada, y el trabajo sigue por el camino normal.
+        """
+        edits = job.edits
+        start = edits.trim_start or 0.0
+        end = edits.trim_end
+        probe_opts = {k: v for k, v in opts.items() if k != "progress_hooks"}
+
+        with yt_dlp.YoutubeDL(probe_opts) as ydl:
+            info = ydl.extract_info(job.url, download=False)
+            if info.get("_type") == "playlist":
+                return None
+            formats = info.get("requested_formats") or [info]
+            if len(formats) > 2 or any(
+                f.get("protocol") != "https" or not f.get("url") for f in formats
+            ):
+                return None
+
+            plans = []
+            for fmt in formats:
+                found = clipper.read_index(fmt["url"], fmt.get("http_headers") or {})
+                if found is None:
+                    return None                       # sin índice no hay atajo
+                plans.append((fmt, found))
+
+            base = Path(ydl.prepare_filename(info))
+
+        try:
+            total = sum(clipper.clip_size(index, start, end) for _, (index, _) in plans)
+        except ValueError:
+            return None                               # el tramo cae fuera del vídeo
+        if not total:
+            return None
+
+        container = job.out_format if job.out_format in VIDEO_FORMATS else "mp4"
+        final = base.with_suffix(f".{container}")
+        job.current_file = str(final)
+        logbus.bus.add(
+            f"[expoal] Clipping at the source: downloading only {_fmt_span(start, end)} "
+            f"instead of the whole video",
+            "info",
+            job.id,
+        )
+
+        started = time.monotonic()
+
+        def progress(done: int, total_bytes: int) -> None:
+            if job.cancel_event.is_set():
+                raise JobCancelled("cancelado por el usuario")
+            while job.pause_event.is_set():
+                if job.cancel_event.is_set():
+                    raise JobCancelled("cancelado por el usuario")
+                time.sleep(0.25)
+            job.progress = round(done * 100 / total_bytes, 1) if total_bytes else 0.0
+            elapsed = time.monotonic() - started
+            speed = done / elapsed if elapsed > 0.5 else 0
+            job.speed = _fmt_speed(speed)
+            job.eta = _fmt_eta((total_bytes - done) / speed if speed else None)
+
+        parts: list[list] = []
+        done = 0
+        try:
+            for i, (fmt, found) in enumerate(plans):
+                part = final.with_name(f"{final.stem}.part{i}.{fmt.get('ext') or 'mp4'}")
+                # Apuntado ANTES de crearlo: si la descarga se rompe a mitad, el
+                # archivo ya existe y hay que poder borrarlo igual (con la lista
+                # rellenada después quedaba un trozo huérfano en la carpeta).
+                parts.append([part, 0.0])
+                job.current_tmp = str(part)
+                first_time = clipper.clip(
+                    fmt["url"], fmt.get("http_headers") or {}, part, start, end,
+                    progress=progress, done=done, total=total, found=found,
+                )
+                if first_time is None:
+                    return None
+                parts[-1][1] = first_time
+                done += part.stat().st_size
+
+            job.status = "procesando"
+            job.speed = job.eta = ""
+            # Aquí solo se juntan las pistas: el recorte fino lo sigue haciendo
+            # el editor de siempre, sobre este archivo pequeño. Es a propósito.
+            # Cortar aquí obligaría a duplicar lo que editor.py ya decide bien
+            # (copiar los flujos si no hay que recortar bordes, recodificar si
+            # sí), y con recorte de bordes salían 23 segundos donde se pedían 20.
+            # Así el resultado es idéntico al de siempre y lo único que cambia es
+            # cuánto se descarga.
+            cmd = [ffmpeg_path, "-y", "-loglevel", "error"]
+            for part, _ in parts:
+                cmd += ["-i", str(part)]
+            for i in range(len(parts)):
+                cmd += ["-map", f"{i}:0"]
+            cmd += ["-c", "copy", "-avoid_negative_ts", "make_zero", str(final)]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0 or not final.exists():
+                final.unlink(missing_ok=True)
+                return None
+        finally:
+            # Los trozos sueltos se barren pase lo que pase. El error, en cambio,
+            # se deja subir: quien llama decide si reintenta con direcciones
+            # nuevas o se rinde y baja el vídeo entero.
+            for part, _ in parts:
+                part.unlink(missing_ok=True)
+
+        info.pop("requested_downloads", None)
+        info["filepath"] = str(final)
+        # En qué segundo del vídeo original empieza este archivo: el recorte que
+        # queda por hacer va referido a él, no al vídeo entero.
+        info[_CLIP_START] = min(first_time for _, first_time in parts)
+        return info
+
     # Intentos completos (con extracción nueva) ante un fallo de red. Tres es el
     # equilibrio: cubre el corte puntual y la url caducada sin dejar a alguien
     # media hora mirando un vídeo que no va a bajar nunca.
@@ -582,7 +731,38 @@ class DownloadManager:
 
         _apply_extra_opts(opts)
 
-        info = self._extract_with_retries(job, opts)
+        # Recortar un minuto de un vídeo de tres horas no debería costar tres
+        # horas de descarga: si se puede, se bajan solo los bytes de ese minuto.
+        clipped = False
+        info = None
+        if has_ffmpeg and self._can_clip_at_source(job, opts):
+            for attempt in range(1, self.ATTEMPTS + 1):
+                try:
+                    info = self._clip_at_source(job, opts, ffmpeg_path)
+                    break
+                except JobCancelled:
+                    raise
+                except Exception as exc:  # noqa: BLE001 - el camino normal sigue estando
+                    msg = clean_error(exc)
+                    # Merece la pena insistir: rendirse aquí cuesta bajar el
+                    # vídeo entero, que es justo lo que se quería evitar.
+                    if attempt < self.ATTEMPTS and looks_temporary(msg):
+                        logbus.bus.add(f"[expoal] Network trouble while clipping ({msg}). "
+                                       f"Retrying {attempt + 1}/{self.ATTEMPTS}...",
+                                       "warn", job.id)
+                        self._sleep_cancellable(job, 2 * attempt)
+                        continue
+                    logbus.bus.add(f"[expoal] Could not clip at the source ({msg}); "
+                                   f"downloading the whole video", "warn", job.id)
+                    info = None
+                    break
+            clipped = info is not None
+            if not clipped:
+                job.progress = 0.0
+                job.status = "descargando"
+
+        if info is None:
+            info = self._extract_with_retries(job, opts)
 
         job.title = job.title or info.get("title") or job.url
         job.file_path = _final_path(info)
@@ -604,7 +784,18 @@ class DownloadManager:
 
         # Ediciones (recorte de duración, recorte de bordes, silenciar) sobre el archivo ya
         # descargado. Solo aplica a vídeo: en modo audio no tienen sentido.
-        if job.mode == "video" and job.edits and job.edits.has_any and job.file_path:
+        edits = job.edits
+        if clipped and edits is not None:
+            # El archivo ya no es el vídeo entero, sino el trozo que lo contiene,
+            # así que los segundos del recorte hay que contarlos desde ahí. Sin
+            # esta resta, FFmpeg buscaría el minuto 90 en un archivo que dura uno.
+            offset = info.get(_CLIP_START) or 0.0
+            edits = replace(
+                edits,
+                trim_start=max(0.0, edits.trim_start - offset) if edits.trim_start else None,
+                trim_end=max(0.0, edits.trim_end - offset) if edits.trim_end else None,
+            )
+        if job.mode == "video" and edits and edits.has_any and job.file_path:
             if not has_ffmpeg:
                 raise RuntimeError("Para editar el vídeo hace falta FFmpeg")
             job.status = "editando"
@@ -612,7 +803,7 @@ class DownloadManager:
             logbus.bus.add("[expoal] Editing the video with FFmpeg...", "info", job.id)
             apply_edits(
                 Path(job.file_path),
-                job.edits,
+                edits,
                 ffmpeg_path,
                 width=info.get("width") or 0,
                 height=info.get("height") or 0,

@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 
 import pytest
 
-from expoal import config, downloader, settings
+from expoal import clipper, config, downloader, settings
 from expoal.downloader import DownloadManager, Job, _apply_extra_opts, _format_selector
+from expoal.editor import Edits
 from expoal.history import History
 
 
@@ -186,6 +188,113 @@ def test_el_fallo_se_guarda_en_el_historial(manager):
     assert entrada["error"] == "Video unavailable"
     # Con lo necesario para poder repetirla tal cual desde la interfaz.
     assert entrada["mode"] == "video" and entrada["folder"] == "C:/tmp"
+
+
+# --- Cuándo se puede bajar solo el tramo pedido ---
+
+def _con_recorte(manager, **cambios):
+    job = _job(manager, **cambios)
+    job.edits = Edits(trim_start=60.0, trim_end=120.0)
+    return job
+
+
+def test_recortar_un_trozo_activa_el_atajo(manager):
+    assert manager._can_clip_at_source(_con_recorte(manager), {}) is True
+
+
+def test_sin_recorte_no_hay_nada_que_ahorrar(manager):
+    assert manager._can_clip_at_source(_job(manager), {}) is False
+
+
+def test_el_audio_va_por_el_camino_de_siempre(manager):
+    assert manager._can_clip_at_source(_con_recorte(manager, mode="audio"), {}) is False
+
+
+def test_recortar_solo_los_bordes_no_activa_el_atajo(manager):
+    # Sin recorte de duración no se baja menos: hace falta el vídeo entero.
+    job = _job(manager)
+    job.edits = Edits(crop_left=10, crop_right=10)
+    assert manager._can_clip_at_source(job, {}) is False
+
+
+def test_con_subtitulos_manda_yt_dlp(manager):
+    assert manager._can_clip_at_source(_con_recorte(manager, subs=True), {}) is False
+
+
+def test_webm_no_merece_el_atajo(manager):
+    # Obliga a recodificar, y entonces el ahorro de la descarga da igual.
+    assert manager._can_clip_at_source(_con_recorte(manager, out_format="webm"), {}) is False
+
+
+def test_lo_que_reescribe_el_archivo_desactiva_el_atajo(manager, monkeypatch):
+    # SponsorBlock, incrustar carátula... son postprocesadores de yt-dlp, y el
+    # atajo se los salta: mejor renunciar al ahorro que perder lo que pidió.
+    monkeypatch.setattr(settings, "rewrites_the_file", lambda: True)
+    assert manager._can_clip_at_source(_con_recorte(manager), {}) is False
+
+
+def test_la_descarga_rapida_no_cuesta_el_atajo(manager, monkeypatch):
+    """Las casillas de velocidad dejan el archivo igual: el atajo sigue valiendo."""
+    settings.set_toggle("fast_fragments", True)
+    assert settings.rewrites_the_file() is False
+    assert manager._can_clip_at_source(_con_recorte(manager), {}) is True
+
+
+class _YdlConFormatos:
+    """yt-dlp de mentira que devuelve un vídeo con sus dos pistas."""
+
+    def __init__(self, destino):
+        self.destino = destino
+
+    def __call__(self, opts):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def extract_info(self, url, download=True):
+        return {
+            "id": "x", "title": "V", "ext": "mp4",
+            "requested_formats": [
+                {"url": "https://x/v", "protocol": "https", "ext": "mp4", "http_headers": {}},
+                {"url": "https://x/a", "protocol": "https", "ext": "m4a", "http_headers": {}},
+            ],
+        }
+
+    def prepare_filename(self, info):
+        return str(self.destino / "V [x].mp4")
+
+
+def test_un_fallo_a_mitad_no_deja_trozos_sueltos(manager, monkeypatch, tmp_path):
+    """Si se corta la red con el trozo a medias, ese archivo hay que barrerlo."""
+    index = clipper.Index(base=100, timescale=1000, refs=[(1000, 1000)])
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", _YdlConFormatos(tmp_path))
+    monkeypatch.setattr(clipper, "read_index", lambda url, headers: (index, b""))
+    monkeypatch.setattr(clipper, "clip_size", lambda *a: 1000)
+
+    def clip_que_se_corta(url, headers, dest, *args, **kwargs):
+        Path(dest).write_bytes(b"a medias")
+        raise OSError("se cortó la red")
+
+    monkeypatch.setattr(clipper, "clip", clip_que_se_corta)
+    job = _con_recorte(manager)
+    # El error sube (arriba se reintenta con direcciones nuevas), pero el trozo
+    # a medias no se queda en la carpeta de nadie.
+    with pytest.raises(OSError):
+        manager._clip_at_source(job, {}, "ffmpeg")
+    assert list(tmp_path.glob("*.part*")) == []
+
+
+def test_si_no_hay_indice_ni_se_intenta(manager, monkeypatch, tmp_path):
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", _YdlConFormatos(tmp_path))
+    monkeypatch.setattr(clipper, "read_index", lambda url, headers: None)
+    llamadas = []
+    monkeypatch.setattr(clipper, "clip", lambda *a, **k: llamadas.append(a))
+    assert manager._clip_at_source(_con_recorte(manager), {}, "ffmpeg") is None
+    assert llamadas == []                    # ni una petición de más
 
 
 # --- Aguantar los tropiezos de red ---
