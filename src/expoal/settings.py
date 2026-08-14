@@ -77,6 +77,15 @@ _DEFAULTS: dict = {
     "cookies_file": "",
     "extra_args": "",
     **{name: False for name in TOGGLES},
+    # Los fragmentos en paralelo vienen puestos: es de yt-dlp, no necesita nada
+    # instalado, no cambia el archivo que sale y donde no aplica no estorba. Una
+    # mejora gratis no debería estar detrás de una casilla que nadie encuentra.
+    "fast_fragments": True,
+    # Marca de que ya se aplicaron los valores nuevos a un archivo viejo. Sin
+    # esto, quien ya tenía Expoal se quedaría para siempre con los de antes,
+    # porque su archivo guarda todas las casillas en false aunque no las haya
+    # tocado nunca. Ver upgrade_defaults().
+    "defaults_v2": False,
 }
 
 
@@ -90,6 +99,19 @@ def load() -> dict:
     if isinstance(raw, dict):
         data.update({k: v for k, v in raw.items() if k in _DEFAULTS})
     return data
+
+
+def upgrade_defaults() -> None:
+    """Estrena los valores nuevos en una instalación que ya existía.
+
+    Solo toca las casillas de VELOCIDAD, que no cambian el archivo que sale y
+    por tanto no pueden estropearle el resultado a nadie. Se hace una sola vez;
+    si luego el usuario la desmarca, se queda desmarcada.
+    """
+    data = load()
+    if data.get("defaults_v2"):
+        return
+    save({"fast_fragments": True, "defaults_v2": True})
 
 
 def save(data: dict) -> None:

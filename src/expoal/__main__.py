@@ -61,6 +61,12 @@ def main() -> None:
 
     engine.activate()
 
+    # Una instalación que ya existía estrena los valores nuevos (solo los de
+    # velocidad, que no cambian el archivo que sale). Ver settings.
+    from . import settings
+
+    settings.upgrade_defaults()
+
     parser = argparse.ArgumentParser(
         prog="expoal",
         description="Download videos from YouTube, TikTok, Instagram and thousands of other sites to your local disk.",

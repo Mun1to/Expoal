@@ -184,3 +184,32 @@ def test_reconoce_un_fallo_al_leer_las_cookies():
 def test_ajustes_corruptos_vuelven_a_los_valores_por_defecto():
     config.SETTINGS_FILE.write_text("{esto no es json", encoding="utf-8")
     assert settings.load()["cookies_browser"] == ""
+
+
+# --- Valores nuevos en una instalación que ya existía ---
+
+def test_la_descarga_rapida_viene_puesta():
+    # Es de yt-dlp, no necesita nada instalado y no cambia el archivo que sale.
+    assert settings.load()["fast_fragments"] is True
+
+
+def test_un_ajuste_viejo_estrena_la_descarga_rapida():
+    # El archivo de quien ya tenía Expoal guarda todas las casillas en false
+    # aunque no las haya tocado nunca: sin esto se quedaría sin la mejora.
+    settings.save({"fast_fragments": False})
+    settings.upgrade_defaults()
+    assert settings.load()["fast_fragments"] is True
+
+
+def test_solo_se_estrena_una_vez():
+    settings.upgrade_defaults()
+    settings.set_toggle("fast_fragments", False)     # el usuario la desmarca
+    settings.upgrade_defaults()
+    assert settings.load()["fast_fragments"] is False
+
+
+def test_estrenar_no_toca_lo_que_reescribe_el_archivo():
+    settings.upgrade_defaults()
+    for name in settings.TOGGLES:
+        if name not in settings.TOGGLES_SPEED_ONLY:
+            assert settings.load()[name] is False
