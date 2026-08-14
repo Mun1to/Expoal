@@ -3,6 +3,22 @@
 All notable changes to Expoal. Dates are release dates; versions follow
 [semantic versioning](https://semver.org/).
 
+## [2.5.0] — 2026-08-14
+
+### Added
+
+- **Trim audio too, not just video.** Keeping one minute of a three-hour interview is as
+  ordinary in MP3 as it is in video, and the editor used to disappear the moment you picked
+  audio. It now stays, showing only the duration.
+- **Concurrent fragments are on by default.** It is built into yt-dlp, needs nothing installed
+  and leaves the resulting file untouched, so the cheapest speed-up there is no longer hides
+  behind a checkbox. Existing installations get it once on the next start.
+
+### Fixed
+
+- Switching between Spanish and English no longer wipes the trim you had marked and closes the
+  editor in your face.
+
 ## [2.4.0] — 2026-08-14
 
 ### Added
@@ -128,6 +144,7 @@ All notable changes to Expoal. Dates are release dates; versions follow
 - First public release: paste a link, pick quality and folder, watch the queue, keep a history.
   Windows installer, MIT license and landing page.
 
+[2.5.0]: https://github.com/Mun1to/Expoal/releases/tag/v2.5.0
 [2.4.0]: https://github.com/Mun1to/Expoal/releases/tag/v2.4.0
 [2.3.1]: https://github.com/Mun1to/Expoal/releases/tag/v2.3.1
 [2.3.0]: https://github.com/Mun1to/Expoal/releases/tag/v2.3.0
