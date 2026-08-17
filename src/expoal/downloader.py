@@ -117,7 +117,8 @@ VIDEO_FORMATS = {"mp4", "mkv", "mov", "webm"}
 AUDIO_FORMATS = {"mp3", "m4a", "wav", "flac", "opus"}
 
 
-def _format_selector(mode: str, quality: str, has_ffmpeg: bool, out_format: str = "") -> str:
+def _format_selector(mode: str, quality: str, has_ffmpeg: bool, out_format: str = "",
+                     clipping: bool = False) -> str:
     if mode == "audio":
         return "ba/b"
     cap = f"[height<={quality}]" if quality != "best" else ""
@@ -136,6 +137,19 @@ def _format_selector(mode: str, quality: str, has_ffmpeg: bool, out_format: str 
         )
     if out_format == "webm":
         return f"bv*[ext=webm]{cap}+ba[ext=webm]/bv*{cap}+ba/b{cap}"
+
+    # Al recortar en origen se pide el audio en MP4 aunque haya otro mejor, y no
+    # es un capricho: YouTube empareja el vídeo moderno (AV1, VP9) con audio
+    # Opus dentro de WEBM, y el WEBM no lleva la tabla de fragmentos que permite
+    # pedir solo un tramo. Como bastaba con que UNA de las dos pistas no la
+    # tuviera para descartar el atajo entero, recortar un vídeo en 4K bajaba el
+    # archivo completo sin que se notara el porqué. Medido con un vídeo de diez
+    # horas: 73 MB en cuatro segundos frente a 32,7 GB en veinte minutos. La
+    # diferencia de calidad entre Opus y AAC a esos bitrates es inapreciable, y
+    # esto solo entra cuando hay recorte: una descarga normal sigue cogiendo el
+    # mejor audio que haya.
+    if clipping:
+        return f"bv*{cap}+ba[ext=m4a]/bv*{cap}+ba/b{cap}"
 
     # Mejor vídeo + mejor audio fusionados; si no hay streams separados, el mejor archivo único.
     return f"bv*{cap}+ba/b{cap}"
@@ -453,23 +467,34 @@ class DownloadManager:
                     pass  # un resto bloqueado no debe tumbar el worker
 
     @staticmethod
-    def _can_clip_at_source(job: Job, opts: dict) -> bool:
-        """¿Se puede bajar solo el tramo, en vez del vídeo entero?
+    def _clip_blocker(job: Job, opts: dict | None = None) -> str | None:
+        """Qué impide bajar solo el tramo, dicho para el panel. None = se puede.
 
         El camino rápido se salta la maquinaria de yt-dlp (postprocesadores,
         subtítulos, remux), así que solo se coge cuando no hay nada de eso en
         juego. En cuanto entra algo que no sabemos hacer por aquí, se descarta y
         manda el camino de siempre, que lo hace todo bien.
+
+        El motivo se devuelve en vez de un simple "no" porque rendirse en
+        silencio dejaba a quien recorta mirando una descarga de treinta gigas
+        sin ninguna pista de por qué el atajo no había entrado.
         """
-        if job.mode != "video" or not job.edits or not job.edits.has_trim:
-            return False
-        if job.subs or opts.get("skip_download"):
-            return False
+        if job.mode != "video":
+            return "only video downloads can be clipped at the source"
+        if not job.edits or not job.edits.has_trim:
+            return "there is no time range to clip"
+        if job.subs or (opts or {}).get("skip_download"):
+            return "subtitles need the whole file"
         if settings.rewrites_the_file():
-            return False              # sus opciones se aplican en el camino normal
+            return "an option that rewrites the file is on"
         if job.out_format == "webm":
-            return False              # obliga a recodificar: no ahorraría nada
-        return True
+            return "WEBM would have to be re-encoded anyway"
+        return None
+
+    @staticmethod
+    def _can_clip_at_source(job: Job, opts: dict | None = None) -> bool:
+        """¿Se puede bajar solo el tramo, en vez del vídeo entero?"""
+        return DownloadManager._clip_blocker(job, opts) is None
 
     def _clip_at_source(self, job: Job, opts: dict, ffmpeg_path: str) -> dict | None:
         """Baja SOLO el tramo pedido y lo deja listo. None si no se ha podido.
@@ -484,21 +509,32 @@ class DownloadManager:
         end = edits.trim_end
         probe_opts = {k: v for k, v in opts.items() if k != "progress_hooks"}
 
+        def give_up(reason: str) -> None:
+            """Vuelve al camino de siempre CONTÁNDOLO. El silencio de antes hacía
+            imposible saber por qué una descarga recortada tardaba lo mismo."""
+            logbus.bus.add(
+                f"[expoal] Cannot clip at the source ({reason}); "
+                f"downloading the whole video", "warn", job.id,
+            )
+            return None
+
         with yt_dlp.YoutubeDL(probe_opts) as ydl:
             info = ydl.extract_info(job.url, download=False)
             if info.get("_type") == "playlist":
-                return None
+                return give_up("this link is a playlist")
             formats = info.get("requested_formats") or [info]
             if len(formats) > 2 or any(
                 f.get("protocol") != "https" or not f.get("url") for f in formats
             ):
-                return None
+                kinds = ", ".join(sorted({f.get("protocol") or "?" for f in formats}))
+                return give_up(f"{len(formats)} streams over {kinds}")
 
             plans = []
             for fmt in formats:
                 found = clipper.read_index(fmt["url"], fmt.get("http_headers") or {})
-                if found is None:
-                    return None                       # sin índice no hay atajo
+                if found is None:                     # sin índice no hay atajo
+                    return give_up(f"the {fmt.get('ext') or '?'} stream "
+                                   f"{fmt.get('format_id') or ''} has no fragment index")
                 plans.append((fmt, found))
 
             base = Path(ydl.prepare_filename(info))
@@ -506,9 +542,9 @@ class DownloadManager:
         try:
             total = sum(clipper.clip_size(index, start, end) for _, (index, _) in plans)
         except ValueError:
-            return None                               # el tramo cae fuera del vídeo
+            return give_up("the range falls outside the video")
         if not total:
-            return None
+            return give_up("the range is empty")
 
         container = job.out_format if job.out_format in VIDEO_FORMATS else "mp4"
         final = base.with_suffix(f".{container}")
@@ -550,7 +586,7 @@ class DownloadManager:
                     progress=progress, done=done, total=total, found=found,
                 )
                 if first_time is None:
-                    return None
+                    return give_up(f"the {fmt.get('ext') or '?'} stream cannot be sliced")
                 parts[-1][1] = first_time
                 done += part.stat().st_size
 
@@ -572,7 +608,8 @@ class DownloadManager:
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0 or not final.exists():
                 final.unlink(missing_ok=True)
-                return None
+                return give_up(f"FFmpeg could not join the pieces "
+                               f"({(result.stderr or '').strip()[:120] or 'no output'})")
         finally:
             # Los trozos sueltos se barren pase lo que pase. El error, en cambio,
             # se deja subir: quien llama decide si reintenta con direcciones
@@ -668,7 +705,12 @@ class DownloadManager:
                 job.status = "procesando"
 
         opts: dict = {
-            "format": _format_selector(job.mode, job.quality, has_ffmpeg, job.out_format),
+            # Si el tramo se va a bajar suelto, el selector tiene que pedir
+            # pistas que se puedan trocear: ver el porqué en _format_selector.
+            "format": _format_selector(
+                job.mode, job.quality, has_ffmpeg, job.out_format,
+                clipping=has_ffmpeg and self._can_clip_at_source(job),
+            ),
             # La carpeta va en "paths" y NO dentro de outtmpl. Parece lo mismo,
             # pero no lo es: si la ruta viviera en la plantilla, un usuario que
             # pusiera su propio "-o" en las opciones avanzadas la borraría sin
@@ -760,6 +802,15 @@ class DownloadManager:
             if not clipped:
                 job.progress = 0.0
                 job.status = "descargando"
+        elif job.edits and job.edits.has_trim:
+            # Hay recorte y aun así toca bajarlo entero: decir por qué, que es
+            # justo lo que faltaba para entender una descarga larga de un tramo
+            # corto.
+            logbus.bus.add(
+                f"[expoal] Not clipping at the source "
+                f"({self._clip_blocker(job, opts) or 'FFmpeg is missing'}); "
+                f"downloading the whole video first", "info", job.id,
+            )
 
         if info is None:
             info = self._extract_with_retries(job, opts)

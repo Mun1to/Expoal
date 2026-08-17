@@ -80,6 +80,24 @@ def test_mkv_admite_cualquier_cosa():
     assert _format_selector("video", "best", True, "mkv") == "bv*+ba/b"
 
 
+def test_al_recortar_se_pide_el_audio_en_mp4():
+    # El fallo que arregla: YouTube empareja el vídeo moderno con audio Opus en
+    # WEBM, que no lleva tabla de fragmentos, y bastaba con eso para que el
+    # atajo no entrara nunca en 4K. Un vídeo de diez horas recortado a un minuto
+    # se bajaba entero: 32,7 GB.
+    sel = _format_selector("video", "best", True, "mp4", clipping=True)
+    assert sel.startswith("bv*+ba[ext=m4a]")
+    assert "/bv*+ba/" in sel                  # y si no hay m4a, el de siempre
+
+
+def test_sin_recorte_el_audio_no_se_toca():
+    assert "m4a" not in _format_selector("video", "best", True, "mp4")
+
+
+def test_al_recortar_tambien_se_respeta_la_calidad():
+    assert "[height<=1080]" in _format_selector("video", "1080", True, "mp4", clipping=True)
+
+
 # --- Limpieza del mensaje de error ---
 
 def test_el_error_llega_legible():
@@ -238,6 +256,14 @@ def test_la_descarga_rapida_no_cuesta_el_atajo(manager, monkeypatch):
     settings.set_toggle("fast_fragments", True)
     assert settings.rewrites_the_file() is False
     assert manager._can_clip_at_source(_con_recorte(manager), {}) is True
+
+
+def test_siempre_hay_un_motivo_que_ensenar(manager):
+    """Rendirse en silencio es lo que hizo invisible el fallo de las pistas WEBM."""
+    assert manager._clip_blocker(_con_recorte(manager)) is None
+    assert "video" in manager._clip_blocker(_con_recorte(manager, mode="audio"))
+    assert "WEBM" in manager._clip_blocker(_con_recorte(manager, out_format="webm"))
+    assert manager._clip_blocker(_job(manager))          # sin recorte, también lo dice
 
 
 class _YdlConFormatos:
