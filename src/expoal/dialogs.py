@@ -11,6 +11,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 _lock = threading.Lock()
 
@@ -34,6 +35,22 @@ _TK_FILE_SCRIPT = (
 )
 
 
+def select_command(path: str) -> str:
+    """La línea EXACTA que entiende explorer.exe para seleccionar un archivo.
+
+    GOTCHA gordo: `/select,` tiene que quedar FUERA de las comillas. Pasándole a
+    subprocess una lista, en cuanto la ruta lleva un espacio (y los títulos de
+    vídeo van llenos) se genera `explorer "/select,C:\\...mp4"`, explorer no
+    reconoce el argumento y abre la carpeta por defecto —Documentos— sin dar
+    ningún error. Es lo que hacía el botón de la carpeta del historial.
+
+    Armar la cadena a mano no abre la puerta a inyectar comandos: en Windows,
+    Popen con una cadena NO pasa por el shell, y una ruta con comillas dentro no
+    existe (es un carácter prohibido en los nombres de archivo de Windows).
+    """
+    return f'explorer /select,"{Path(path)}"'
+
+
 def reveal_in_folder(path: str) -> None:
     """Abre el explorador del sistema con el archivo seleccionado.
 
@@ -41,12 +58,10 @@ def reveal_in_folder(path: str) -> None:
     se comprueba el resultado; con Popen tampoco se bloquea el servidor.
     """
     if sys.platform == "win32":
-        subprocess.Popen(["explorer", f"/select,{path}"], close_fds=True)
+        subprocess.Popen(select_command(path), close_fds=True)
     elif sys.platform == "darwin":
         subprocess.Popen(["open", "-R", path], close_fds=True)
     else:
-        from pathlib import Path
-
         subprocess.Popen(["xdg-open", str(Path(path).parent)], close_fds=True)
 
 
