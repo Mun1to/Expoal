@@ -15,8 +15,11 @@ class History:
         self._entries: list[dict] = self._load()
 
     def _load(self) -> list[dict]:
+        # utf-8-sig y no utf-8: si algo (un editor, un script de PowerShell) deja
+        # el archivo con BOM, leerlo como utf-8 revienta el JSON, el historial se
+        # da por vacío y la siguiente descarga lo sobrescribe entero.
         try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
+            data = json.loads(self._path.read_text(encoding="utf-8-sig"))
             return data if isinstance(data, list) else []
         except (OSError, ValueError):
             return []

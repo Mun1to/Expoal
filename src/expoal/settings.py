@@ -95,7 +95,8 @@ def load() -> dict:
     """Lee los ajustes. Si el archivo no está o está corrupto, vuelve a los valores por defecto."""
     data = dict(_DEFAULTS)
     try:
-        raw = json.loads(config.SETTINGS_FILE.read_text(encoding="utf-8"))
+        # utf-8-sig: un BOM dejado por otra herramienta no puede costar los ajustes.
+        raw = json.loads(config.SETTINGS_FILE.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return data
     if isinstance(raw, dict):

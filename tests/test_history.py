@@ -33,13 +33,15 @@ def test_un_archivo_roto_no_tumba_la_app(tmp_path):
     assert History(ruta).entries() == []
 
 
-def test_el_bom_de_powershell_rompe_la_lectura(tmp_path):
-    """Documenta un fallo real: `Out-File -Encoding utf8` añade BOM y el
-    historial se leía vacío (ver FEEDBACK.md, 2026-07-06). El comportamiento
-    esperado es no reventar; el archivo se descarta y se empieza de cero."""
+def test_el_bom_de_powershell_no_vacia_el_historial(tmp_path):
+    """Fallo real y REPETIDO (FEEDBACK.md, 2026-07-06 y 2026-08-17): las
+    herramientas de Windows dejan un BOM al principio, `json.loads` fallaba y el
+    historial se daba por vacío... y la siguiente descarga lo sobrescribía. Se
+    lee con utf-8-sig: descartar lo que el usuario tenía no es tolerar un fallo,
+    es perder sus datos."""
     ruta = tmp_path / "h.json"
     ruta.write_bytes(b"\xef\xbb\xbf" + json.dumps([{"title": "uno"}]).encode())
-    assert History(ruta).entries() == []
+    assert History(ruta).entries() == [{"title": "uno"}]
 
 
 def test_vaciar(tmp_path):

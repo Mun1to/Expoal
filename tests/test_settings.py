@@ -242,3 +242,9 @@ def test_una_carpeta_que_ya_no_existe_no_manda(tmp_path):
     # sitio muerto: se vuelve a la de fábrica.
     settings.set_download_folder(str(tmp_path / "disco-que-no-esta"))
     assert settings.download_folder() == ""
+
+
+def test_un_bom_no_borra_los_ajustes():
+    config.SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    config.SETTINGS_FILE.write_text('{"extra_args": "--no-mtime"}', encoding="utf-8-sig")
+    assert settings.load()["extra_args"] == "--no-mtime"
