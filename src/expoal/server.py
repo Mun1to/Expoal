@@ -103,6 +103,18 @@ class DownloadRequest(BaseModel):
     out_format: str = ""         # MP4/MKV/MOV/WEBM o MP3/M4A/WAV/FLAC/OPUS
 
 
+def _folder_for(requested: str | None) -> str:
+    """La carpeta de destino de una descarga, recordada para la próxima vez.
+
+    Se guarda aquí, en el único sitio por el que pasan todas las descargas, en
+    vez de al elegirla en el explorador: lo que hay que recordar es dónde se
+    guardó de verdad, no dónde se estuvo mirando.
+    """
+    folder = (requested or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
+    settings.set_download_folder(folder)
+    return folder
+
+
 def _validate_url(url: str) -> str:
     url = url.strip()
     if not url.lower().startswith(("http://", "https://")):
@@ -115,7 +127,14 @@ def get_config() -> dict:
     return {
         "version": __version__,
         "engine": engine.current_version(),
-        "default_folder": str(config.DEFAULT_DOWNLOAD_DIR),
+        # La última que usó el usuario; si aún no hay ninguna guardada, la del
+        # historial (para quien ya tenía Expoal antes de esto), y solo si no hay
+        # nada de nada, la de fábrica.
+        "default_folder": (
+            settings.download_folder()
+            or history.last_folder()
+            or str(config.DEFAULT_DOWNLOAD_DIR)
+        ),
         "ffmpeg": config.ffmpeg_available(),
         "aria2c": config.aria2c_available(),
         "cookies_browser": settings.cookies_browser(),
@@ -331,7 +350,7 @@ def start_download(req: DownloadRequest) -> dict:
                 detail="Para elegir el formato hace falta FFmpeg (winget install Gyan.FFmpeg)",
             )
 
-    folder = (req.folder or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
+    folder = _folder_for(req.folder)
     return manager.enqueue(
         url, req.mode, req.quality, folder, title=req.title, edits=edits,
         subs=req.subs, sub_lang=req.sub_lang, sub_format=req.sub_format,
@@ -374,7 +393,7 @@ def start_batch(req: BatchRequest) -> dict:
     if len(items) > PLAYLIST_LIMIT:
         raise HTTPException(status_code=422, detail=f"Máximo {PLAYLIST_LIMIT} vídeos de una vez")
 
-    folder = (req.folder or "").strip() or str(config.DEFAULT_DOWNLOAD_DIR)
+    folder = _folder_for(req.folder)
     for it in items:
         _validate_url(it.url)
     queued = [

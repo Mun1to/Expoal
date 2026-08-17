@@ -221,3 +221,24 @@ def test_estrenar_no_toca_lo_que_reescribe_el_archivo():
     for name in settings.TOGGLES:
         if name not in settings.TOGGLES_SPEED_ONLY:
             assert settings.load()[name] is False
+
+
+# --- Carpeta de destino recordada ---
+
+def test_sin_carpeta_guardada_no_hay_ninguna():
+    assert settings.download_folder() == ""
+
+
+def test_la_carpeta_sobrevive_al_reinicio(tmp_path):
+    destino = tmp_path / "Vídeos"
+    destino.mkdir()
+    settings.set_download_folder(str(destino))
+    # load() vuelve a leer el archivo: es lo mismo que hace el arranque.
+    assert settings.download_folder() == str(destino)
+
+
+def test_una_carpeta_que_ya_no_existe_no_manda(tmp_path):
+    # Un disco externo que se quedó fuera no puede dejar la app apuntando a un
+    # sitio muerto: se vuelve a la de fábrica.
+    settings.set_download_folder(str(tmp_path / "disco-que-no-esta"))
+    assert settings.download_folder() == ""

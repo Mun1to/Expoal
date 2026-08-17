@@ -53,3 +53,26 @@ def test_los_acentos_se_guardan_legibles(tmp_path):
     ruta = tmp_path / "h.json"
     History(ruta).add({"title": "Canción de Ñu"})
     assert "Canción de Ñu" in ruta.read_text(encoding="utf-8")
+
+
+def test_la_ultima_carpeta_sale_del_historial(tmp_path):
+    # Respaldo para quien ya tenía Expoal antes de que la carpeta se guardara en
+    # los ajustes: su historial ya sabe dónde guarda las cosas.
+    destino = tmp_path / "Vídeos"
+    destino.mkdir()
+    h = History(tmp_path / "h.json")
+    h.add({"url": "u1", "folder": str(destino)})
+    assert h.last_folder() == str(destino)
+
+
+def test_una_carpeta_del_historial_que_ya_no_existe_se_salta(tmp_path):
+    viva = tmp_path / "Viva"
+    viva.mkdir()
+    h = History(tmp_path / "h.json")
+    h.add({"url": "u1", "folder": str(viva)})
+    h.add({"url": "u2", "folder": str(tmp_path / "disco-que-no-esta")})
+    assert h.last_folder() == str(viva)
+
+
+def test_sin_historial_no_hay_carpeta(tmp_path):
+    assert History(tmp_path / "h.json").last_folder() == ""

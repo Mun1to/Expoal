@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from expoal.server import EditRequest, edits_for
+from expoal import config, settings
+from expoal.server import EditRequest, _folder_for, edits_for
 
 
 def _pedido(**cambios) -> EditRequest:
@@ -40,3 +41,16 @@ def test_sin_recorte_no_hay_nada_que_hacer(modo):
                                     crop_bottom=0, crop_left=0, crop_right=0,
                                     mute=False))
     assert edits.has_any is False
+
+
+# --- La carpeta de destino se recuerda ---
+
+def test_la_carpeta_de_la_descarga_queda_guardada(tmp_path):
+    destino = tmp_path / "Vídeos"
+    destino.mkdir()
+    assert _folder_for(str(destino)) == str(destino)
+    assert settings.download_folder() == str(destino)
+
+
+def test_sin_carpeta_pedida_se_usa_la_de_fabrica():
+    assert _folder_for("  ") == str(config.DEFAULT_DOWNLOAD_DIR)

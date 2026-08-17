@@ -76,6 +76,8 @@ _DEFAULTS: dict = {
     "cookies_browser": "",
     "cookies_file": "",
     "extra_args": "",
+    # La última carpeta en la que se guardó algo. Vacío = la de fábrica.
+    "download_folder": "",
     **{name: False for name in TOGGLES},
     # Los fragmentos en paralelo vienen puestos: es de yt-dlp, no necesita nada
     # instalado, no cambia el archivo que sale y donde no aplica no estorba. Una
@@ -144,6 +146,31 @@ def set_cookies_browser(name: str) -> str:
         raise ValueError(f"Navegador no soportado: {name}")
     save({"cookies_browser": name, "cookies_file": ""})
     return name
+
+
+def download_folder() -> str:
+    """La carpeta donde se guardó lo último; vacío si todavía no hay ninguna.
+
+    Dónde va el vídeo es una preferencia, no una decisión de cada descarga:
+    quien lo guarda todo en su disco de vídeos no tiene por qué volver a
+    escribir la ruta cada vez que abre la app. Si la carpeta ya no existe (un
+    disco externo que se quedó fuera, una carpeta borrada) se devuelve vacío y
+    manda la de fábrica: mejor eso que arrancar apuntando a un sitio muerto.
+    """
+    path = str(load().get("download_folder") or "").strip()
+    if not path:
+        return ""
+    try:
+        return path if Path(path).is_dir() else ""
+    except OSError:
+        return ""
+
+
+def set_download_folder(path: str) -> str:
+    """Recuerda la carpeta de la última descarga."""
+    path = str(path or "").strip()
+    save({"download_folder": path})
+    return path
 
 
 def cookies_file() -> str:

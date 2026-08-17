@@ -31,6 +31,26 @@ class History:
         with self._lock:
             return list(self._entries)
 
+    def last_folder(self) -> str:
+        """La carpeta de la descarga más reciente que todavía existe.
+
+        Es el respaldo para quien ya tenía Expoal antes de que la carpeta se
+        guardara en los ajustes: su historial ya sabe dónde guarda las cosas, así
+        que no hay que hacerle una descarga de más para que la app se entere.
+        """
+        with self._lock:
+            entries = list(self._entries)
+        for entry in entries:
+            folder = str(entry.get("folder") or "").strip()
+            if not folder:
+                continue
+            try:
+                if Path(folder).is_dir():
+                    return folder
+            except OSError:
+                continue
+        return ""
+
     def clear(self) -> None:
         with self._lock:
             self._entries = []
