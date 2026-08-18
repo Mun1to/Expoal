@@ -208,6 +208,30 @@ def test_el_fallo_se_guarda_en_el_historial(manager):
     assert entrada["mode"] == "video" and entrada["folder"] == "C:/tmp"
 
 
+# --- Qué fallos merecen otro intento ---
+
+@pytest.mark.parametrize("mensaje", [
+    "unable to download video data: HTTP Error 403: Forbidden",
+    "Unable to download video subtitles for 'en': HTTP Error 429: Too Many Requests",
+    "HTTP Error 503: Service Unavailable",
+    "The read operation timed out",
+])
+def test_lo_que_se_arregla_esperando_se_reintenta(mensaje):
+    # 429 es "vas muy rápido" y los 5xx son "el servidor está mal ahora mismo":
+    # rendirse al primero es rendirse cuando esperar habría bastado.
+    assert downloader.looks_temporary(mensaje) is True
+
+
+@pytest.mark.parametrize("mensaje", [
+    "Private video. Sign in if you've been granted access",
+    "Video unavailable",
+    "This video is available to members only",
+    "Top 500 canciones de los 90 [abc123]: Video unavailable",   # el 500 va en el título
+])
+def test_lo_que_no_se_arregla_esperando_no_se_reintenta(mensaje):
+    assert downloader.looks_temporary(mensaje) is False
+
+
 # --- Direcciones que se agotan a media descarga ---
 
 class _YdlFalso:

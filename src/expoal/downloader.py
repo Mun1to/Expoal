@@ -78,6 +78,17 @@ _TEMPORARY_HINTS = (
     "403", "connection", "connreset", "reset by peer", "remote end closed",
     "unable to download video data", "content too short", "incomplete",
     "temporary failure", "handshake", "network is unreachable",
+    # Los códigos que literalmente significan "vuelve a intentarlo": 429 es
+    # "vas muy rápido" (YouTube lo devuelve a poco que se pidan varios vídeos
+    # seguidos, y sobre todo en los subtítulos) y los 5xx son "el servidor está
+    # mal ahora mismo". Rendirse al primero de estos es rendirse justo cuando
+    # esperar veinte segundos habría bastado.
+    # Se escriben con el "http error" delante a propósito: un "500" suelto
+    # también aparece en el TÍTULO de un vídeo, y los títulos viajan dentro de
+    # los mensajes de error.
+    "http error 429", "too many requests",
+    "http error 500", "http error 502", "http error 503", "http error 504",
+    "internal server error", "bad gateway", "service unavailable",
 )
 
 
