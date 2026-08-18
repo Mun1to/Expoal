@@ -28,6 +28,7 @@ const I18N = (function () {
       installing: "Instalando... la aplicación se cerrará en un momento.",
       enginedl: "Actualizando el motor...",
       enginedone: "Motor actualizado. Cierra y abre Expoal para estrenarlo.",
+      enginetest: "versión de prueba",
       cancel: "Cancelar descarga",
       openfolder: "Abrir la carpeta del archivo",
       filegone: "El archivo ya no está ahí",
@@ -88,6 +89,7 @@ const I18N = (function () {
       installing: "Installing... the app will close in a moment.",
       enginedl: "Updating the engine...",
       enginedone: "Engine updated. Close and reopen Expoal to use it.",
+      enginetest: "test build",
       cancel: "Cancel download",
       openfolder: "Open the file's folder",
       filegone: "The file is not there anymore",
@@ -1763,7 +1765,11 @@ async function checkForUpdate() {
 
 function showEngineBanner(engineInfo) {
   const banner = $("#engine-banner");
-  $("#engine-version").textContent = `yt-dlp ${engineInfo.latest}`;
+  // Cuando YouTube rompe algo, el arreglo llega antes en la nightly de yt-dlp
+  // que en su estable, así que el motor también las coge; se dice cuál es para
+  // que quien pulsa el botón sepa lo que se lleva.
+  const marca = engineInfo.prerelease ? ` (${I18N.t("enginetest")})` : "";
+  $("#engine-version").textContent = `yt-dlp ${engineInfo.latest}${marca}`;
   const btn = $("#engine-btn");
   const status = $("#engine-status");
   btn.addEventListener("click", async () => {

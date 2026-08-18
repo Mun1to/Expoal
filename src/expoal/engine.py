@@ -6,6 +6,12 @@ perfecta. Este módulo baja el wheel oficial de PyPI, lo deja en el directorio
 de datos del usuario y hace que Python cargue esa copia en vez de la
 empaquetada. Así el motor se renueva con un clic entre versiones de la app.
 
+Canal: se coge la versión más reciente publicada en PyPI, estable o nightly.
+No es un capricho: yt-dlp saca el arreglo de cada cambio de YouTube en su
+nightly el mismo día y en la estable puede tardar semanas, y una app cuyo
+motor solo llega a la estable se queda rota justo cuando más falta hace (ver
+_newest_wheel). La interfaz dice si lo que va a instalar es de prueba.
+
 Seguridad: solo se consulta pypi.org y solo se descarga de
 files.pythonhosted.org (los dominios oficiales de PyPI), siempre por HTTPS y
 verificando el sha256 que publica el propio PyPI. El zip se extrae filtrando
@@ -94,12 +100,48 @@ def current_version() -> str:
 
 def _as_tuple(version: str) -> tuple[int, ...]:
     # yt-dlp escribe "2026.07.04" y PyPI lo normaliza a "2026.7.4": comparar
-    # como números iguala ambos formatos.
-    parts = []
-    for chunk in version.split("."):
-        digits = "".join(ch for ch in chunk if ch.isdigit())
-        parts.append(int(digits) if digits else 0)
-    return tuple(parts)
+    # como números iguala ambos formatos. Los trozos que no son un número se
+    # tiran enteros, y eso NO es cosmético: PyPI llama "2026.8.18.122307.dev0"
+    # a la misma versión que instalada dice ser "2026.08.18.122307", así que
+    # sin tirar el "dev0" el sufijo sobrante la haría siempre "más nueva" y el
+    # aviso de motor nuevo no se iría nunca.
+    return tuple(int(chunk) for chunk in version.split(".") if chunk.isdigit())
+
+
+def _newest_wheel(data: dict) -> tuple[str, dict]:
+    """La versión más reciente publicada en PyPI, sea estable o de prueba.
+
+    POR QUÉ TAMBIÉN LAS DE PRUEBA: yt-dlp publica el arreglo de cada cambio de
+    YouTube en su nightly EL MISMO DÍA, y la estable puede tardar semanas. El
+    2026-08-18 pasó lo que este módulo existe para evitar: YouTube rompió el
+    cliente que usaba la única estable publicada (403 al pasar de unos 350 MB,
+    o sea ningún vídeo largo), el arreglo llevaba horas en la nightly, y el
+    botón "actualizar motor" no podía alcanzarlo. Un motor que solo llega a
+    donde no está el arreglo no sirve de nada.
+
+    "info.version" de PyPI es solo la última ESTABLE, así que hay que recorrer
+    las publicadas y quedarse con la mayor que traiga wheel y no esté retirada.
+    """
+    mejor: tuple[tuple[int, ...], str, dict] | None = None
+    for version, files in (data.get("releases") or {}).items():
+        wheel = next(
+            (f for f in files
+             if f.get("filename", "").endswith("py3-none-any.whl") and not f.get("yanked")),
+            None,
+        )
+        if wheel is None:
+            continue
+        clave = _as_tuple(version)
+        if mejor is None or clave > mejor[0]:
+            mejor = (clave, version, wheel)
+    if mejor is None:
+        raise ValueError("PyPI no devolvió ningún paquete instalable")
+    return mejor[1], mejor[2]
+
+
+def is_prerelease(version: str) -> bool:
+    """¿Es una nightly? Se dice en la interfaz: quien actualiza tiene que saberlo."""
+    return any(not chunk.isdigit() for chunk in version.split("."))
 
 
 def check(force: bool = False) -> dict:
@@ -113,11 +155,7 @@ def check(force: bool = False) -> dict:
         req = urllib.request.Request(PYPI_JSON, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        latest = data["info"]["version"]
-        wheel = next(
-            f for f in data["releases"][latest]
-            if f.get("filename", "").endswith("py3-none-any.whl")
-        )
+        latest, wheel = _newest_wheel(data)
     except Exception:  # noqa: BLE001 - sin conexión no es un error visible
         result["error"] = "no se pudo comprobar"
         with _lock:
@@ -127,6 +165,7 @@ def check(force: bool = False) -> dict:
         {
             "latest": latest,
             "update_available": _as_tuple(latest) > _as_tuple(result["current"]),
+            "prerelease": is_prerelease(latest),
             "wheel_url": wheel["url"],
             "sha256": wheel["digests"]["sha256"],
         }
