@@ -165,6 +165,15 @@ def _fmt_speed(speed: float | None) -> str:
     return f"{speed:.1f} TB/s"
 
 
+def _fmt_size(nbytes: int) -> str:
+    value = float(nbytes)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < 1024:
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} PB"
+
+
 def _fmt_eta(eta: float | None) -> str:
     if not eta:
         return ""
@@ -624,10 +633,21 @@ class DownloadManager:
         info[_CLIP_START] = min(first_time for _, first_time in parts)
         return info
 
-    # Intentos completos (con extracción nueva) ante un fallo de red. Tres es el
-    # equilibrio: cubre el corte puntual y la url caducada sin dejar a alguien
-    # media hora mirando un vídeo que no va a bajar nunca.
+    # Intentos completos (con extracción nueva) ante un fallo de red que NO
+    # avanzó ni un byte. Tres es el equilibrio: cubre el corte puntual sin dejar
+    # a alguien media hora mirando un vídeo que no va a bajar nunca.
     ATTEMPTS = 3
+
+    # Cuántas veces se puede pedir una dirección nueva MIENTRAS SE AVANCE.
+    # GOTCHA GORDO, medido el 2026-08-18 con dos vídeos de fondo de Munir:
+    # YouTube deja de servir una url firmada después de unos 350 MB y responde
+    # 403 a todo lo que venga por ella, aunque falten seis horas para que
+    # caduque. Un vídeo de 45 GB en 8K necesita más de cien direcciones nuevas
+    # para acabar, así que un tope de tres intentos lo condenaba SIEMPRE al
+    # error, mientras que los cortos (por debajo del corte) bajaban sin
+    # despeinarse. El tope de aquí es solo una brida contra el bucle infinito:
+    # da para unos 175 GB.
+    MAX_RENEWALS = 500
 
     @staticmethod
     def _sleep_cancellable(job: Job, seconds: float) -> None:
@@ -638,14 +658,25 @@ class DownloadManager:
                 raise JobCancelled("cancelado por el usuario")
             time.sleep(0.2)
 
-    def _extract_with_retries(self, job: Job, opts: dict) -> dict:
+    def _extract_with_retries(self, job: Job, opts: dict,
+                              downloaded=None) -> dict:
         """Descarga, y si la red falla vuelve a intentarlo pidiendo la info de nuevo.
 
         La extracción se repite entera a propósito: las direcciones que sirven el
-        vídeo van firmadas y caducan, así que insistir sobre la vieja solo da más
-        403. Lo ya bajado no se pierde, porque continuedl reanuda el .part.
+        vídeo van firmadas, caducan y encima se agotan a los 350 MB, así que
+        insistir sobre la vieja solo da más 403. Lo ya bajado no se pierde,
+        porque continuedl reanuda el .part.
+
+        Lo que decide si seguir NO es el número de vueltas, es si se ha avanzado:
+        un fallo tras el que el archivo ha crecido es el peaje normal de bajar
+        algo grande de YouTube, y contarlo como intento fallido condenaba al
+        error a todo vídeo de más de 350 MB por muchas vueltas que se dieran.
+        Solo cuentan los intentos que no consiguen un byte (`downloaded` dice
+        cuántos llevamos; sin ella, se cuenta como antes).
         """
-        for attempt in range(1, self.ATTEMPTS + 1):
+        best = downloaded() if downloaded else 0
+        stalled = 0
+        for _ in range(self.MAX_RENEWALS):
             try:
                 with yt_dlp.YoutubeDL(opts) as ydl:
                     return ydl.extract_info(job.url, download=True)
@@ -653,20 +684,34 @@ class DownloadManager:
                 if job.cancel_event.is_set():
                     raise
                 msg = clean_error(exc)
-                if attempt >= self.ATTEMPTS or not looks_temporary(msg):
+                got = downloaded() if downloaded else 0
+                progressed = got > best
+                if progressed:
+                    best, stalled = got, 0        # se avanzó: no es un intento perdido
+                else:
+                    stalled += 1
+                if stalled >= self.ATTEMPTS or not looks_temporary(msg):
                     raise
-                logbus.bus.add(
-                    f"[expoal] Network trouble ({msg}). "
-                    f"Retrying {attempt + 1}/{self.ATTEMPTS}...",
-                    "warn",
-                    job.id,
-                )
+                if progressed:
+                    logbus.bus.add(
+                        f"[expoal] The address stopped serving at {_fmt_size(got)} "
+                        f"({msg}); getting a fresh one and picking up there...",
+                        "warn",
+                        job.id,
+                    )
+                else:
+                    logbus.bus.add(
+                        f"[expoal] Network trouble ({msg}). "
+                        f"Retrying {stalled + 1}/{self.ATTEMPTS}...",
+                        "warn",
+                        job.id,
+                    )
                 # El hook pudo dejarlo en "procesando" antes de romperse.
                 job.status = "descargando"
                 job.speed = ""
                 job.eta = ""
-                self._sleep_cancellable(job, min(3 * attempt, 10))
-        raise RuntimeError("No se pudo descargar el vídeo")   # inalcanzable
+                self._sleep_cancellable(job, min(3 * (stalled + 1), 10))
+        raise RuntimeError("No se pudo descargar el vídeo")   # tope de seguridad
 
     def _download(self, job: Job) -> None:
         folder = Path(job.folder).expanduser()
@@ -675,6 +720,12 @@ class DownloadManager:
         has_ffmpeg = ffmpeg_path is not None
         job.status = "descargando"
         logbus.bus.add(f"[expoal] Starting: {job.url}", "info", job.id)
+
+        # Lo más lejos que ha llegado cada archivo temporal. Es lo que distingue
+        # "la dirección se ha agotado y hay que pedir otra" de "esto no avanza y
+        # no va a avanzar": ver _extract_with_retries. Por archivo, porque un
+        # vídeo con audio aparte son dos, y el segundo empieza otra vez en cero.
+        reached: dict[str, int] = {}
 
         def hook(d: dict) -> None:
             if job.cancel_event.is_set():
@@ -693,6 +744,10 @@ class DownloadManager:
             if d.get("filename"):
                 job.current_file = d["filename"]
             if d["status"] == "downloading":
+                name = d.get("tmpfilename") or d.get("filename") or ""
+                got = d.get("downloaded_bytes") or 0
+                if got > reached.get(name, 0):
+                    reached[name] = got
                 total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
                 if total:
                     job.progress = round(d.get("downloaded_bytes", 0) * 100 / total, 1)
@@ -813,7 +868,8 @@ class DownloadManager:
             )
 
         if info is None:
-            info = self._extract_with_retries(job, opts)
+            info = self._extract_with_retries(job, opts,
+                                              downloaded=lambda: sum(reached.values()))
 
         job.title = job.title or info.get("title") or job.url
         job.file_path = _final_path(info)

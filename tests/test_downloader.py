@@ -208,6 +208,74 @@ def test_el_fallo_se_guarda_en_el_historial(manager):
     assert entrada["mode"] == "video" and entrada["folder"] == "C:/tmp"
 
 
+# --- Direcciones que se agotan a media descarga ---
+
+class _YdlFalso:
+    """Un yt-dlp de mentira que falla las veces que se le diga."""
+
+    def __init__(self, fallos: int, error: str):
+        self.fallos = fallos
+        self.error = error
+        self.vueltas = 0
+
+    def __call__(self, opts):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        return False
+
+    def extract_info(self, url, download=False):
+        self.vueltas += 1
+        if self.vueltas <= self.fallos:
+            raise RuntimeError(self.error)
+        return {"title": "ok"}
+
+
+@pytest.fixture()
+def sin_esperas(monkeypatch):
+    monkeypatch.setattr(DownloadManager, "_sleep_cancellable", lambda self, job, s: None)
+
+
+def test_mientras_se_avance_se_piden_direcciones_nuevas(manager, monkeypatch, sin_esperas):
+    """YouTube deja de servir una dirección firmada tras unos 350 MB y responde
+    403 por ella para siempre, así que un vídeo de 45 GB necesita más de cien
+    direcciones. Contar esos 403 como intentos fallidos condenaba al error a
+    todo vídeo grande: solo cuentan los intentos que no consiguen un byte."""
+    ydl = _YdlFalso(fallos=8, error="unable to download video data: HTTP Error 403: Forbidden")
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", ydl)
+    bajado = [0]
+
+    def descargado():
+        bajado[0] += 350 * 1024 * 1024      # cada intento avanza otro tramo
+        return bajado[0]
+
+    job = _job(manager)
+    assert manager._extract_with_retries(job, {}, downloaded=descargado)["title"] == "ok"
+    assert ydl.vueltas == 9
+
+
+def test_lo_que_no_avanza_se_rinde_a_los_tres_intentos(manager, monkeypatch, sin_esperas):
+    ydl = _YdlFalso(fallos=8, error="unable to download video data: HTTP Error 403: Forbidden")
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", ydl)
+    job = _job(manager)
+    with pytest.raises(RuntimeError):
+        manager._extract_with_retries(job, {}, downloaded=lambda: 0)
+    assert ydl.vueltas == DownloadManager.ATTEMPTS
+
+
+def test_lo_permanente_no_se_reintenta_aunque_haya_avanzado(manager, monkeypatch, sin_esperas):
+    # Un vídeo privado no se arregla pidiendo otra dirección.
+    ydl = _YdlFalso(fallos=3, error="Private video. Sign in if you've been granted access")
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", ydl)
+    job = _job(manager)
+    with pytest.raises(RuntimeError):
+        manager._extract_with_retries(job, {}, downloaded=lambda: 999)
+    assert ydl.vueltas == 1
+
+
 # --- Cuándo se puede bajar solo el tramo pedido ---
 
 def _con_recorte(manager, **cambios):
