@@ -610,6 +610,8 @@ def video_trends(req: TrendsRequest) -> dict:
     try:
         found = trends.search(req.query, req.window, req.limit,
                               opts=dict(settings.cookie_opts()))
+    except trends.EmptyQuery as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except trends.TrendsError as exc:
         detail = str(exc)
         raise HTTPException(status_code=502, detail={

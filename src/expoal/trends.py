@@ -48,6 +48,12 @@ class TrendsError(RuntimeError):
     """La búsqueda no se pudo completar, con el motivo ya en cristiano."""
 
 
+class EmptyQuery(TrendsError):
+    """No hay nada que buscar. Es culpa de la petición, no de la plataforma, y
+    por eso va aparte: mezclarlas hacía que un campo vacío se contara como que
+    el sitio de vídeos había fallado."""
+
+
 def _results_url(query: str, window: str) -> str:
     sp = WINDOWS.get(window) or WINDOWS[DEFAULT_WINDOW]
     return (f"https://www.youtube.com/results"
@@ -91,7 +97,7 @@ def search(query: str, window: str = DEFAULT_WINDOW, limit: int = LIMIT,
     """
     query = (query or "").strip()
     if not query:
-        raise TrendsError("Escribe de qué quieres ver las tendencias")
+        raise EmptyQuery("Escribe de qué quieres ver las tendencias")
     limit = max(1, min(int(limit or LIMIT), MAX_LIMIT))
 
     base = {

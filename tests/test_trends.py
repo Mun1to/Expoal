@@ -137,3 +137,11 @@ def test_un_fallo_de_red_llega_legible(monkeypatch):
     with pytest.raises(trends.TrendsError) as exc:
         trends.search("ia")
     assert str(exc.value) == "Sign in to confirm you're not a bot"
+
+
+def test_una_busqueda_vacia_no_es_culpa_de_la_plataforma():
+    # Va aparte para que el endpoint pueda responder 400 y no 502: un campo
+    # vacío no es que el sitio de vídeos haya fallado.
+    with pytest.raises(trends.EmptyQuery):
+        trends.search("")
+    assert issubclass(trends.EmptyQuery, trends.TrendsError)
