@@ -25,9 +25,20 @@ No third-party download sites, no ads, no uploads. Everything runs locally on yo
 
 ## What it looks like
 
-Five real screenshots, not mockups, following one download from start to finish.
+Six real screenshots, not mockups, following one download from start to finish.
 
-### 01 · Analyze
+### 01 · See what is trending
+
+Before you even have a link. Type your topic, pick a window, and Expoal brings back the most
+watched videos on it right now, with channel, views and length. Clicking one drops it straight
+into the download screen. It asks the platform for its own results page with its own filters:
+no spoofed browser fingerprint, no anti-bot walls jumped, nothing stored, one search per click.
+
+<div align="center">
+<img src="assets/screenshot-trends-dark-en.png" width="740" alt="Expoal showing the most watched videos of the week on a topic, ready to download">
+</div>
+
+### 02 · Analyze
 
 Paste a link and Expoal reads the video, showing you the formats and resolutions it can
 actually pull. Pick a quality, a container and a destination folder.
@@ -38,7 +49,7 @@ actually pull. Pick a quality, a container and a destination folder.
 
 There is a light theme, shown above, and a dark one. The interface is in English or Spanish.
 
-### 02 · Edit before it downloads
+### 03 · Edit before it downloads
 
 Trim the length with the slider or exact timecodes, crop the edges by pixels, strip the audio
 track. This is the part no other downloader gives you: the file arrives the way you wanted it,
@@ -53,7 +64,7 @@ allow it, the video is downloaded in full and trimmed afterwards, exactly as bef
 <img src="assets/screenshot-editor-dark-en.png" width="740" alt="Expoal's editor: a duration slider, pixel crop fields for all four edges with a live preview, and a checkbox to remove the audio">
 </div>
 
-### 03 · Live download queue
+### 04 · Live download queue
 
 Once a download starts you get the queue: progress, speed and time left, a pause button that
 keeps what it already has, and a cancel button that stops it cleanly and leaves no half-written
@@ -63,7 +74,7 @@ files behind.
 <img src="assets/screenshot-queue-dark-en.png" width="740" alt="Expoal's download queue: a video downloading with its progress, speed, time left and a cancel button">
 </div>
 
-### 04 · Done, and on your disk
+### 05 · Done, and on your disk
 
 Finished downloads keep a folder button that opens the file where it landed, and the history
 below survives restarts.
@@ -72,7 +83,7 @@ below survives restarts.
 <img src="assets/screenshot-done-dark-en.png" width="740" alt="Expoal with a finished download and the history below, each entry with a button to open its folder">
 </div>
 
-### 05 · Nothing hidden
+### 06 · Nothing hidden
 
 One button in the header opens a terminal panel with the engine's live output: which extractor
 ran, which formats it picked, when it is merging. It is off by default, because the app should

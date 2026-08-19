@@ -175,6 +175,10 @@ INFO = {
     "duration": 635,
     "platform": "Youtube",
     "heights": [2160, 1440, 1080, 720, 480, 360],
+    # Lo que ocupa cada calidad. Va en los datos falsos para que la captura lo
+    # enseñe: es de lo primero que mira quien duda entre 4K y 1080p.
+    "sizes": {"best": 722647490, "2160": 722647490, "1440": 322756523,
+              "1080": 134589086, "720": 81486037, "480": 36200784, "360": 25501018},
     "width": 3840,
     "height": 2160,
     "ffmpeg": True,
@@ -187,6 +191,46 @@ INFO = {
     "video_formats": ["mkv", "mov", "mp4", "webm"],
     "audio_formats": ["flac", "m4a", "mp3", "opus", "wav"],
 }
+
+
+# Tendencias de mentira, por lo mismo que el resto: la captura tiene que salir
+# igual hoy y dentro de un año, sin depender de qué esté petando ni de que la
+# plataforma conteste. Todo son vídeos libres o de charlas, nunca material
+# comercial: el escaparate de un descargador no puede enseñar una peli pirata.
+TRENDS = {
+    "window": "week",
+    "results": [
+        {"id": "aqz-KE-bpKQ", "url": VIDEO, "views": 8_240_000, "duration": 635,
+         "title": "Big Buck Bunny 60fps 4K - Official Blender Foundation Short Film",
+         "channel": "Blender Foundation",
+         "thumbnail": "https://i.ytimg.com/vi/aqz-KE-bpKQ/mqdefault.jpg"},
+        {"id": "eRsGyueVLvQ", "url": "https://www.youtube.com/watch?v=eRsGyueVLvQ",
+         "views": 3_115_000, "duration": 872, "title": "Sintel - Open Movie by Blender Foundation",
+         "channel": "Blender Foundation",
+         "thumbnail": "https://i.ytimg.com/vi/eRsGyueVLvQ/mqdefault.jpg"},
+        {"id": "WhWc3b3KhnY", "url": "https://www.youtube.com/watch?v=WhWc3b3KhnY",
+         "views": 1_940_000, "duration": 754, "title": "Spring - Blender Open Movie",
+         "channel": "Blender Studio",
+         "thumbnail": "https://i.ytimg.com/vi/WhWc3b3KhnY/mqdefault.jpg"},
+        {"id": "eIho2S0ZahI", "url": "https://www.youtube.com/watch?v=eIho2S0ZahI",
+         "views": 1_206_000, "duration": 599,
+         "title": "How to Speak So That People Want to Listen | Julian Treasure",
+         "channel": "TED",
+         "thumbnail": "https://i.ytimg.com/vi/eIho2S0ZahI/mqdefault.jpg"},
+        {"id": "8S0FDjFBj8o", "url": "https://www.youtube.com/watch?v=8S0FDjFBj8o",
+         "views": 874_300, "duration": 1128, "title": "The power of vulnerability",
+         "channel": "TED",
+         "thumbnail": "https://i.ytimg.com/vi/8S0FDjFBj8o/mqdefault.jpg"},
+        {"id": "Ks-_Mh1QhMc", "url": "https://www.youtube.com/watch?v=Ks-_Mh1QhMc",
+         "views": 612_450, "duration": 1204, "title": "Your body language may shape who you are",
+         "channel": "TED",
+         "thumbnail": "https://i.ytimg.com/vi/Ks-_Mh1QhMc/mqdefault.jpg"},
+    ],
+}
+
+
+def fake_trends(route) -> None:
+    route.fulfill(status=200, content_type="application/json", body=json.dumps(TRENDS))
 
 
 def fake_info(route) -> None:
@@ -307,6 +351,29 @@ def capture_log(page, theme: str, lang: str) -> None:
     _capture_state(page, theme, lang, f"screenshot-log-{theme}-{lang}.png", log=True)
 
 
+def capture_trends(page, theme: str, lang: str) -> None:
+    """La búsqueda de tendencias, con resultados y listos para pulsar.
+
+    Es la única captura que enseña lo que Expoal hace ANTES de tener un enlace,
+    y sin ella la función no se ve en ninguna parte del escaparate.
+    """
+    page.goto(URL, wait_until="networkidle")
+    page.evaluate(
+        "([t, l]) => { localStorage.setItem('expoal-theme', t);"
+        " localStorage.setItem('expoal-lang', l); }",
+        [theme, lang],
+    )
+    page.reload(wait_until="networkidle")
+    page.click("#trends-toggle")
+    page.fill("#trends-input", "blender open movie" if lang == "en" else "cortos de blender")
+    page.click("#trends-search")
+    page.wait_for_selector(".trend", timeout=15000)
+    page.wait_for_timeout(700)
+    filename = f"screenshot-trends-{theme}-{lang}.png"
+    page.screenshot(path=str(OUT / filename))
+    print("guardada:", filename)
+
+
 def main() -> None:
     global JOBS_STATE
     with sync_playwright() as p:
@@ -318,6 +385,7 @@ def main() -> None:
         page.route("**/api/history", fake_history)
         page.route("**/api/jobs", fake_jobs)
         page.route("**/api/log*", fake_log)
+        page.route("**/api/trends", fake_trends)
         # El recorrido completo, en el orden en que lo vive quien usa la app:
         # analizar, editar, descargar y terminar.
         JOBS_STATE = ""
@@ -325,6 +393,7 @@ def main() -> None:
             for lang in ("es", "en"):
                 capture(page, theme, lang)
                 capture_editor(page, theme, lang)
+                capture_trends(page, theme, lang)
         JOBS_STATE = "running"
         for theme in ("dark", "light"):
             for lang in ("es", "en"):
