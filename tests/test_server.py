@@ -4,7 +4,8 @@ from __future__ import annotations
 import pytest
 
 from expoal import config, settings
-from expoal.server import EditRequest, _folder_for, edits_for, video_heights
+from expoal.server import (EditRequest, _folder_for, edits_for, sizes_by_quality,
+                           video_heights)
 
 
 def _pedido(**cambios) -> EditRequest:
@@ -76,3 +77,67 @@ def test_las_miniaturas_de_youtube_no_son_calidades():
 
 def test_un_video_sin_formatos_no_ofrece_calidades():
     assert video_heights({}) == []
+
+
+# --- Lo que va a ocupar cada calidad ---
+
+def _fmt(fid, height, size=0, tbr=0, audio=False):
+    """Un formato como los que sirve YouTube: pistas de vídeo y audio sueltas."""
+    base = {"format_id": fid, "ext": "m4a" if audio else "mp4", "url": f"https://x/{fid}",
+            "protocol": "https", "filesize": size or None, "tbr": tbr or None}
+    if audio:
+        return {**base, "vcodec": "none", "acodec": "mp4a.40.2", "height": None, "abr": 128}
+    return {**base, "vcodec": "avc1.640028", "acodec": "none", "height": height,
+            "width": height * 16 // 9}
+
+
+def _info(*formats, duration=600):
+    """GOTCHA: los formatos van de PEOR a MEJOR, como los sirve YouTube.
+
+    yt-dlp se fía de ese orden y da por bueno el último que cumpla el filtro,
+    en vez de reordenar por altura. Con la lista al revés elige el peor y el
+    peso saldría mal, así que los tests tienen que imitar el orden real.
+    """
+    return {"duration": duration, "formats": list(formats)}
+
+
+def test_cada_calidad_dice_lo_que_ocupa():
+    # El caso que lo motiva: "mejor calidad" en un vídeo de doce horas son 114 GB
+    # y la app no lo decía en ninguna parte.
+    info = _info(_fmt("136", 720, size=200_000_000),
+                 _fmt("137", 1080, size=500_000_000),
+                 _fmt("140", None, size=10_000_000, audio=True))
+    sizes = sizes_by_quality(info)
+    # El peso incluye la pista de audio, porque es lo que se descarga de verdad.
+    assert sizes["1080"] == 510_000_000
+    assert sizes["720"] == 210_000_000
+    assert sizes["best"] == sizes["1080"]
+
+
+def test_una_calidad_menor_nunca_pesa_mas():
+    info = _info(_fmt("137", 1080, size=500_000_000),
+                 _fmt("313", 2160, size=3_000_000_000),
+                 _fmt("140", None, size=10_000_000, audio=True))
+    sizes = sizes_by_quality(info)
+    assert sizes["2160"] > sizes["1080"]
+
+
+def test_sin_tamano_declarado_se_calcula_con_el_bitrate():
+    # YouTube no siempre manda filesize; con el bitrate y la duración sale un
+    # número aproximado, que es infinitamente mejor que ninguno.
+    info = _info(_fmt("137", 1080, tbr=8000),
+                 _fmt("140", None, tbr=128, audio=True), duration=100)
+    # 8000 kbit/s durante 100 s = 100 MB, más el audio.
+    assert 95_000_000 < sizes_by_quality(info)["1080"] < 110_000_000
+
+
+def test_un_video_sin_formatos_no_inventa_pesos():
+    assert sizes_by_quality({}) == {}
+
+
+def test_el_peso_nunca_puede_tumbar_el_analisis():
+    # Es un extra. Un formato roto se queda sin número, pero el resto sigue.
+    info = _info({"format_id": "roto"}, _fmt("137", 1080, size=500_000_000),
+                 _fmt("140", None, size=10_000_000, audio=True))
+    # El "roto" no tiene ni códecs ni url: yt-dlp lo ignora y sigue.
+    assert sizes_by_quality(info)["1080"] == 510_000_000

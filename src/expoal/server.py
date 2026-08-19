@@ -11,7 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import __version__, config, dialogs, engine, logbus, settings, subtitles, updater, urls
-from .downloader import AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error
+from .downloader import (AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error,
+                         format_selector)
 from .editor import Edits
 from .history import History
 
@@ -205,6 +206,58 @@ def set_args(req: ArgsRequest) -> dict:
 PLAYLIST_LIMIT = 200
 
 
+def _format_size(fmt: dict, duration: float) -> int:
+    """Lo que ocupa un formato. Si no lo dice, se calcula con su bitrate."""
+    size = fmt.get("filesize") or fmt.get("filesize_approx") or 0
+    if not size and fmt.get("tbr") and duration:
+        size = int(fmt["tbr"] * 1000 / 8 * duration)      # tbr viene en kbit/s
+    return int(size or 0)
+
+
+def sizes_by_quality(info: dict) -> dict[str, int]:
+    """Cuánto ocupa cada calidad del desplegable, en bytes.
+
+    POR QUÉ: "mejor calidad" en un vídeo de doce horas son 114 GB, y la app no
+    lo decía en ninguna parte; se pulsa pensando en un vídeo normal y se
+    descubre media hora después. El dato ya viene en el análisis, así que no
+    cuesta ni una petición más.
+
+    Quién elige NO lo decide esta función: se le pregunta al propio yt-dlp con
+    el MISMO selector con el que se va a descargar, porque adivinarlo mintió de
+    verdad al probarlo (el de más bitrate daba 32 GB donde la descarga real
+    ocupaba 22: yt-dlp prefiere el códec más eficiente, no el más gordo). Se
+    calcula sobre MP4, que es el caso normal; cambiar de contenedor mueve el
+    número un poco. Si algo falla, se devuelve lo que haya: una calidad sin
+    número es mejor que un número inventado.
+    """
+    formats = info.get("formats") or []
+    duration = info.get("duration") or 0
+    if not formats:
+        return {}
+    sizes: dict[str, int] = {}
+    try:
+        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
+            for quality in ["best", *(str(h) for h in video_heights(info))]:
+                spec = format_selector("video", quality, True, "mp4")
+                try:
+                    elegido = next(
+                        iter(ydl.build_format_selector(spec)(
+                            {"formats": formats, "incomplete_formats": {}})),
+                        None,
+                    )
+                except Exception:  # noqa: BLE001 - esa calidad se queda sin número
+                    continue
+                if not elegido:
+                    continue
+                partes = elegido.get("requested_formats") or [elegido]
+                total = sum(_format_size(f, duration) for f in partes)
+                if total:
+                    sizes[quality] = total
+    except Exception:  # noqa: BLE001 - el peso es un extra, nunca un motivo de fallo
+        return sizes
+    return sizes
+
+
 def video_heights(info: dict) -> list[int]:
     """Las calidades que se pueden ofrecer: solo las que son VÍDEO de verdad.
 
@@ -292,6 +345,9 @@ def video_info(req: InfoRequest) -> dict:
         "duration": info.get("duration"),
         "platform": info.get("extractor_key", ""),
         "heights": heights,
+        # Lo que ocupa cada calidad: el desplegable lo enseña para que nadie
+        # pida 114 GB sin enterarse (ver sizes_by_quality).
+        "sizes": sizes_by_quality(info),
         # Dimensiones del vídeo: la interfaz las necesita para el recorte de bordes.
         "width": info.get("width") or 0,
         "height": info.get("height") or 0,

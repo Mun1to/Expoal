@@ -567,19 +567,32 @@ function renderPreview(keepEdit = false) {
   $("#preview").classList.remove("hidden");
 }
 
+// Lo que va a ocupar, en corto. "Mejor calidad" en un vídeo de doce horas son
+// 114 GB, y sin verlo escrito se pulsa pensando en un vídeo normal.
+function weight(bytes) {
+  if (!bytes) return "";
+  const units = ["MB", "GB", "TB"];
+  let value = bytes / (1024 * 1024);
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+  const shown = value >= 100 ? Math.round(value) : value.toFixed(1);
+  return ` — ${shown} ${units[unit]}`;
+}
+
 function renderQualityOptions() {
   const select = $("#quality-select");
   select.innerHTML = "";
   select.disabled = state.mode !== "video";
+  const sizes = (state.mode === "video" && state.info?.sizes) || {};
   const best = document.createElement("option");
   best.value = "best";
-  best.textContent = I18N.t("best");
+  best.textContent = I18N.t("best") + weight(sizes.best);
   select.appendChild(best);
   if (state.mode === "video" && state.info) {
     for (const height of state.info.heights) {
       const opt = document.createElement("option");
       opt.value = String(height);
-      opt.textContent = `${height}p`;
+      opt.textContent = `${height}p${weight(sizes[String(height)])}`;
       select.appendChild(opt);
     }
   }

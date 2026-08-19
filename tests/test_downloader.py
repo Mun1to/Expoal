@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from expoal import clipper, config, downloader, settings
-from expoal.downloader import DownloadManager, Job, _apply_extra_opts, _format_selector
+from expoal.downloader import DownloadManager, Job, _apply_extra_opts, format_selector
 from expoal.editor import Edits
 from expoal.history import History
 
@@ -54,30 +54,30 @@ def test_sin_opciones_del_usuario_no_se_toca_nada(monkeypatch):
 # --- Selector de formato ---
 
 def test_audio_pide_el_mejor_audio():
-    assert _format_selector("audio", "best", True) == "ba/b"
+    assert format_selector("audio", "best", True) == "ba/b"
 
 
 def test_la_calidad_limita_la_altura():
-    assert "[height<=720]" in _format_selector("video", "720", True)
+    assert "[height<=720]" in format_selector("video", "720", True)
 
 
 def test_sin_ffmpeg_solo_archivos_completos():
     # No se puede fusionar vídeo y audio por separado, así que nada de "bv*+ba".
-    assert "+" not in _format_selector("video", "best", False)
+    assert "+" not in format_selector("video", "best", False)
 
 
 def test_mov_exige_h264():
     # YouTube sirve AV1 en muchas calidades y AV1 no cabe en un MOV: sin pedir
     # códec compatible, el remux falla con "Conversion failed".
-    assert "vcodec^=avc1" in _format_selector("video", "best", True, "mov")
+    assert "vcodec^=avc1" in format_selector("video", "best", True, "mov")
 
 
 def test_webm_prefiere_sus_codecs():
-    assert "ext=webm" in _format_selector("video", "best", True, "webm")
+    assert "ext=webm" in format_selector("video", "best", True, "webm")
 
 
 def test_mkv_admite_cualquier_cosa():
-    assert _format_selector("video", "best", True, "mkv") == "bv*+ba/b"
+    assert format_selector("video", "best", True, "mkv") == "bv*+ba/b"
 
 
 def test_al_recortar_se_pide_el_audio_en_mp4():
@@ -85,17 +85,17 @@ def test_al_recortar_se_pide_el_audio_en_mp4():
     # WEBM, que no lleva tabla de fragmentos, y bastaba con eso para que el
     # atajo no entrara nunca en 4K. Un vídeo de diez horas recortado a un minuto
     # se bajaba entero: 32,7 GB.
-    sel = _format_selector("video", "best", True, "mp4", clipping=True)
+    sel = format_selector("video", "best", True, "mp4", clipping=True)
     assert sel.startswith("bv*+ba[ext=m4a]")
     assert "/bv*+ba/" in sel                  # y si no hay m4a, el de siempre
 
 
 def test_sin_recorte_el_audio_no_se_toca():
-    assert "m4a" not in _format_selector("video", "best", True, "mp4")
+    assert "m4a" not in format_selector("video", "best", True, "mp4")
 
 
 def test_al_recortar_tambien_se_respeta_la_calidad():
-    assert "[height<=1080]" in _format_selector("video", "1080", True, "mp4", clipping=True)
+    assert "[height<=1080]" in format_selector("video", "1080", True, "mp4", clipping=True)
 
 
 # --- Limpieza del mensaje de error ---

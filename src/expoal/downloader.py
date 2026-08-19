@@ -128,8 +128,8 @@ VIDEO_FORMATS = {"mp4", "mkv", "mov", "webm"}
 AUDIO_FORMATS = {"mp3", "m4a", "wav", "flac", "opus"}
 
 
-def _format_selector(mode: str, quality: str, has_ffmpeg: bool, out_format: str = "",
-                     clipping: bool = False) -> str:
+def format_selector(mode: str, quality: str, has_ffmpeg: bool, out_format: str = "",
+                    clipping: bool = False) -> str:
     if mode == "audio":
         return "ba/b"
     cap = f"[height<={quality}]" if quality != "best" else ""
@@ -806,8 +806,8 @@ class DownloadManager:
 
         opts: dict = {
             # Si el tramo se va a bajar suelto, el selector tiene que pedir
-            # pistas que se puedan trocear: ver el porqué en _format_selector.
-            "format": _format_selector(
+            # pistas que se puedan trocear: ver el porqué en format_selector.
+            "format": format_selector(
                 job.mode, job.quality, has_ffmpeg, job.out_format,
                 clipping=has_ffmpeg and self._can_clip_at_source(job),
             ),
