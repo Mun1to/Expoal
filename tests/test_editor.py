@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from expoal.editor import Edits, build_command
+from expoal.editor import Edits, apply, build_command
 
 SRC = Path("entrada.mp4")
 DST = Path("salida.mp4")
@@ -58,3 +58,56 @@ def test_el_corte_empieza_en_cero():
 
 def test_sin_ediciones_no_hay_nada_que_hacer():
     assert Edits().has_any is False
+
+
+# --- El trozo no se guarda encima del vídeo entero ---
+
+def _ffmpeg_de_mentira(monkeypatch):
+    """Un FFmpeg que no existe pero deja escrito su archivo de salida."""
+    import subprocess
+
+    class Resultado:
+        returncode = 0
+        stderr = ""
+
+    def run(cmd, **kwargs):
+        Path(cmd[-1]).write_bytes(b"trozo")
+        return Resultado()
+
+    monkeypatch.setattr(subprocess, "run", run)
+
+
+def test_el_recorte_va_a_otro_archivo_y_el_original_se_queda(tmp_path, monkeypatch):
+    # El caso que borraba datos: el vídeo entero ya estaba en la carpeta, se
+    # pedía un minuto de él, y el minuto se guardaba con su mismo nombre.
+    _ffmpeg_de_mentira(monkeypatch)
+    entero = tmp_path / "video.mp4"
+    entero.write_bytes(b"el video entero, largo")
+    trozo = tmp_path / "video 1m00s-1m30s.mp4"
+
+    salida = apply(entero, Edits(trim_start=60, trim_end=90), "ffmpeg",
+                   dest=trozo, keep_source=True)
+
+    assert salida == trozo and trozo.read_bytes() == b"trozo"
+    assert entero.exists() and entero.read_bytes() == b"el video entero, largo"
+
+
+def test_si_lo_bajamos_solo_para_recortarlo_no_se_queda_el_grande(tmp_path, monkeypatch):
+    # Al revés: si el vídeo entero se bajó AHORA solo para sacarle el trozo,
+    # dejarlo sería regalarle al usuario cuarenta gigas que no pidió.
+    _ffmpeg_de_mentira(monkeypatch)
+    entero = tmp_path / "video.mp4"
+    entero.write_bytes(b"recien bajado")
+    trozo = tmp_path / "video 1m00s-1m30s.mp4"
+
+    apply(entero, Edits(trim_start=60, trim_end=90), "ffmpeg", dest=trozo, keep_source=False)
+
+    assert trozo.exists() and not entero.exists()
+
+
+def test_sin_destino_se_edita_en_el_sitio_como_siempre(tmp_path, monkeypatch):
+    _ffmpeg_de_mentira(monkeypatch)
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"original")
+    assert apply(video, Edits(mute=True), "ffmpeg") == video
+    assert video.read_bytes() == b"trozo"

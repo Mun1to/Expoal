@@ -526,3 +526,18 @@ def test_el_hook_espera_mientras_este_pausado():
     assert not salio.wait(0.15)      # sigue esperando
     job.pause_event.clear()
     assert salio.wait(1)             # y sale en cuanto se reanuda
+
+
+# --- Cómo se llama un archivo que no es el vídeo entero ---
+
+@pytest.mark.parametrize("edits, esperado", [
+    (Edits(trim_start=60, trim_end=90), "Big Buck Bunny [abc] 1m00s-1m30s.mp4"),
+    (Edits(trim_start=60), "Big Buck Bunny [abc] 1m00s-end.mp4"),
+    (Edits(trim_end=30), "Big Buck Bunny [abc] 0s-30s.mp4"),
+    (Edits(trim_start=3900, trim_end=3960), "Big Buck Bunny [abc] 1h05m00s-1h06m00s.mp4"),
+    (Edits(mute=True), "Big Buck Bunny [abc] edit.mp4"),
+])
+def test_el_tramo_va_en_el_nombre(edits, esperado):
+    # Sin esto, el trozo se guardaba con el nombre del vídeo entero y lo borraba.
+    origen = Path("C:/videos/Big Buck Bunny [abc].mp4")
+    assert downloader.edited_name(origen, edits).name == esperado

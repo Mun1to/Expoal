@@ -201,6 +201,38 @@ def _fmt_eta(eta: float | None) -> str:
 _CLIP_START = "_expoal_clip_start"
 
 
+def _stamp(seconds: float) -> str:
+    """Un instante escrito para caber en un nombre de archivo: 1h05m00s, 90s."""
+    total = int(seconds)
+    horas, resto = divmod(total, 3600)
+    minutos, segundos = divmod(resto, 60)
+    if horas:
+        return f"{horas}h{minutos:02d}m{segundos:02d}s"
+    if minutos:
+        return f"{minutos}m{segundos:02d}s"
+    return f"{segundos}s"
+
+
+def edited_name(path: Path, edits: Edits) -> Path:
+    """Cómo se llama un archivo que NO es el vídeo entero, sino un trozo suyo.
+
+    POR QUÉ EXISTE: el recorte se guardaba con el nombre del vídeo completo, así
+    que recortar un minuto de algo que ya tenías en disco te lo BORRABA (medido:
+    46 MB de vídeo convertidos en 2,4 MB de trozo), dos recortes distintos se
+    pisaban entre ellos, y al pedir después el vídeo entero yt-dlp veía el
+    archivo, decía "ya está descargado" y la app cantaba "completado" dejándote
+    el trozo. El tramo va en el nombre para que ninguna de las tres cosas pueda
+    pasar, y de paso se sabe qué hay dentro sin abrirlo.
+    """
+    if edits.has_trim:
+        inicio = _stamp(edits.trim_start or 0)
+        fin = _stamp(edits.trim_end) if edits.trim_end else "end"
+        marca = f"{inicio}-{fin}"
+    else:
+        marca = "edit"        # sin recorte de duración: bordes o silencio
+    return path.with_name(f"{path.stem} {marca}{path.suffix}")
+
+
 def _fmt_span(start: float, end: float | None) -> str:
     """El tramo en minutos y segundos, para contarlo en el panel de terminal."""
     def hhmmss(value: float) -> str:
@@ -567,7 +599,9 @@ class DownloadManager:
             return give_up("the range is empty")
 
         container = job.out_format if job.out_format in VIDEO_FORMATS else "mp4"
-        final = base.with_suffix(f".{container}")
+        # Con el tramo en el nombre desde el primer momento: si no, el trozo
+        # pisaría el vídeo entero que el usuario pudiera tener ya en la carpeta.
+        final = edited_name(base.with_suffix(f".{container}"), edits)
         job.current_file = str(final)
         logbus.bus.add(
             f"[expoal] Clipping at the source: downloading only {_fmt_span(start, end)} "
@@ -919,13 +953,22 @@ class DownloadManager:
             job.status = "editando"
             job.progress = 100.0
             logbus.bus.add("[expoal] Editing the video with FFmpeg...", "info", job.id)
-            apply_edits(
-                Path(job.file_path),
+            origen = Path(job.file_path)
+            # El trozo NO se guarda encima del vídeo entero (ver edited_name).
+            # Si el atajo entró, el archivo ya nació con ese nombre.
+            destino = origen if clipped else edited_name(origen, job.edits)
+            # Y el vídeo entero solo se borra si lo hemos bajado nosotros ahora
+            # para poder recortarlo: si ya estaba en la carpeta, es del usuario.
+            bajado_ahora = bool(reached)
+            job.file_path = str(apply_edits(
+                origen,
                 edits,
                 ffmpeg_path,
                 width=info.get("width") or 0,
                 height=info.get("height") or 0,
-            )
+                dest=destino,
+                keep_source=not bajado_ahora,
+            ))
 
         job.status = "completado"
         job.progress = 100.0

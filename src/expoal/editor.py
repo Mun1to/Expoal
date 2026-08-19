@@ -86,16 +86,23 @@ def build_command(src: Path, dst: Path, edits: Edits, ffmpeg: str,
     return cmd
 
 
-def apply(src: Path, edits: Edits, ffmpeg: str, width: int = 0, height: int = 0) -> Path:
+def apply(src: Path, edits: Edits, ffmpeg: str, width: int = 0, height: int = 0,
+          dest: Path | None = None, keep_source: bool = False) -> Path:
     """Aplica las ediciones sobre `src` y devuelve la ruta final.
 
     Trabaja sobre un archivo temporal y solo sustituye el original si FFmpeg termina
     bien, para no dejar nunca al usuario con un vídeo a medias.
+
+    `dest` deja el resultado con OTRO nombre, y `keep_source` conserva el archivo
+    de partida. Van juntos y existen por un fallo con pérdida de datos: un trozo
+    se guardaba con el nombre del vídeo entero, así que recortar un minuto de un
+    vídeo que ya tenías en disco te lo borraba y te dejaba el minuto.
     """
     if not edits.has_any:
         return src
 
-    tmp = src.with_name(f"{src.stem}.edit{src.suffix}")
+    final = dest or src
+    tmp = src.with_name(f"{src.stem}.edit{final.suffix}")
     cmd = build_command(src, tmp, edits, ffmpeg, width, height)
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0 or not tmp.exists():
@@ -103,6 +110,8 @@ def apply(src: Path, edits: Edits, ffmpeg: str, width: int = 0, height: int = 0)
         detail = (result.stderr or "").strip().splitlines()
         raise RuntimeError(detail[-1] if detail else "FFmpeg no pudo editar el vídeo")
 
-    src.unlink(missing_ok=True)
-    tmp.rename(src)
-    return src
+    if final == src or not keep_source:
+        src.unlink(missing_ok=True)
+    final.unlink(missing_ok=True)      # por si quedaba un recorte igual de antes
+    tmp.rename(final)
+    return final
