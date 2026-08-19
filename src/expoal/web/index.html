@@ -117,6 +117,27 @@
                 data-en="Several links at once">Varios enlaces a la vez</button>
         <button type="button" id="args-toggle" class="cookies-toggle"
                 data-en="Advanced options">Opciones avanzadas</button>
+        <button type="button" id="trends-toggle" class="cookies-toggle"
+                data-en="What is trending">Qué está petando</button>
+      </div>
+
+      <!-- Tendencias: la pregunta "¿qué se está moviendo esta semana en lo mío?"
+           acaba siempre en abrir la plataforma, buscar a mano y copiar enlaces
+           uno a uno. Aquí se busca y se pulsa, y el enlace entra por el mismo
+           camino que si lo hubieras pegado tú. Se le pide a la plataforma su
+           propia página de resultados con sus propios filtros: ni se falsea el
+           navegador ni se guarda nada de nadie. -->
+      <div id="trends-row" class="args-row hidden">
+        <label for="trends-input" data-en="Your topic: what do you want to see trending?">Tu tema: ¿de qué quieres ver las tendencias?</label>
+        <div class="trends-form">
+          <input type="text" id="trends-input" autocomplete="off" spellcheck="false"
+                 placeholder="inteligencia artificial, recetas veganas, Fórmula 1..."
+                 data-en-placeholder="artificial intelligence, vegan recipes, Formula 1...">
+          <select id="trends-window" aria-label="Periodo" data-en-aria="Period"></select>
+          <button type="button" id="trends-search" class="btn primary small"
+                  data-en="Search">Buscar</button>
+        </div>
+        <p id="trends-error" class="error hidden"></p>
       </div>
 
       <!-- Varios enlaces de golpe: lo normal cuando se han ido guardando en una
@@ -390,6 +411,20 @@
 
       <button type="button" id="pl-add" class="btn primary big"></button>
       <p id="pl-error" class="error hidden"></p>
+    </section>
+
+    <!-- Resultados de tendencias. Al pulsar uno se comporta igual que pegar su
+         enlace arriba: se analiza y se elige calidad como siempre. Un solo
+         camino de descarga, no dos. -->
+    <section class="card hidden" id="trends">
+      <div class="pl-head">
+        <span class="badge" id="trends-badge" data-en="Trending">Tendencias</span>
+        <div>
+          <h2 id="trends-title"></h2>
+          <p id="trends-sub" data-en="Most watched first. Click one to download it.">Lo más visto primero. Pulsa uno para descargarlo.</p>
+        </div>
+      </div>
+      <div id="trends-list" class="trends-list"></div>
     </section>
 
     <section class="list-section hidden" id="queue-section">

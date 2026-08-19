@@ -24,6 +24,12 @@ const I18N = (function () {
       cropresult: (from, to) => `${from} queda en ${to}`,
       needsffmpeg: "Requiere FFmpeg",
       download: "Descargar",
+      trendsday: "Hoy", trendsweek: "Esta semana",
+      trendsmonth: "Este mes", trendsyear: "Este año",
+      trendssearching: "Buscando...", trendssearch: "Buscar",
+      trendsnone: "No hay nada de eso en ese periodo. Prueba con otras palabras o un periodo más largo.",
+      trendsfor: (q, n) => `${n} vídeos sobre "${q}"`,
+      views: (n) => `${n} visualizaciones`,
       updating: "Descargando la actualización... Expoal se reiniciará solo.",
       installing: "Instalando... la aplicación se cerrará en un momento.",
       enginedl: "Actualizando el motor...",
@@ -85,6 +91,12 @@ const I18N = (function () {
       cropresult: (from, to) => `${from} becomes ${to}`,
       needsffmpeg: "Requires FFmpeg",
       download: "Download",
+      trendsday: "Today", trendsweek: "This week",
+      trendsmonth: "This month", trendsyear: "This year",
+      trendssearching: "Searching...", trendssearch: "Search",
+      trendsnone: "Nothing on that in this period. Try other words or a longer period.",
+      trendsfor: (q, n) => `${n} videos about "${q}"`,
+      views: (n) => `${n} views`,
       updating: "Downloading the update... Expoal will restart by itself.",
       installing: "Installing... the app will close in a moment.",
       enginedl: "Updating the engine...",
@@ -229,6 +241,10 @@ const state = {
   // Lo último que se pintó de la cola y del historial, para no reconstruirlos
   // cuando el servidor devuelve exactamente lo mismo (ver refresh).
   painted: { jobs: "", history: "" },
+  // Lo último buscado en tendencias, para poder repintarlo al cambiar
+  // de idioma sin volver a pedirlo a la plataforma.
+  trends: null,
+  trendsQuery: "",
 };
 
 async function api(path, options) {
@@ -962,6 +978,107 @@ function fmtDur(seconds) {
   return h ? `${h}:${two(m)}:${two(sec)}` : `${m}:${two(sec)}`;
 }
 
+// --- Tendencias -------------------------------------------------------------
+// Buscar qué se mueve en un tema y bajarlo sin salir de la app. Al pulsar un
+// resultado NO hay un segundo camino de descarga: se rellena el campo de arriba
+// y se analiza, exactamente igual que si el enlace lo hubieras pegado tú.
+
+const TRENDS_WINDOWS = ["day", "week", "month", "year"];
+
+function fmtViews(n) {
+  const v = Number(n) || 0;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(v >= 1e7 ? 0 : 1)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(v >= 1e4 ? 0 : 1)}K`;
+  return String(v);
+}
+
+function renderTrendsWindows() {
+  const sel = $("#trends-window");
+  const elegido = sel.value || "week";
+  sel.innerHTML = "";
+  for (const w of TRENDS_WINDOWS) {
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = I18N.t(`trends${w}`);
+    sel.appendChild(opt);
+  }
+  sel.value = elegido;
+}
+
+function renderTrends() {
+  const section = $("#trends");
+  const list = $("#trends-list");
+  list.innerHTML = "";
+  if (!state.trends) {
+    section.classList.add("hidden");
+    return;
+  }
+  section.classList.remove("hidden");
+  $("#trends-title").textContent = I18N.t("trendsfor")(state.trendsQuery, state.trends.length);
+
+  for (const item of state.trends) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "trend";
+    row.dataset.url = item.url;
+
+    if (item.thumbnail) {
+      const img = document.createElement("img");
+      img.src = item.thumbnail;
+      img.alt = "";
+      img.loading = "lazy";
+      row.appendChild(img);
+    }
+
+    const body = document.createElement("div");
+    body.className = "trend-body";
+    const title = document.createElement("span");
+    title.className = "trend-title";
+    // textContent, nunca innerHTML: el título lo escribe cualquiera.
+    title.textContent = item.title;
+    const meta = document.createElement("span");
+    meta.className = "trend-meta";
+    const trozos = [item.channel, I18N.t("views")(fmtViews(item.views)), fmtDur(item.duration)];
+    meta.textContent = trozos.filter(Boolean).join(" · ");
+    body.append(title, meta);
+    row.appendChild(body);
+    list.appendChild(row);
+  }
+}
+
+async function searchTrends() {
+  const input = $("#trends-input");
+  const btn = $("#trends-search");
+  const errorEl = $("#trends-error");
+  const query = input.value.trim();
+  hideError(errorEl);
+  if (!query) { input.focus(); return; }
+
+  btn.disabled = true;
+  btn.textContent = I18N.t("trendssearching");
+  try {
+    const data = await post("/api/trends", { query, window: $("#trends-window").value });
+    state.trends = data.results;
+    state.trendsQuery = query;
+    renderTrends();
+    if (!data.results.length) showError(errorEl, I18N.t("trendsnone"));
+  } catch (err) {
+    state.trends = null;
+    renderTrends();
+    showError(errorEl, err.message);
+    // El anti-bot de la plataforma se arregla con las cookies del navegador,
+    // igual que en una descarga: si es eso, se ofrece el bloque.
+    if (err.needs_cookies) {
+      state.cookiesProblem = "login";
+      state.cookiesOpen = null;
+      renderCookies();
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = I18N.t("trendssearch");
+  }
+}
+
 function renderPlaylist() {
   const info = state.info;
   $("#pl-title").textContent = info.title || I18N.t("playlist");
@@ -1630,6 +1747,30 @@ async function init() {
     $("#args-row").classList.toggle("hidden");
     if (!$("#args-row").classList.contains("hidden")) $("#args-input").focus();
   });
+  renderTrendsWindows();
+  $("#trends-toggle").addEventListener("click", () => {
+    $("#trends-row").classList.toggle("hidden");
+    if (!$("#trends-row").classList.contains("hidden")) $("#trends-input").focus();
+  });
+  $("#trends-search").addEventListener("click", searchTrends);
+  $("#trends-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); searchTrends(); }
+  });
+  // Cambiar de periodo con una búsqueda ya hecha rebusca: es lo que se espera
+  // de un desplegable así, y evita tener que volver a pulsar el botón.
+  $("#trends-window").addEventListener("change", () => {
+    if (state.trendsQuery) searchTrends();
+  });
+  // Pulsar un resultado es lo mismo que pegar su enlace arriba: un solo camino
+  // de descarga, con su calidad, su formato y su editor de siempre.
+  $("#trends-list").addEventListener("click", (e) => {
+    const row = e.target.closest(".trend");
+    if (!row) return;
+    $("#url-input").value = row.dataset.url;
+    analyze();
+    $("#preview").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
   $("#multi-toggle").addEventListener("click", () => {
     $("#multi-row").classList.toggle("hidden");
     if (!$("#multi-row").classList.contains("hidden")) $("#multi-input").focus();
@@ -1677,6 +1818,11 @@ async function init() {
     // el title, que lo escribe este archivo: sin repintar aquí se quedaban en
     // el idioma anterior (cazado con el barrido de traducciones).
     renderToggles();
+    // Los periodos y las filas de tendencias los escribe este archivo, y se
+    // repintan desde el estado guardado: cambiar de idioma NO vuelve a pedirle
+    // la búsqueda a la plataforma.
+    renderTrendsWindows();
+    renderTrends();
     // El aviso de "aquí no hay nada todavía" es de este archivo: si el panel
     // está abierto y vacío, hay que volver a escribirlo en el idioma nuevo.
     if (state.log.open && state.log.count === 0) {

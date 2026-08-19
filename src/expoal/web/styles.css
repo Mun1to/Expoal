@@ -773,3 +773,35 @@ footer p { margin: 0; }
   #preview-thumb { width: 100%; height: auto; }
   .url-row { flex-direction: column; }
 }
+
+/* --- Tendencias --------------------------------------------------------- */
+/* La búsqueda vive en la fila discreta de opciones (.args-row), así que hereda
+   su caja; aquí solo se coloca lo de dentro en una línea. */
+.trends-form { display: flex; gap: 8px; align-items: center; }
+.trends-form input[type="text"] { flex: 1; min-width: 0; }
+.trends-form select { flex: none; }
+
+.trends-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+
+/* Cada resultado es un botón entero: se pulsa en cualquier parte de la fila y
+   el enlace entra por el camino de siempre. Por eso hay que apagarle el estilo
+   nativo de botón, que si no pinta borde y fondo del sistema. */
+.trend {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 7px 10px; border: 0; border-radius: 8px;
+  background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.trend:hover { background: var(--surface-2); }
+.trend:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.trend img {
+  flex: none; width: 68px; height: 38px; border-radius: 5px;
+  object-fit: cover; background: var(--surface-2);
+}
+.trend-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trend-title {
+  font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.trend-meta {
+  font-size: 12px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

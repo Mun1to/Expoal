@@ -10,7 +10,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import __version__, config, dialogs, engine, logbus, settings, subtitles, updater, urls
+from . import (__version__, config, dialogs, engine, logbus, settings, subtitles, trends,
+               updater, urls)
 from .downloader import (AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error,
                          format_selector)
 from .editor import Edits
@@ -591,6 +592,33 @@ def get_log(after: int = 0) -> dict:
 def clear_log() -> dict:
     logbus.bus.clear()
     return {"ok": True}
+
+
+class TrendsRequest(BaseModel):
+    query: str
+    window: str = trends.DEFAULT_WINDOW
+    limit: int = trends.LIMIT
+
+
+@app.post("/api/trends")
+def video_trends(req: TrendsRequest) -> dict:
+    """Lo más visto sobre un tema en la ventana pedida.
+
+    Se le pasan las cookies del usuario porque una búsqueda topa con el mismo
+    anti-bot que una descarga, y la salida es la misma: su propia sesión.
+    """
+    try:
+        found = trends.search(req.query, req.window, req.limit,
+                              opts=dict(settings.cookie_opts()))
+    except trends.TrendsError as exc:
+        detail = str(exc)
+        raise HTTPException(status_code=502, detail={
+            "message": detail,
+            "needs_cookies": settings.looks_like_login_error(detail),
+        })
+    logbus.bus.add(f"[expoal] Trends: {len(found)} results for {req.query!r} "
+                   f"({req.window})", "info")
+    return {"results": found, "window": req.window}
 
 
 class OpenRequest(BaseModel):
