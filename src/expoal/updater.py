@@ -234,10 +234,20 @@ def apply_update() -> dict:
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": f"fallo al descargar: {exc}"}
 
-    # Verifica el checksum si el release lo publica.
+    # Verifica el checksum si el release lo publica. Y si lo publica, es
+    # OBLIGATORIO: antes, no poder leerlo (un corte de red, un formato raro, el
+    # nombre del archivo cambiado) valía lo mismo que no tenerlo, así que la
+    # comprobación se apagaba sola y en silencio, y se lanzaba un instalador sin
+    # verificar. Una comprobación que se desactiva cuando falla no es una
+    # comprobación. Solo un release SIN checksums publicados se instala a pelo.
     if info.get("checksums_url"):
         expected = _expected_sha256(info["checksums_url"], asset_name)
-        if expected and _sha256(dst) != expected:
+        if not expected:
+            dst.unlink(missing_ok=True)
+            return {"ok": False,
+                    "error": "no se ha podido comprobar el checksum de la descarga; "
+                             "descarga abortada"}
+        if _sha256(dst) != expected:
             dst.unlink(missing_ok=True)
             return {"ok": False, "error": "el checksum no coincide; descarga abortada"}
 
