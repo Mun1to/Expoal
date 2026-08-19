@@ -3,6 +3,64 @@
 All notable changes to Expoal. Dates are release dates; versions follow
 [semantic versioning](https://semver.org/).
 
+## [2.5.3] — 2026-08-19
+
+### Added
+
+- **Every quality now says what it weighs.** "Best available" on a twelve-hour video is 114 GB,
+  and nothing on screen said so: you picked it thinking of an ordinary video and found out half
+  an hour later. The dropdown now reads "2160p — 8.4 GB". The figure is not a guess: each
+  quality asks yt-dlp itself, using the very selector the download will use, and adds up the
+  video and audio tracks. It costs no extra request.
+- **Clips carry their time range in the file name.** A clip used to overwrite the full video it
+  came from, silently. It now saves as `Title [id] 1m00s-1m30s.mp4`, so the original survives
+  and two clips of the same video can live side by side.
+
+### Fixed
+
+- **Downloads no longer die on "come back in a minute".** A 429 (you are going too fast) or a
+  5xx (the server is having a moment) counted as a permanent failure, so a download stopped
+  dead where waiting twenty seconds would have been enough. Both are now retried.
+- **The engine no longer deletes itself.** Expoal wiped its downloaded yt-dlp whenever the app
+  version did not match the one that fetched it, which meant two installations sharing the same
+  folder destroyed each other's engine on every start, and a long video would then fail again.
+- **YouTube's storyboards are gone from the quality list.** 27p, 45p and 90p are the thumbnail
+  strips of the seek bar, not video: picking one always failed with "Requested format is not
+  available".
+- **Big downloads survive expiring links.** A long download keeps asking for a fresh address as
+  it advances, instead of giving up after a fixed number of tries on a link that has already
+  expired. Measured on a 12-hour video: 1.47 GB straight through, past the point where it used
+  to die.
+- **The engine updater reaches yt-dlp's nightly builds.** It only looked at the last stable
+  release, so when YouTube broke that build the fix was out of reach behind the very button
+  meant to deliver it.
+
+## [2.5.2] — 2026-08-17
+
+### Fixed
+
+- **"Open folder" opens the folder again.** With a space anywhere in the file name, and video
+  titles are full of them, Windows Explorer quietly opened Documents instead of selecting the
+  file. It gave no error, so from the code working and not working looked identical.
+
+## [2.5.1] — 2026-08-17
+
+### Added
+
+- **The destination folder is remembered.** Where your videos go is a preference, not a
+  decision to retype on every start.
+
+### Fixed
+
+- **Clipping works on 4K videos.** The shortcut that downloads only the part you asked for
+  never ran on modern video, because YouTube pairs it with audio in a container that carries no
+  fragment table, and one track without it was enough to discard the shortcut entirely.
+  Measured on a ten-hour video trimmed to one minute: 73 MB in four seconds, against 32.7 GB in
+  twenty minutes. When the shortcut cannot run, the terminal panel now says why.
+- **A byte-order mark no longer empties your history.** A stray marker at the start of the file,
+  which any Windows editor can leave behind, made the history read as empty, and the next
+  download overwrote it.
+
 ## [2.5.0] — 2026-08-14
 
 ### Added
