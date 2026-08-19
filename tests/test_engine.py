@@ -49,3 +49,26 @@ def test_lo_retirado_y_lo_que_no_trae_wheel_no_cuenta():
         },
     }
     assert engine._newest_wheel(data)[0] == "2026.7.4"
+
+
+def test_el_motor_sobrevive_a_un_cambio_de_version_de_la_app(tmp_path, monkeypatch):
+    """Dos instalaciones de Expoal (el .exe y el repo) comparten la carpeta de
+    datos: cuando borrar dependía de la versión de la app, cada arranque de una
+    se cargaba el motor que había bajado la otra y el usuario volvía al roto."""
+    import json
+    import sys
+
+    engine_dir = tmp_path / "engine"
+    (engine_dir / "yt_dlp").mkdir(parents=True)
+    (engine_dir / "yt_dlp" / "__init__.py").write_text("", encoding="utf-8")
+    (engine_dir / "engine.json").write_text(
+        json.dumps({"yt_dlp": "2026.8.18.122307.dev0", "app": "0.0.1-otra"}), encoding="utf-8"
+    )
+    monkeypatch.setattr(engine, "ENGINE_DIR", engine_dir)
+    monkeypatch.setattr(engine, "META_FILE", engine_dir / "engine.json")
+    meta_path = list(sys.meta_path)
+    try:
+        assert engine.activate() == "2026.8.18.122307.dev0"
+        assert (engine_dir / "yt_dlp" / "__init__.py").exists()
+    finally:
+        sys.meta_path[:] = meta_path

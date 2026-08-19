@@ -72,21 +72,25 @@ def _discard() -> None:
 
 
 def activate() -> str | None:
-    """Engancha el motor descargado si existe y pertenece a esta versión de la app.
+    """Engancha el motor descargado, si hay uno entero en su sitio.
 
-    Si la app se actualizó desde que se descargó el motor, la copia se borra:
-    la app nueva trae su propio yt-dlp reciente y así no hay que comparar
-    versiones entre el empaquetado (ilegible sin importarlo) y el descargado.
+    ANTES se borraba en cuanto la versión de la app no coincidía con la que lo
+    descargó, dando por hecho que una app nueva trae un yt-dlp reciente. Esa
+    premisa es falsa y costó un diagnóstico entero el 2026-08-19: el instalador
+    empaqueta la última ESTABLE, que puede estar rota, y encima dos
+    instalaciones de Expoal conviviendo (el .exe instalado y el repo, o dos
+    versiones cualquiera) comparten esta carpeta de datos, así que **cada
+    arranque de una borraba el motor que había bajado la otra** y el usuario
+    volvía al motor roto sin tocar nada. Si el motor descargado se queda viejo,
+    quien lo detecta es check() contra PyPI y se resuelve con un clic, que es
+    para lo que está el banner.
     """
     try:
         if not (ENGINE_DIR / "yt_dlp" / "__init__.py").exists():
             return None
         meta = json.loads(META_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        _discard()
-        return None
-    if meta.get("app") != __version__:
-        _discard()
+        _discard()          # sin ficha no se sabe qué es esto: fuera
         return None
     sys.meta_path.insert(0, _EngineFinder())
     return str(meta.get("yt_dlp") or "")
