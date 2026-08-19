@@ -7,6 +7,13 @@ All notable changes to Expoal. Dates are release dates; versions follow
 
 ### Added
 
+- **See what is trending on your topic, and download it without leaving.** "What is blowing up
+  in my field this week" used to mean opening the platform, searching by hand, sorting however
+  you could and copying links one at a time. Type a subject, pick a window, and the most watched
+  videos on it come back with channel, views and length; clicking one analyses it exactly as if
+  you had pasted the link. It asks the platform for its own results page with its own filters,
+  through the yt-dlp already in the app: no spoofed browser fingerprint, no anti-bot walls
+  jumped, nothing stored, one search per click.
 - **Every quality now says what it weighs.** "Best available" on a twelve-hour video is 114 GB,
   and nothing on screen said so: you picked it thinking of an ordinary video and found out half
   an hour later. The dropdown now reads "2160p — 8.4 GB". The figure is not a guess: each

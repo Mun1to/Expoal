@@ -105,9 +105,10 @@ for the times you want a window, and for the people who would never open a termi
 
 - Works with YouTube, TikTok, Instagram and every other site yt-dlp supports (thousands of them)
 - Paste a link, preview the video and download it in the best available quality
+- **See what is trending on your topic and grab it without leaving**: type a subject, pick a window (today, this week, this month, this year) and get the most watched videos on it, with channel, views and length. Clicking one analyses it just like a link you pasted yourself. It asks the platform for its own results page with its own filters, through the same yt-dlp the app already ships: no spoofed fingerprints, no anti-bot walls jumped, nothing stored, one search per click
 - Choose the output format: MP4, MKV, MOV or WEBM for video; MP3, M4A, WAV, FLAC or OPUS for audio (requires FFmpeg)
 - Extract the transcript: save subtitles as clean text or as timed `.srt`, in any of the languages the video offers, either instead of the video or alongside it
-- Pick the resolution, and choose the destination folder with a native file browser
+- Pick the resolution, with what each one weighs written next to it, and choose the destination folder with a native file browser
 - The destination folder is remembered: the app opens on the one you saved to last, not on a default you have to change every time
 - Edit while you download: trim the length (visual slider or exact timecodes), crop the edges by pixels, and strip the audio track
 - Playlists and channels: paste one and pick which videos to grab from a checklist, all queued at once with shared format and quality
