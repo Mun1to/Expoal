@@ -205,6 +205,24 @@ def set_args(req: ArgsRequest) -> dict:
 PLAYLIST_LIMIT = 200
 
 
+def video_heights(info: dict) -> list[int]:
+    """Las calidades que se pueden ofrecer: solo las que son VÍDEO de verdad.
+
+    YouTube mezcla en la lista de formatos sus storyboards (las miniaturas que
+    salen al pasar el ratón por la barra de progreso): llegan con altura 27, 45
+    y 90 y sin códec de vídeo. Sin filtrarlas, el desplegable de calidad
+    ofrecía tres opciones que no son un vídeo, y elegir una daba siempre
+    "Requested format is not available" (reproducido antes de arreglarlo).
+    """
+    return sorted(
+        {
+            f["height"] for f in info.get("formats", [])
+            if f.get("height") and f.get("vcodec") and f["vcodec"] != "none"
+        },
+        reverse=True,
+    )
+
+
 @app.post("/api/info")
 def video_info(req: InfoRequest) -> dict:
     url = _validate_url(req.url)
@@ -264,9 +282,7 @@ def video_info(req: InfoRequest) -> dict:
             "audio_formats": sorted(AUDIO_FORMATS),
         }
 
-    heights = sorted(
-        {f["height"] for f in info.get("formats", []) if f.get("height")}, reverse=True
-    )
+    heights = video_heights(info)
     return {
         "type": "video",
         "url": url,
