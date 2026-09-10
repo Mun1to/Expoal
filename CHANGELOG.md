@@ -3,6 +3,24 @@
 All notable changes to Expoal. Dates are release dates; versions follow
 [semantic versioning](https://semver.org/).
 
+## [2.5.4] — 2026-09-10
+
+### Fixed
+
+- **TikTok and Instagram no longer fail at random.** Their extractors ask to present a real
+  browser's TLS handshake, and Expoal could not: yt-dlp warned about it in passing and asked for
+  the page anyway, which works right up until the site gets suspicious and answers with a filler
+  page instead of the video. Expoal now ships that capability (yt-dlp's own `curl-cffi` extra),
+  going from no browser fingerprints available to 37. It changes how a request looks and nothing
+  else: still one page per click, still nothing sent but the link you pasted, still nothing
+  stored about anyone.
+- **Analysing a link retries instead of giving up on the first stumble.** All the stubbornness
+  lived in the download; the analysis, which is the first thing anyone does, had a single
+  attempt. A link that TikTok refused once showed the raw yt-dlp error, which asks you to open a
+  bug report on GitHub, when the same link worked thirteen times in a row seconds later. It now
+  retries three times and, if it still fails, says so in plain words. A missing session is still
+  not retried: insisting does not create one.
+
 ## [2.5.3] — 2026-08-19
 
 ### Added
