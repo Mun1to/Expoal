@@ -1,6 +1,7 @@
 """API local de Expoal + servido de la interfaz web estática."""
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -13,7 +14,7 @@ from pydantic import BaseModel
 from . import (__version__, config, dialogs, engine, logbus, settings, subtitles, trends,
                updater, urls)
 from .downloader import (AUDIO_FORMATS, VIDEO_FORMATS, DownloadManager, clean_error,
-                         format_selector)
+                         format_selector, looks_temporary)
 from .editor import Edits
 from .history import History
 
@@ -277,6 +278,44 @@ def video_heights(info: dict) -> list[int]:
     )
 
 
+# Cuántas veces se vuelve a pedir el análisis cuando la plataforma tropieza, y
+# cuánto se espera entre intentos. Son tres y cortos a propósito: esto pasa
+# dentro de una petición HTTP con alguien mirando la pantalla, así que el techo
+# de espera es lo que se aguanta sin pensar que la app se ha colgado.
+INFO_ATTEMPTS = 3
+INFO_WAIT = 1.5
+
+
+def _extract_info(url: str, opts: dict) -> dict:
+    """Extrae la info, reintentando los fallos que se arreglan solos.
+
+    ANTES había UN intento: si TikTok o Instagram devolvían una página de
+    relleno porque sospecharon de la petición, el usuario se comía el error
+    crudo de yt-dlp, que además le pedía abrir una incidencia en GitHub. El
+    reintento no es un parche por si acaso, está medido: el mismo enlace que
+    falló funcionó 13 veces seguidas después sin cambiar nada (2026-09-10).
+
+    La descarga ya hacía esto (`_extract_with_retries`); el análisis se quedó
+    sin ello y es justo el paso que ve el usuario antes de cualquier otra cosa.
+    """
+    last: Exception | None = None
+    for attempt in range(INFO_ATTEMPTS):
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                return ydl.extract_info(url, download=False)
+        except yt_dlp.utils.DownloadError as exc:
+            last = exc
+            if not looks_temporary(clean_error(exc)):
+                raise
+            if attempt + 1 < INFO_ATTEMPTS:
+                logbus.bus.add(
+                    f"[expoal] The platform did not answer as expected; "
+                    f"retrying ({attempt + 2}/{INFO_ATTEMPTS})"
+                )
+                time.sleep(INFO_WAIT)
+    raise last   # type: ignore[misc]
+
+
 @app.post("/api/info")
 def video_info(req: InfoRequest) -> dict:
     url = _validate_url(req.url)
@@ -296,8 +335,7 @@ def video_info(req: InfoRequest) -> dict:
         **settings.cookie_opts(),
     }
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+        info = _extract_info(url, opts)
     except yt_dlp.utils.DownloadError as exc:
         # Un fallo por falta de sesión no es lo mismo que un vídeo roto: la
         # interfaz necesita distinguirlos para poder ofrecer las cookies en vez
@@ -309,6 +347,10 @@ def video_info(req: InfoRequest) -> dict:
                 "message": message,
                 "needs_cookies": settings.looks_like_login_error(message),
                 "cookie_error": settings.looks_like_cookie_error(message),
+                # Si aguantó los tres intentos, sigue siendo un tropiezo de la
+                # plataforma: la interfaz lo dice en cristiano en vez de enseñar
+                # el mensaje de yt-dlp, que pide abrir una incidencia en GitHub.
+                "hiccup": settings.looks_like_platform_hiccup(message),
             },
         ) from exc
 

@@ -16,6 +16,12 @@ const I18N = (function () {
       analyze: "Analizar", analyzing: "Analizando...",
       video: "Vídeo", best: "Máxima disponible", nochange: "sin cambios",
       neterror: "Error de red",
+      // El mensaje crudo de yt-dlp para este caso pide abrir una incidencia en
+      // GitHub, que es el peor consejo cuando lo único que hace falta es
+      // volver a intentarlo (la app ya lo reintenta tres veces sola).
+      hiccup: "La plataforma no ha devuelto los datos del vídeo. Suele ser "
+              + "pasajero: vuelve a intentarlo en un momento. Si insiste, "
+              + "prueba con las cookies de tu navegador.",
       nosubs: "Este vídeo no tiene subtítulos disponibles",
       cropbad: "El recorte deja el vídeo sin imagen",
       auto: (name) => `${name} (automático)`,
@@ -83,6 +89,9 @@ const I18N = (function () {
       analyze: "Analyze", analyzing: "Analyzing...",
       video: "Video", best: "Best available", nochange: "no changes",
       neterror: "Network error",
+      hiccup: "The platform did not return the video data. This is usually "
+              + "temporary: try again in a moment. If it keeps happening, try "
+              + "using your browser cookies.",
       nosubs: "This video has no subtitles available",
       cropbad: "The crop leaves the video with no image",
       auto: (name) => `${name} (automatic)`,
@@ -547,6 +556,10 @@ async function analyze(event) {
     // rutas del sistema: no aporta nada sobre lo que ya dice el bloque de abajo
     // en cristiano, y encima enseña la carpeta del usuario. Se calla.
     if (state.cookiesProblem === "fail") hideError(errorEl);
+    // Tropiezo de la plataforma: el mensaje de yt-dlp manda al usuario a abrir
+    // una incidencia en GitHub y no dice lo único que sirve, que es esperar un
+    // momento. Se sustituye por el nuestro (el backend ya reintentó tres veces).
+    else if (err.hiccup) showError(errorEl, I18N.t("hiccup"));
     else showError(errorEl, err.message);
   } finally {
     btn.disabled = false;

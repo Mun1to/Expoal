@@ -421,3 +421,25 @@ def looks_like_cookie_error(message: str) -> bool:
     # Solo cuenta si el fallo habla de cookies o del navegador elegido: hay
     # errores de "no such file" que no tienen nada que ver.
     return "cookie" in low or (cookies_browser() and cookies_browser() in low)
+
+
+# La plataforma contestó, pero no con lo que el extractor esperaba. Pasa cuando
+# TikTok o Instagram sospechan de la petición y devuelven una página de relleno
+# en vez de los datos del vídeo, y se arregla solo al volver a pedirlo (medido
+# el 2026-09-10: un enlace de TikTok falló una vez y luego funcionó 13 veces
+# seguidas sin cambiar nada). El mensaje crudo de yt-dlp para este caso manda al
+# usuario a abrir una incidencia en GitHub, que es el peor consejo posible
+# cuando lo que hace falta es reintentar.
+_HICCUP_HINTS = (
+    "unexpected response from webpage request",
+    "unable to extract webpage video data",
+    "unable to extract initial data",
+    "unable to extract video data",
+)
+
+
+def looks_like_platform_hiccup(message: str) -> bool:
+    low = (message or "").lower()
+    if looks_like_login_error(message):
+        return False   # falta sesión: eso no se arregla insistiendo
+    return any(hint in low for hint in _HICCUP_HINTS)

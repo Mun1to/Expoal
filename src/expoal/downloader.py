@@ -97,6 +97,11 @@ def looks_temporary(msg: str) -> bool:
     low = msg.lower()
     if settings.looks_like_login_error(msg):
         return False   # falta sesión: reintentar mil veces no la va a crear
+    # Una respuesta que no es la esperada también se arregla insistiendo: la
+    # plataforma contestó, solo que con una página de relleno porque sospechó de
+    # la petición (ver settings.looks_like_platform_hiccup).
+    if settings.looks_like_platform_hiccup(msg):
+        return True
     return any(hint in low for hint in _TEMPORARY_HINTS)
 
 

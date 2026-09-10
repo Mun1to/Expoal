@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import pytest
+import yt_dlp
 
-from expoal import config, settings
-from expoal.server import (EditRequest, _folder_for, edits_for, sizes_by_quality,
-                           video_heights)
+from expoal import config, server, settings
+from expoal.server import (EditRequest, _extract_info, _folder_for, edits_for,
+                           sizes_by_quality, video_heights)
 
 
 def _pedido(**cambios) -> EditRequest:
@@ -141,3 +142,76 @@ def test_el_peso_nunca_puede_tumbar_el_analisis():
                  _fmt("140", None, size=10_000_000, audio=True))
     # El "roto" no tiene ni códecs ni url: yt-dlp lo ignora y sigue.
     assert sizes_by_quality(info)["1080"] == 510_000_000
+
+
+# --- Reintentos del análisis -------------------------------------------------
+# El caso real que los motivó (2026-09-10): un enlace de TikTok devolvía
+# "Unexpected response from webpage request" y la app se rendía al primer
+# intento, cuando el segundo funcionaba. Estos tests fijan que se reintenta lo
+# pasajero y NO lo permanente, sin tocar la red.
+
+_TROPIEZO = ("[TikTok] 7672000499146640670: Unexpected response from webpage "
+             "request; please report this issue on "
+             "https://github.com/yt-dlp/yt-dlp/issues?q= .")
+
+
+class _YdlFalso:
+    """Sustituto de yt_dlp.YoutubeDL que falla las primeras N veces."""
+
+    def __init__(self, opts):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def extract_info(self, url, download=False):
+        _YdlFalso.llamadas += 1
+        if _YdlFalso.llamadas <= _YdlFalso.fallos:
+            raise yt_dlp.utils.DownloadError(_YdlFalso.mensaje)
+        return {"id": "ok", "title": "va"}
+
+
+@pytest.fixture
+def ydl_falso(monkeypatch):
+    _YdlFalso.llamadas = 0
+    _YdlFalso.fallos = 0
+    _YdlFalso.mensaje = _TROPIEZO
+    monkeypatch.setattr(server.yt_dlp, "YoutubeDL", _YdlFalso)
+    monkeypatch.setattr(server.time, "sleep", lambda s: None)   # sin esperas
+    return _YdlFalso
+
+
+def test_un_tropiezo_de_la_plataforma_se_reintenta(ydl_falso):
+    ydl_falso.fallos = 1
+    assert _extract_info("https://vm.tiktok.com/X/", {})["id"] == "ok"
+    assert ydl_falso.llamadas == 2
+
+
+def test_el_reintento_no_es_infinito(ydl_falso):
+    # Si la plataforma sigue sin contestar bien, el error llega al usuario en
+    # vez de dejarle mirando la rueda para siempre.
+    ydl_falso.fallos = 99
+    with pytest.raises(yt_dlp.utils.DownloadError):
+        _extract_info("https://vm.tiktok.com/X/", {})
+    assert ydl_falso.llamadas == server.INFO_ATTEMPTS
+
+
+def test_lo_que_no_se_arregla_solo_no_se_reintenta(ydl_falso):
+    # Falta de sesión: insistir no la crea, y esperar cuatro segundos y medio
+    # para dar el mismo error es peor que darlo ya.
+    ydl_falso.fallos = 99
+    ydl_falso.mensaje = "Sign in to confirm you're not a bot"
+    with pytest.raises(yt_dlp.utils.DownloadError):
+        _extract_info("https://www.youtube.com/watch?v=X", {})
+    assert ydl_falso.llamadas == 1
+
+
+def test_un_video_privado_tampoco_se_reintenta(ydl_falso):
+    ydl_falso.fallos = 99
+    ydl_falso.mensaje = "Private video. Sign in if you've been granted access"
+    with pytest.raises(yt_dlp.utils.DownloadError):
+        _extract_info("https://www.youtube.com/watch?v=X", {})
+    assert ydl_falso.llamadas == 1
