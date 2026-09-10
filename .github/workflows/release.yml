@@ -40,8 +40,12 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync
 
+      # --collect-all curl_cffi no es opcional y no se puede quitar: PyInstaller
+      # no trae hook para ese paquete (comprobado en pyinstaller-hooks-contrib
+      # 2026.6), así que sin esto el .exe se construye sin su extensión nativa y
+      # TikTok e Instagram fallan SOLO en el instalador, nunca en desarrollo.
       - name: Build executable (PyInstaller)
-        run: uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets/expoal.ico --add-data "src/expoal/web;expoal/web" launcher.py
+        run: uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets/expoal.ico --collect-all curl_cffi --add-data "src/expoal/web;expoal/web" launcher.py
 
       - name: Build installer (Inno Setup)
         shell: pwsh
@@ -73,8 +77,9 @@ jobs:
 
       # En Linux el separador de --add-data es ':' (no ';') y no se usa --windowed:
       # la app abre en el navegador, así que es un binario normal.
+      # --collect-all curl_cffi: ver el comentario del build de Windows.
       - name: Build executable (PyInstaller)
-        run: uv run pyinstaller --noconfirm --name Expoal --add-data "src/expoal/web:expoal/web" launcher.py
+        run: uv run pyinstaller --noconfirm --name Expoal --collect-all curl_cffi --add-data "src/expoal/web:expoal/web" launcher.py
 
       - name: Assemble AppDir
         run: |

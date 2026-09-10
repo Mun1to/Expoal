@@ -12,6 +12,11 @@ a given release is reproducible from that file.
 | Component | License | Source |
 | --- | --- | --- |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp) | The Unlicense (public domain) | https://github.com/yt-dlp/yt-dlp |
+| [curl_cffi](https://github.com/lexiforest/curl_cffi) | MIT | https://github.com/lexiforest/curl_cffi |
+| [curl-impersonate](https://github.com/lexiforest/curl-impersonate) (linked into curl_cffi) | MIT, over [curl](https://curl.se/docs/copyright.html)'s MIT-like license | https://github.com/lexiforest/curl-impersonate |
+| [cffi](https://github.com/python-cffi/cffi) | MIT-0 | https://github.com/python-cffi/cffi |
+| [pycparser](https://github.com/eliben/pycparser) | BSD-3-Clause | https://github.com/eliben/pycparser |
+| [certifi](https://github.com/certifi/python-certifi) | MPL-2.0 | https://github.com/certifi/python-certifi |
 | [FastAPI](https://github.com/fastapi/fastapi) | MIT | https://github.com/fastapi/fastapi |
 | [Starlette](https://github.com/encode/starlette) | BSD-3-Clause | https://github.com/encode/starlette |
 | [Pydantic](https://github.com/pydantic/pydantic) | MIT | https://github.com/pydantic/pydantic |
@@ -27,6 +32,13 @@ a given release is reproducible from that file.
 The engine updater downloads official **yt-dlp** wheels from PyPI at runtime, over HTTPS,
 verified against the SHA-256 published by PyPI and restricted to `files.pythonhosted.org`.
 Those wheels carry the same Unlicense terms as the bundled copy.
+
+**Why curl_cffi is in that list.** yt-dlp's TikTok and Instagram extractors ask to present a
+real browser's TLS handshake; without it those sites answer some requests with a filler page
+instead of the video. `curl_cffi` is what yt-dlp itself documents for this, and it is requested
+through yt-dlp's own `curl-cffi` extra so that yt-dlp pins the versions it supports. It changes
+how a request looks, nothing else: Expoal still asks for one page per click, sends nothing but
+the link you pasted, and keeps no data about anyone.
 
 ## Not bundled — used if you install them
 

@@ -1,6 +1,6 @@
 [project]
 name = "expoal"
-version = "2.5.3"
+version = "2.5.4"
 description = "Paste a link from YouTube, TikTok, Instagram or thousands of other sites and save the video to your own disk. 100% local, no third-party sites."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,7 +9,14 @@ authors = [{ name = "Munir Torres" }]
 dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
-    "yt-dlp>=2025.6.9",
+    # El extra curl-cffi no es un capricho: los extractores de TikTok e
+    # Instagram piden hacerse pasar por un navegador en el saludo de la
+    # conexión, y sin él yt-dlp avisa ("no impersonate target is available") y
+    # pide la página a pelo, así que funciona hasta que la plataforma aprieta y
+    # devuelve una página de relleno. Se pide POR EL EXTRA y no como dependencia
+    # suelta para que sea yt-dlp quien fije el rango de versiones que sabe que
+    # le funcionan (hoy >=0.5.10,<0.17 con varias excluidas).
+    "yt-dlp[curl-cffi]>=2025.6.9",
     "pywebview>=5.1",
     "platformdirs>=4.2",
 ]

@@ -116,6 +116,8 @@ for the times you want a window, and for the people who would never open a termi
 
 - Works with YouTube, TikTok, Instagram and every other site yt-dlp supports (thousands of them)
 - Paste a link, preview the video and download it in the best available quality
+- Reliable on TikTok and Instagram: their extractors ask to present a real browser's TLS handshake, and Expoal ships that (yt-dlp's `curl-cffi` extra) instead of hoping the site lets it through. It changes how a request looks, nothing else: one page per click, nothing sent but the link you pasted
+- Stubborn about temporary failures: when a platform answers with a filler page instead of the video, the analysis retries before bothering you, and a failed download renews its links instead of dying
 - **See what is trending on your topic and grab it without leaving**: type a subject, pick a window (today, this week, this month, this year) and get the most watched videos on it, with channel, views and length. Clicking one analyses it just like a link you pasted yourself. It asks the platform for its own results page with its own filters, through the same yt-dlp the app already ships: no spoofed fingerprints, no anti-bot walls jumped, nothing stored, one search per click
 - Choose the output format: MP4, MKV, MOV or WEBM for video; MP3, M4A, WAV, FLAC or OPUS for audio (requires FFmpeg)
 - Extract the transcript: save subtitles as clean text or as timed `.srt`, in any of the languages the video offers, either instead of the video or alongside it
@@ -210,10 +212,12 @@ history and the log buffer. No network, and no touching your real settings or hi
 ### Build the standalone app yourself
 
 ```powershell
-uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets\expoal.ico --add-data "src\expoal\web;expoal\web" launcher.py
+uv run pyinstaller --noconfirm --windowed --name Expoal --icon assets\expoal.ico --collect-all curl_cffi --add-data "src\expoal\web;expoal\web" launcher.py
 ```
 
-The result is in `dist\Expoal\Expoal.exe`. To build the installer as well (requires [Inno Setup 6](https://jrsoftware.org/isdl.php)):
+`--collect-all curl_cffi` is required: PyInstaller has no hook for it, and without
+it the build silently drops the native extension that lets TikTok and Instagram
+work. The result is in `dist\Expoal\Expoal.exe`. To build the installer as well (requires [Inno Setup 6](https://jrsoftware.org/isdl.php)):
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\expoal.iss
