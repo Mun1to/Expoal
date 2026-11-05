@@ -47,6 +47,36 @@ def test_las_opciones_que_ejecutan_programas_estan_bloqueadas(flag):
         settings.parse_extra_args(f'{flag} "echo hola"')
 
 
+@pytest.mark.parametrize("flags", [
+    "--exec-b calc",
+    "--exec-before calc",
+    "--alias foo -x",
+    "--alia foo -x",
+    "--plugin-dirs carpeta",
+    "--plugin-d carpeta",
+])
+def test_se_mira_lo_que_yt_dlp_entiende_no_el_texto(flags):
+    # yt-dlp acepta abreviaturas de las opciones largas, así que el filtro no
+    # puede comparar nombres: tiene que mirar el resultado de parse_options.
+    with pytest.raises(settings.ArgsError):
+        settings.parse_extra_args(flags)
+
+
+@pytest.mark.parametrize("flag", ["--config-locatio", "--config-loc", "--config-locations"])
+def test_config_locations_abreviado_con_un_archivo_que_existe(tmp_path, flag):
+    # Con un archivo real, yt-dlp lo lee sin quejarse: el filtro es lo único que lo para.
+    conf = tmp_path / "yt-dlp.conf"
+    conf.write_text("--no-mtime"+chr(10), encoding="utf-8")
+    with pytest.raises(settings.ArgsError):
+        settings.parse_extra_args(f'{flag} "{conf}"')
+
+
+def test_opciones_normales_siguen_pasando_junto_a_las_abreviaturas():
+    opts = settings.parse_extra_args("--concurrent-fragments 4 --embed-thumb --no-plugin-dirs")
+    assert opts["concurrent_fragment_downloads"] == 4
+    assert opts["writethumbnail"] is True
+
+
 def test_bloqueo_con_igual():
     with pytest.raises(settings.ArgsError):
         settings.parse_extra_args('--exec="echo hola"')

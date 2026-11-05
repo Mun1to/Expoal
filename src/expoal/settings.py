@@ -213,6 +213,23 @@ class ArgsError(ValueError):
     """El texto de opciones avanzadas no se puede usar; el mensaje explica por qué."""
 
 
+def _reject_dangerous(parsed) -> None:
+    """Rechaza lo que yt-dlp ha entendido que ejecuta programas o carga código.
+
+    Se mira el resultado de `parse_options`, no el texto: yt-dlp acepta
+    abreviaturas de las opciones largas, así que comparar nombres no basta.
+    """
+    postprocessors = parsed.ydl_opts.get("postprocessors") or []
+    if any(pp.get("key") == "Exec" for pp in postprocessors):
+        raise ArgsError("Esa opción ejecuta programas en tu equipo y no se permite desde aquí")
+    if parsed.options.config_locations:
+        raise ArgsError("No se permite cargar archivos de configuración desde aquí")
+    if [d for d in (parsed.options.plugin_dirs or []) if d != "default"]:
+        raise ArgsError("No se permite cargar plugins desde aquí")
+    if any(group.title == "Aliases" for group in parsed.parser.option_groups):
+        raise ArgsError("No se permite definir alias desde aquí")
+
+
 def parse_extra_args(text: str) -> dict:
     """Convierte flags de yt-dlp ("--embed-thumbnail") en opciones de la librería.
 
@@ -260,6 +277,8 @@ def parse_extra_args(text: str) -> dict:
 
     if parsed.urls:
         raise ArgsError("Escribe solo opciones, no enlaces")
+
+    _reject_dangerous(parsed)
 
     baseline = _baseline_opts()
     return {k: v for k, v in parsed.ydl_opts.items() if k not in baseline or baseline[k] != v}
