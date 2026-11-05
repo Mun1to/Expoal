@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from urllib.parse import urlparse
 
 import yt_dlp
 from fastapi import FastAPI, HTTPException, Request
@@ -21,7 +20,10 @@ from .history import History
 WEB_DIR = Path(__file__).parent / "web"
 VALID_MODES = {"video", "audio", "text"}
 VALID_SUB_FORMATS = {"txt", "srt"}
-LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+# Puerto real en el que se sirve la app. Lo fija __main__ antes de arrancar:
+# es fijo en modo web y al azar en la ventana de escritorio. Mientras no se
+# conozca, el filtro de abajo rechaza todo.
+SERVED_PORT: int | None = None
 
 app = FastAPI(title="Expoal", version=__version__)
 history = History(config.HISTORY_FILE)
@@ -30,16 +32,21 @@ manager = DownloadManager(history)
 
 @app.middleware("http")
 async def local_origin_guard(request: Request, call_next):
-    """Bloquea escrituras cross-origin: solo la propia interfaz local puede usar la API.
+    """Solo la propia interfaz local puede usar la API, para todos los métodos.
 
-    Sin esto, una web maliciosa abierta en el navegador podría lanzar POST contra
-    127.0.0.1 (CSRF contra servidores locales). Los navegadores siempre mandan
-    la cabecera Origin en peticiones POST.
+    Exige que Host sea 127.0.0.1:<puerto> o localhost:<puerto> (el puerto en el
+    que de verdad se sirve la app), y si viene Origin, que sea exactamente
+    http://<ese host>:<puerto>, comparando esquema, host y puerto.
     """
-    if request.method not in ("GET", "HEAD", "OPTIONS"):
-        origin = request.headers.get("origin")
-        if origin and urlparse(origin).hostname not in LOCAL_HOSTS:
-            return JSONResponse({"detail": "Origen no permitido"}, status_code=403)
+    port = SERVED_PORT
+    if port is None:
+        return JSONResponse({"detail": "Host no permitido"}, status_code=403)
+    hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+    if request.headers.get("host", "").lower() not in hosts:
+        return JSONResponse({"detail": "Host no permitido"}, status_code=403)
+    origin = request.headers.get("origin")
+    if origin is not None and origin.lower() not in {f"http://{h}" for h in hosts}:
+        return JSONResponse({"detail": "Origen no permitido"}, status_code=403)
     return await call_next(request)
 
 

@@ -32,7 +32,11 @@ def _wait_for_port(port: int, timeout: float = 10.0) -> None:
 
 def _serve(port: int) -> None:
     # Import directo (no string) para que PyInstaller incluya el módulo en el .exe.
+    from . import server
     from .server import app
+
+    # El filtro de Host y Origin necesita saber en qué puerto se sirve de verdad.
+    server.SERVED_PORT = port
 
     # Solo 127.0.0.1: la app nunca se expone a la red local.
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
