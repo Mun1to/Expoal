@@ -19,6 +19,15 @@ Windows and Linux · [License MIT](LICENSE) · 100% local and private
 
 <p align="center"><img src="assets/screenshot-dark-en.png" alt="Expoal in dark mode: a link pasted, the video ready to download, and the history below"></p>
 
+## How it works
+
+<p align="center"><picture>
+<source media="(prefers-color-scheme: dark) and (max-width: 600px)" srcset=".github/readme/how-it-works-dark-narrow.svg">
+<source media="(max-width: 600px)" srcset=".github/readme/how-it-works-light-narrow.svg">
+<source media="(prefers-color-scheme: dark)" srcset=".github/readme/how-it-works-dark.svg">
+<img src=".github/readme/how-it-works-light.svg" alt="Paste a link: Paste a link and Expoal reads the video, showing you the formats and resolutions it can actually pull. Pick a quality: Pick a quality, a container and a destination folder. Watch the queue: Once a download starts you get the queue: progress, speed and time left, a pause button that keeps what it already has, and a cancel button that stops it cleanly and leaves no half-written files behind. Find it on your disk: Finished downloads keep a folder button that opens the file where it landed, and the history below survives restarts.">
+</picture></p>
+
 ## Features
 
 - Works with YouTube, TikTok, Instagram and every other site yt-dlp supports (thousands of them)
@@ -104,7 +113,8 @@ Once installed, Expoal checks for a newer release on startup. When one is availa
 > FFmpeg is not bundled (it is large). Install it for MP3 export and top-quality merges:
 > `winget install Gyan.FFmpeg`
 
-## "Windows protected your PC"
+<details>
+<summary><b>&quot;Windows protected your PC&quot;</b></summary>
 
 The `.exe` is not signed with a paid code-signing certificate, so the first time you run it
 Windows SmartScreen may show a blue **"Windows protected your PC"** screen listing the publisher
@@ -114,6 +124,8 @@ as unknown. This is expected for independent open-source apps. To run it:
 2. Click **Run anyway**.
 
 You only need to do this once. The full source is in this repo if you prefer to build it yourself.
+
+</details>
 
 ## Why not just yt-dlp?
 
@@ -174,7 +186,8 @@ whatever you use. It is the same prompt in every public repository here, so you 
 > y te dirá en tu idioma qué hace este programa de verdad: qué envía por internet, qué toca
 > en tu ordenador y qué ejecuta al instalarse.
 
-## Run from source
+<details>
+<summary><b>Run from source</b></summary>
 
 Requirements: Python 3.10+ and [uv](https://docs.astral.sh/uv/).
 
@@ -217,6 +230,8 @@ work. The result is in `dist\Expoal\Expoal.exe`. To build the installer as well 
 ```
 
 This produces `dist\Expoal-<version>-setup.exe`.
+
+</details>
 
 ## License
 
