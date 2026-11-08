@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon-256.png" width="96" alt="Expoal">
+<img src="assets/icon-256.png" alt="Expoal" height="88">
 
 # Expoal
 
@@ -8,109 +8,16 @@
 
 No third-party download sites, no ads, no uploads. Everything runs locally on your machine, powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
-### One-click download
+<a href="https://github.com/Mun1to/Expoal/releases/latest/download/Expoal-setup.exe"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/download-windows-dark.svg"><img src=".github/readme/download-windows-light.svg" alt="Download for Windows"></picture></a>
+<a href="https://github.com/Mun1to/Expoal/releases/latest/download/Expoal-linux-x86_64.AppImage"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/readme/download-linux-dark.svg"><img src=".github/readme/download-linux-light.svg" alt="Download for Linux"></picture></a>
 
-[![Download for Windows](https://img.shields.io/badge/Download_for-Windows-0069FF?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Mun1to/Expoal/releases/latest/download/Expoal-setup.exe)
-[![Download for Linux](https://img.shields.io/badge/Download_for-Linux-0069FF?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/Mun1to/Expoal/releases/latest/download/Expoal-linux-x86_64.AppImage)
+Windows and Linux · [License MIT](LICENSE) · 100% local and private
 
-[![Version](https://img.shields.io/github/v/release/Mun1to/Expoal?style=flat-square&color=0069FF&label=version)](https://github.com/Mun1to/Expoal/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-E8B84B?style=flat-square)](LICENSE)
-[![Website](https://img.shields.io/badge/website-expoal-0069FF?style=flat-square)](https://mun1to.github.io/Expoal/)
-
-[**Website**](https://mun1to.github.io/Expoal/) · [**All downloads**](https://github.com/Mun1to/Expoal/releases/latest)
-
-<img src="assets/screenshot-dark-en.png" width="820" alt="Expoal in dark mode: a link pasted, the video ready to download, and the history below">
+[Website](https://mun1to.github.io/Expoal/) · [All downloads](https://github.com/Mun1to/Expoal/releases/latest)
 
 </div>
 
-## What it looks like
-
-Six real screenshots, not mockups, following one download from start to finish.
-
-### 01 · See what is trending
-
-Before you even have a link. Type your topic, pick a window, and Expoal brings back the most
-watched videos on it right now, with channel, views and length. Clicking one drops it straight
-into the download screen. It asks the platform for its own results page with its own filters:
-no spoofed browser fingerprint, no anti-bot walls jumped, nothing stored, one search per click.
-
-<div align="center">
-<img src="assets/screenshot-trends-dark-en.png" width="740" alt="Expoal showing the most watched videos of the week on a topic, ready to download">
-</div>
-
-### 02 · Analyze
-
-Paste a link and Expoal reads the video, showing you the formats and resolutions it can
-actually pull. Pick a quality, a container and a destination folder.
-
-<div align="center">
-<img src="assets/screenshot-light-en.png" width="740" alt="Expoal in light mode: a link analyzed, with format, quality and destination folder ready">
-</div>
-
-There is a light theme, shown above, and a dark one. The interface is in English or Spanish.
-
-### 03 · Edit before it downloads
-
-Trim the length with the slider or exact timecodes, crop the edges by pixels, strip the audio
-track. This is the part no other downloader gives you: the file arrives the way you wanted it,
-without opening a video editor afterwards.
-
-And trimming actually downloads less. Ask for one minute out of a three-hour video and Expoal
-works out which bytes hold that minute and asks the server for those alone: measured at 4% of
-the file and three seconds, against thirteen minutes for the whole thing. Where a site does not
-allow it, the video is downloaded in full and trimmed afterwards, exactly as before.
-
-<div align="center">
-<img src="assets/screenshot-editor-dark-en.png" width="740" alt="Expoal's editor: a duration slider, pixel crop fields for all four edges with a live preview, and a checkbox to remove the audio">
-</div>
-
-### 04 · Live download queue
-
-Once a download starts you get the queue: progress, speed and time left, a pause button that
-keeps what it already has, and a cancel button that stops it cleanly and leaves no half-written
-files behind.
-
-<div align="center">
-<img src="assets/screenshot-queue-dark-en.png" width="740" alt="Expoal's download queue: a video downloading with its progress, speed, time left and a cancel button">
-</div>
-
-### 05 · Done, and on your disk
-
-Finished downloads keep a folder button that opens the file where it landed, and the history
-below survives restarts.
-
-<div align="center">
-<img src="assets/screenshot-done-dark-en.png" width="740" alt="Expoal with a finished download and the history below, each entry with a button to open its folder">
-</div>
-
-### 06 · Nothing hidden
-
-One button in the header opens a terminal panel with the engine's live output: which extractor
-ran, which formats it picked, when it is merging. It is off by default, because the app should
-stay simple, and it is exactly what you need the day something breaks. Copy the whole thing with
-one click when you report a problem.
-
-<div align="center">
-<img src="assets/screenshot-log-dark-en.png" width="740" alt="Expoal's log panel showing yt-dlp's live output while a video downloads">
-</div>
-
-## Why not just yt-dlp?
-
-Expoal is built on [yt-dlp](https://github.com/yt-dlp/yt-dlp) and makes no secret of it. yt-dlp
-is the engine; Expoal is everything you would otherwise have to remember, script or look up:
-
-- A window instead of a command line, so you can hand it to someone who does not use a terminal
-- Format and quality pickers built from what the video actually offers, instead of format strings
-- A queue with live progress, speed and ETA, pause/resume, and a history that survives restarts
-- Failed downloads recorded and retried with one click, instead of scrolling back through a terminal
-- Trimming, edge cropping and audio stripping without touching FFmpeg flags
-- An installer, a desktop shortcut and one-click self-updates on Windows and Linux
-
-And when you *do* want the terminal, it is one button away: the log panel shows yt-dlp's real
-output live, so nothing is hidden from you — it is just not in your face by default.
-
-If you are happy typing `yt-dlp -f bestvideo+bestaudio <url>`, you do not need Expoal. It exists
-for the times you want a window, and for the people who would never open a terminal at all.
+<p align="center"><img src="assets/screenshot-dark-en.png" alt="Expoal in dark mode: a link pasted, the video ready to download, and the history below"></p>
 
 ## Features
 
@@ -128,7 +35,7 @@ for the times you want a window, and for the people who would never open a termi
 - Several links at once: paste a whole list, duplicates and junk lines are dropped before anything is queued
 - See what it is doing: a terminal panel with the engine's live output, off by default, one click away when something goes wrong
 - Faster downloads: concurrent fragments out of the box, plus optional [aria2c](https://aria2.github.io/) multi-connection support when it is installed
-- Pause and resume a download, and retry the ones that failed — individually or all at once
+- Pause and resume a download, and retry the ones that failed, individually or all at once
 - Sign in where you already are: use your browser's cookies for private, age-restricted or members-only videos, and for YouTube's bot checks, or point it at an exported `cookies.txt`
 - One click for the things everyone wants: cut sponsor segments with SponsorBlock, embed the thumbnail as cover art, the title and author, the chapters, the subtitles
 - A field for raw yt-dlp options, in the same syntax as the official docs, for everything the window doesn't show
@@ -143,20 +50,47 @@ for the times you want a window, and for the people who would never open a termi
   - Desktop mode: a native window you can pin to the taskbar
 - 100% local and private: the server only listens on 127.0.0.1, and your links and files never leave your computer
 
+## Screenshots
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="assets/screenshot-trends-dark-en.png" alt="Expoal showing the most watched videos of the week on a topic, ready to download"><br><strong>See what is trending.</strong> Before you even have a link. Type your topic, pick a window, and Expoal brings back the most watched videos on it right now, with channel, views and length. Clicking one drops it straight into the download screen. It asks the platform for its own results page with its own filters: no spoofed browser fingerprint, no anti-bot walls jumped, nothing stored, one search per click.</td>
+<td width="50%" valign="top"><img src="assets/screenshot-light-en.png" alt="Expoal in light mode: a link analyzed, with format, quality and destination folder ready"><br><strong>Analyze.</strong> Paste a link and Expoal reads the video, showing you the formats and resolutions it can actually pull. Pick a quality, a container and a destination folder.
+
+There is a light theme, shown above, and a dark one. The interface is in English or Spanish.</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="assets/screenshot-editor-dark-en.png" alt="Expoal's editor: a duration slider, pixel crop fields for all four edges with a live preview, and a checkbox to remove the audio"><br><strong>Edit before it downloads.</strong> Trim the length with the slider or exact timecodes, crop the edges by pixels, strip the audio track. This is the part no other downloader gives you: the file arrives the way you wanted it, without opening a video editor afterwards.
+
+And trimming actually downloads less. Ask for one minute out of a three-hour video and Expoal works out which bytes hold that minute and asks the server for those alone: measured at 4% of the file and three seconds, against thirteen minutes for the whole thing. Where a site does not allow it, the video is downloaded in full and trimmed afterwards, exactly as before.</td>
+<td width="50%" valign="top"><img src="assets/screenshot-queue-dark-en.png" alt="Expoal's download queue: a video downloading with its progress, speed, time left and a cancel button"><br><strong>Live download queue.</strong> Once a download starts you get the queue: progress, speed and time left, a pause button that keeps what it already has, and a cancel button that stops it cleanly and leaves no half-written files behind.</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="assets/screenshot-done-dark-en.png" alt="Expoal with a finished download and the history below, each entry with a button to open its folder"><br><strong>Done, and on your disk.</strong> Finished downloads keep a folder button that opens the file where it landed, and the history below survives restarts.</td>
+<td width="50%" valign="top"><img src="assets/screenshot-log-dark-en.png" alt="Expoal's log panel showing yt-dlp's live output while a video downloads"><br><strong>Nothing hidden.</strong> One button in the header opens a terminal panel with the engine&#39;s live output: which extractor ran, which formats it picked, when it is merging. It is off by default, because the app should stay simple, and it is exactly what you need the day something breaks. Copy the whole thing with one click when you report a problem.</td>
+</tr>
+</table>
+
 ## Download
 
 Grab the latest build from the [**releases page**](https://github.com/Mun1to/Expoal/releases/latest).
 
 **Windows**
 
-- **`Expoal-<version>-setup.exe` (installer, recommended)** — a normal Windows setup wizard. It installs the app, adds Start menu (and optionally desktop) shortcuts, and registers an uninstaller in "Add or remove programs". No admin rights needed.
-- **`Expoal-windows.zip` (portable)** — unzip anywhere and run `Expoal.exe`, nothing to install.
+- **`Expoal-<version>-setup.exe` (installer, recommended)**: a normal Windows setup wizard. It installs the app, adds Start menu (and optionally desktop) shortcuts, and registers an uninstaller in "Add or remove programs". No admin rights needed.
+- **`Expoal-windows.zip` (portable)**: unzip anywhere and run `Expoal.exe`, nothing to install.
 
 Double-clicking opens the app in its own window, which you can then pin to the taskbar.
 
 **Linux**
 
-- **`Expoal-<version>-x86_64.AppImage`** — a single file that runs on any distro:
+- **`Expoal-<version>-x86_64.AppImage`**: a single file that runs on any distro:
   ```bash
   chmod +x Expoal-*-x86_64.AppImage
   ./Expoal-*-x86_64.AppImage
@@ -170,7 +104,7 @@ Once installed, Expoal checks for a newer release on startup. When one is availa
 > FFmpeg is not bundled (it is large). Install it for MP3 export and top-quality merges:
 > `winget install Gyan.FFmpeg`
 
-### "Windows protected your PC"
+## "Windows protected your PC"
 
 The `.exe` is not signed with a paid code-signing certificate, so the first time you run it
 Windows SmartScreen may show a blue **"Windows protected your PC"** screen listing the publisher
@@ -180,6 +114,65 @@ as unknown. This is expected for independent open-source apps. To run it:
 2. Click **Run anyway**.
 
 You only need to do this once. The full source is in this repo if you prefer to build it yourself.
+
+## Why not just yt-dlp?
+
+Expoal is built on [yt-dlp](https://github.com/yt-dlp/yt-dlp) and makes no secret of it. yt-dlp
+is the engine; Expoal is everything you would otherwise have to remember, script or look up:
+
+- A window instead of a command line, so you can hand it to someone who does not use a terminal
+- Format and quality pickers built from what the video actually offers, instead of format strings
+- A queue with live progress, speed and ETA, pause/resume, and a history that survives restarts
+- Failed downloads recorded and retried with one click, instead of scrolling back through a terminal
+- Trimming, edge cropping and audio stripping without touching FFmpeg flags
+- An installer, a desktop shortcut and one-click self-updates on Windows and Linux
+
+And when you *do* want the terminal, it is one button away: the log panel shows yt-dlp's real
+output live, so nothing is hidden from you, it is just not in your face by default.
+
+If you are happy typing `yt-dlp -f bestvideo+bestaudio <url>`, you do not need Expoal. It exists
+for the times you want a window, and for the people who would never open a terminal at all.
+
+## Releasing a new version
+
+Releases are built and published automatically. To ship a new version:
+
+1. Bump `version` in `pyproject.toml` and `__version__` in `src/expoal/__init__.py`.
+2. Commit, then push a matching tag:
+   ```bash
+   git tag v1.2.0 && git push origin v1.2.0
+   ```
+
+The [release workflow](.github/workflows/release.yml) then builds the `.exe` and the installer on Windows, generates `SHA256SUMS.txt`, and publishes the GitHub release with all the assets. Users on an older version get the in-app update banner automatically.
+
+## How it works
+
+A small FastAPI server wraps yt-dlp and exposes a minimal API (`/api/info`, `/api/download`, `/api/pick-folder`, `/api/jobs`, `/api/history`, `/api/log`). The same static web UI is served in your browser (web mode) or inside a pywebview native window (desktop mode). A local-origin guard blocks cross-origin requests, so no other site can talk to the server. Downloads run in a background queue, one at a time, and the history is stored as JSON in your user data folder. The log panel reads from an in-memory ring buffer: nothing is written to disk, so there is no log file quietly growing on your machine.
+
+Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); release-by-release changes are in [CHANGELOG.md](CHANGELOG.md).
+
+## Legal notice
+
+Download only content you own, content licensed for it, or content you have permission to save. Downloading media may violate the terms of service of some platforms. This tool is intended for personal archiving. You are responsible for how you use it.
+
+## Brand
+
+Logo, colors and tone are documented in [docs/MARCA.md](docs/MARCA.md). Icons are generated from the
+source logo with `uv run python scripts/make_brand.py`.
+
+## Don't trust it, check it
+
+Published code only helps if somebody actually reads it, and almost nobody does. So
+instead of asking you to trust this project, here is the prompt to check it: point your own
+AI agent at this repository and get a security report, in your language, in a few minutes,
+even if you do not know how to program.
+
+**[Open AI-AUDIT.md](AI-AUDIT.md)** and paste it into Claude Code, Codex, Cursor, Copilot or
+whatever you use. It is the same prompt in every public repository here, so you can compare.
+
+> **ES:** No hace falta que te fíes. Abre [AI-AUDIT.md](AI-AUDIT.md), pega ese texto en tu IA
+> y te dirá en tu idioma qué hace este programa de verdad: qué envía por internet, qué toca
+> en tu ordenador y qué ejecuta al instalarse.
 
 ## Run from source
 
@@ -225,47 +218,10 @@ work. The result is in `dist\Expoal\Expoal.exe`. To build the installer as well 
 
 This produces `dist\Expoal-<version>-setup.exe`.
 
-## Releasing a new version
-
-Releases are built and published automatically. To ship a new version:
-
-1. Bump `version` in `pyproject.toml` and `__version__` in `src/expoal/__init__.py`.
-2. Commit, then push a matching tag:
-   ```bash
-   git tag v1.2.0 && git push origin v1.2.0
-   ```
-
-The [release workflow](.github/workflows/release.yml) then builds the `.exe` and the installer on Windows, generates `SHA256SUMS.txt`, and publishes the GitHub release with all the assets. Users on an older version get the in-app update banner automatically.
-
-## How it works
-
-A small FastAPI server wraps yt-dlp and exposes a minimal API (`/api/info`, `/api/download`, `/api/pick-folder`, `/api/jobs`, `/api/history`, `/api/log`). The same static web UI is served in your browser (web mode) or inside a pywebview native window (desktop mode). A local-origin guard blocks cross-origin requests, so no other site can talk to the server. Downloads run in a background queue, one at a time, and the history is stored as JSON in your user data folder. The log panel reads from an in-memory ring buffer — nothing is written to disk, so there is no log file quietly growing on your machine.
-
-Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); release-by-release changes are in [CHANGELOG.md](CHANGELOG.md).
-
-## Legal notice
-
-Download only content you own, content licensed for it, or content you have permission to save. Downloading media may violate the terms of service of some platforms. This tool is intended for personal archiving. You are responsible for how you use it.
-
-## Brand
-
-Logo, colors and tone are documented in [docs/MARCA.md](docs/MARCA.md). Icons are generated from the
-source logo with `uv run python scripts/make_brand.py`.
-
-## 🔍 Don't trust it, check it
-
-Open source only helps if somebody actually reads the code, and almost nobody does. So
-instead of asking you to trust this project, here is the prompt to check it: point your own
-AI agent at this repository and get a security report, in your language, in a few minutes,
-even if you do not know how to program.
-
-**[Open AI-AUDIT.md](AI-AUDIT.md)** and paste it into Claude Code, Codex, Cursor, Copilot or
-whatever you use. It is the same prompt in every public repository here, so you can compare.
-
-> **ES:** No hace falta que te fíes. Abre [AI-AUDIT.md](AI-AUDIT.md), pega ese texto en tu IA
-> y te dirá en tu idioma qué hace este programa de verdad: qué envía por internet, qué toca
-> en tu ordenador y qué ejecuta al instalarse.
-
 ## License
 
 [MIT](LICENSE) © 2026 Munir Torres (Mun1to)
+
+<br>
+
+<p align="center">Made by <a href="https://munito.dev"><b>Munir Torres</b></a>. Also by him: <a href="https://adeorq.com">Adeorq</a> · <a href="https://vocript.app">VoCript</a> · <a href="https://winshotx.com">winshotx</a> · <a href="https://github.com/Mun1to/hotkeyconfig">hotkeyconfig</a> · <a href="https://github.com/Mun1to/froede">froede</a></p>
